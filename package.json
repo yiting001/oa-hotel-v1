@@ -14,7 +14,7 @@
     "lint": "eslint . --max-warnings=0",
     "test": "npm run test -w @oa/contracts && npm run test -w @oa/api && npm run test -w @oa/web",
     "test:e2e": "playwright test",
-    "typecheck": "npm run typecheck -w @oa/contracts && npm run typecheck -w @oa/api && npm run typecheck -w @oa/web"
+    "typecheck": "npm run build -w @oa/contracts && npm run typecheck -w @oa/api && npm run typecheck -w @oa/web"
   },
   "devDependencies": {
     "@eslint/js": "9.29.0",

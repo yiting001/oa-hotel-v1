@@ -10,11 +10,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "vitest/globals"],
-    "baseUrl": "./",
-    "paths": {
-      "@oa/contracts": ["../../packages/contracts/src/index.ts"]
-    }
+    "types": ["vite/client", "vitest/globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.vue"]
 }
