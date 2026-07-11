@@ -63,6 +63,7 @@ erDiagram
 
 - `business_documents`
 - 各业务模块明确表，例如 `contracts`、`expense_requests`、`leave_requests`
+- 会议宴会模块表，例如 `event_orders`、`room_reservations`、`meal_reservations`、`venue_reservations`、`event_department_tasks`
 - `business_relations`
 - `attachments`
 - `attachment_links`

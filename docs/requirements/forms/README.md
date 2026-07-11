@@ -35,6 +35,7 @@
 
 - [合同与财务表单](contract-and-finance.md)
 - [行政、物资与人力表单](administration-supply-hr.md)
+- [会议宴会 EO 表单](meeting-event-order.md)
 - [公文、信息与党群表单](documents-and-party.md)
 
 ## 4. 表单组件
@@ -48,6 +49,7 @@
 | DictSelect/Radio/Checkbox | 字典、单选、多选 |
 | Attachment | 附件上传和权限 |
 | EditableTable | 申购物品、领用明细 |
+| ReservationTable | 客房、用餐、会场预订明细 |
 | AccountingSubjectPicker | 会计科目 |
 | BankAccountPicker | 收款单位、账号、开户行联动 |
 | ApprovalTimeline | 审批意见和流程轨迹 |
