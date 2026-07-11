@@ -1,0 +1,33 @@
+{
+  "name": "oa-hotel-v1",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @oa/contracts && npm run build -w @oa/api && npm run build -w @oa/web",
+    "dev": "npm run build -w @oa/contracts && concurrently -k -n api,web -c blue,magenta \"npm run dev -w @oa/api\" \"npm run dev -w @oa/web\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings=0",
+    "test": "npm run test -w @oa/contracts && npm run test -w @oa/api && npm run test -w @oa/web",
+    "test:e2e": "playwright test",
+    "typecheck": "npm run typecheck -w @oa/contracts && npm run typecheck -w @oa/api && npm run typecheck -w @oa/web"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.29.0",
+    "@playwright/test": "1.61.1",
+    "concurrently": "9.2.0",
+    "eslint": "9.29.0",
+    "eslint-plugin-vue": "10.1.0",
+    "globals": "16.2.0",
+    "prettier": "3.5.3",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.34.1"
+  },
+  "engines": {
+    "node": ">=20.18"
+  }
+}

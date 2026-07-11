@@ -1,0 +1,5 @@
+import 'reflect-metadata';
+import { DataSource } from 'typeorm';
+import { createDatabaseOptions } from './database-options';
+
+export default new DataSource(createDatabaseOptions());
