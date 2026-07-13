@@ -2,7 +2,34 @@
 
 面向酒店企业的响应式 OA 审批与制单系统。规划技术栈为 NestJS、SQLite、Vue 3、Pinia、TypeScript，采用 DDD 分层和模块化单体架构。
 
-当前仓库处于需求与架构阶段，尚未开始业务代码开发。
+当前仓库已进入首批业务模块开发阶段，包含 NestJS API、Vue 3 Web、SQLite 迁移和合同支出、行政印章、物资申购领用 MVP。
+
+## 本地启动
+
+```bash
+npm install
+npm run build -w @oa/contracts
+npm run dev
+```
+
+默认开发账号密码为 `Demo123!`：
+
+- `applicant`：申请人
+- `manager`：部门总监
+- `finance`：财务审核
+- `office`：办公室/印章管理员
+- `procurement`：采购
+- `warehouse`：仓库
+
+## 验证命令
+
+```bash
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
 
 ## 文档入口
 
@@ -17,6 +44,9 @@
 - [响应式 UI/UX 规范](docs/architecture/02-ui-ux.md)
 - [开发路线与验收标准](docs/delivery/00-roadmap-and-acceptance.md)
 - [待确认事项与决策记录](docs/delivery/01-open-questions.md)
+- [合同支出模块 MVP](docs/modules/contract-business-mvp.md)
+- [行政印章模块 MVP](docs/modules/seal-business-mvp.md)
+- [物资申购领用模块 MVP](docs/modules/supply-business-mvp.md)
 
 ## 核心原则
 

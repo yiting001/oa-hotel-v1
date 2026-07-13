@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+playwright-report/
+test-results/
+apps/api/storage/
+apps/web/.vite/
