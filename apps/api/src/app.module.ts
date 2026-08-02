@@ -8,6 +8,7 @@ import { WorkbenchModule } from './common/workbench/workbench.module';
 import { FormDesignModule } from './common/form-design/form-design.module';
 import { ProcessDesignModule } from './common/process-design/process-design.module';
 import { ContractModule } from './modules/contract/contract.module';
+import { InsightModule } from './modules/insight/insight.module';
 import { PettyModule } from './modules/petty/petty.module';
 import { PortalModule } from './modules/portal/portal.module';
 import { PurchaseModule } from './modules/purchase/purchase.module';
@@ -24,6 +25,7 @@ import { SupplyModule } from './modules/supply/supply.module';
     WorkbenchModule,
     PortalModule,
     ContractModule,
+    InsightModule,
     PurchaseModule,
     PettyModule,
     SealModule,

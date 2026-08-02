@@ -29,6 +29,9 @@ export type NavigationItemId =
   | 'purchase'
   | 'petty'
   | 'petty-materials'
+  | 'insight-documents'
+  | 'insight-logs'
+  | 'insight-statistics'
   | 'seal'
   | 'supply'
   | 'iam'
@@ -118,6 +121,33 @@ const navigationGroups: readonly NavigationGroup[] = [
         label: '物资管理',
         icon: Box,
         requiredPermissions: requiredBusinessModulePermissions('SUPPLY', 'VIEW'),
+      },
+    ],
+  },
+  {
+    id: 'insight',
+    label: '运营分析',
+    items: [
+      {
+        id: 'insight-documents',
+        path: '/insight/documents',
+        label: '单据检索',
+        icon: Tickets,
+        requiredPermissions: ['DOCUMENT_VIEW'],
+      },
+      {
+        id: 'insight-logs',
+        path: '/insight/logs',
+        label: '操作日志',
+        icon: DocumentCopy,
+        requiredPermissions: ['IAM_MANAGE'],
+      },
+      {
+        id: 'insight-statistics',
+        path: '/insight/statistics',
+        label: '统计看板',
+        icon: DataBoard,
+        requiredPermissions: ['IAM_MANAGE'],
       },
     ],
   },
