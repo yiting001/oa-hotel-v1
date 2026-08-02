@@ -75,6 +75,8 @@ stateDiagram-v2
 
 ## 权限矩阵
 
+查看要求 `DOCUMENT_VIEW + SEAL_VIEW`，创建、修改和提交要求 `DOCUMENT_CREATE + SEAL_CREATE`，领用、归还和用印登记额外要求 `SEAL_EXECUTE` 并按其数据范围校验目标单据。
+
 | 动作          | 申请人 | 部门总监 | 办公室           | 印章管理员 |
 | ------------- | ------ | -------- | ---------------- | ---------- |
 | 创建/提交     | 本人   | 否       | 否               | 否         |
@@ -95,7 +97,7 @@ stateDiagram-v2
 
 ## 数据迁移
 
-`InitialSchema` 创建 `seal_assets`、`seal_borrow_requests`、`seal_use_requests`。开发环境种子数据包含公司公章和营业执照。
+`InitialSchema` 创建 `seal_assets`、`seal_borrow_requests`、`seal_use_requests`；`BusinessModulePermissions1784100000000` 幂等初始化印章模块权限。开发环境种子数据包含公司公章和营业执照。
 
 ## 测试说明
 
@@ -105,7 +107,7 @@ stateDiagram-v2
 
 ## PC/手机 UI 验收
 
-PC 显示资产台账与两类申请卡片；手机自动切换单列，外借与用印字段保持完整。
+PC 使用申请单据/资产台账分区、独立制单页和执行登记页；手机切换为单列记录与表单，外借、用印和执行字段保持完整。详细实现与缺口见 [行政印章模块企业级 UI](seal-enterprise-ui.md)。
 
 ## 打印和归档
 

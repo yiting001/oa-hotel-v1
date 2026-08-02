@@ -9,6 +9,9 @@ export default [
       '**/dist/**',
       '**/node_modules/**',
       '**/coverage/**',
+      '**/.vite/**',
+      'apps/api/release/**',
+      'packages/contracts/cjs/**',
       'playwright-report/**',
       'test-results/**',
     ],
@@ -41,6 +44,14 @@ export default [
       'vue/multiline-html-element-content-newline': 'off',
       'vue/html-closing-bracket-newline': 'off',
       'vue/html-indent': 'off',
+      'vue/html-self-closing': [
+        'error',
+        {
+          html: { void: 'always', normal: 'always', component: 'always' },
+          svg: 'always',
+          math: 'always',
+        },
+      ],
     },
   },
 ];

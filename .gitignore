@@ -1,4 +1,6 @@
 node_modules/
+.idea/
+.DS_Store
 dist/
 coverage/
 .env
@@ -8,4 +10,6 @@ coverage/
 playwright-report/
 test-results/
 apps/api/storage/
+apps/api/release/
 apps/web/.vite/
+packages/contracts/cjs/*.js

@@ -1,0 +1,465 @@
+.form-designer-shell {
+  display: grid;
+  min-height: 880px;
+  grid-template-areas:
+    'definitions canvas inspector'
+    'palette canvas inspector';
+  grid-template-columns: 235px minmax(820px, 1fr) 300px;
+  grid-template-rows: 360px minmax(520px, 1fr);
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--platform-border);
+  border-radius: 6px;
+}
+
+.form-designer-mobile-tabs {
+  display: none;
+}
+
+.form-designer-shell > .definition-nav {
+  grid-area: definitions;
+  border: 0;
+  border-right: 1px solid var(--platform-border);
+  border-bottom: 1px solid var(--platform-border);
+}
+
+.form-palette {
+  min-width: 0;
+  grid-area: palette;
+  padding: 16px 12px;
+  overflow: auto;
+  background: #f8fafc;
+  border-right: 1px solid var(--platform-border);
+}
+
+.form-palette .platform-panel-heading {
+  margin: 0 4px 12px;
+}
+
+.form-palette__items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.form-palette__items button {
+  display: flex;
+  min-height: 82px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 8px;
+  color: #263547;
+  background: #fff;
+  border: 1px solid #cfdae4;
+  border-radius: 5px;
+  cursor: grab;
+  text-align: left;
+}
+
+.form-palette__items button:hover:not(:disabled) {
+  background: #edf5fb;
+  border-color: #83afd1;
+}
+
+.form-palette__items button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.form-palette__items .el-icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--platform-primary);
+  font-size: 17px;
+}
+
+.form-palette__items span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.form-palette__items strong {
+  font-size: 12px;
+}
+
+.form-palette__items small {
+  margin-top: 3px;
+  color: var(--platform-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.form-palette__note {
+  margin-top: 14px;
+  padding: 11px;
+  background: #eef5f1;
+  border-left: 3px solid #27864d;
+  border-radius: 3px;
+}
+
+.form-palette__note strong {
+  font-size: 12px;
+}
+
+.form-palette__note p {
+  margin: 4px 0 0;
+  color: #50645a;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.form-canvas-workspace {
+  min-width: 0;
+  grid-area: canvas;
+  background: #e9eef2;
+}
+
+.a4-zoom-controls {
+  display: flex;
+  min-width: 310px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.a4-zoom-controls .el-slider {
+  width: 120px;
+}
+
+.a4-zoom-controls > span {
+  min-width: 52px;
+  padding: 5px 9px;
+  color: #576778;
+  background: #f3f5f7;
+  border: 1px solid var(--platform-border);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.a4-stage {
+  height: calc(100% - 58px);
+  min-height: 820px;
+  padding: 28px;
+  overflow: auto;
+}
+
+.a4-sheet {
+  display: flex;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  flex-direction: column;
+  padding: var(--a4-margin);
+  color: #111;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(27, 39, 51, 0.16);
+  font-family: SimSun, 'Songti SC', serif;
+  letter-spacing: 0;
+}
+
+.a4-sheet__header {
+  margin-bottom: 7mm;
+  text-align: center;
+}
+
+.a4-sheet__header h2 {
+  margin: 0;
+  font-family: SimSun, 'Songti SC', serif;
+  font-size: 22pt;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.a4-sheet__header p {
+  margin: 2.5mm 0 0;
+  color: #333;
+  font-size: 10.5pt;
+}
+
+.a4-sheet__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5mm;
+  font-size: 9pt;
+  text-align: left;
+}
+
+.a4-sheet__body {
+  flex: 1;
+}
+
+.a4-sheet__footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6mm;
+  padding-top: 2mm;
+  color: #444;
+  border-top: 0.5px solid #777;
+  font-size: 8pt;
+}
+
+.a4-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-right: var(--a4-grid-line) solid #222;
+  border-bottom: var(--a4-grid-line) solid #222;
+}
+
+.a4-grid__field {
+  display: grid;
+  min-width: 0;
+  min-height: 13mm;
+  grid-template-columns: 30mm minmax(0, 1fr);
+  padding: 0;
+  color: #111;
+  background: #fff;
+  border: 0;
+  border-top: var(--a4-grid-line) solid #222;
+  border-left: var(--a4-grid-line) solid #222;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10pt;
+  text-align: left;
+}
+
+.a4-grid__field--span-2 {
+  grid-column: 1 / -1;
+}
+
+.a4-grid__field.is-selected {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid #1769aa;
+  outline-offset: -2px;
+}
+
+.a4-grid__label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 2mm;
+  background: #f4f4f4;
+  border-right: var(--a4-grid-line) solid #222;
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.a4-grid__label i {
+  margin-left: 1mm;
+  color: #a51d1d;
+  font-style: normal;
+}
+
+.a4-field-preview {
+  min-width: 0;
+  min-height: 12mm;
+  padding: 3mm;
+}
+
+.a4-field-preview--textarea {
+  min-height: 30mm;
+}
+
+.a4-placeholder {
+  color: #777;
+  font-size: 9pt;
+}
+
+.a4-field-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 8.5pt;
+}
+
+.a4-field-preview th,
+.a4-field-preview td {
+  height: 8mm;
+  padding: 1mm;
+  border: 0.5px solid #444;
+  text-align: center;
+}
+
+.a4-attachment-line {
+  min-height: 8mm;
+  padding: 1mm 0;
+  color: #555;
+  border-bottom: 0.5px solid #888;
+  font-size: 9pt;
+}
+
+.a4-opinion-grid {
+  display: flex;
+  min-height: 27mm;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.a4-opinion-grid small {
+  align-self: flex-end;
+  font-size: 8.5pt;
+}
+
+.a4-grid__empty {
+  display: flex;
+  min-height: 90mm;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  border-top: var(--a4-grid-line) solid #222;
+  border-left: var(--a4-grid-line) solid #222;
+  font-size: 10pt;
+}
+
+.form-inspector {
+  min-width: 0;
+  grid-area: inspector;
+  padding: 0 16px 20px;
+  overflow: auto;
+  background: #fff;
+  border-left: 1px solid var(--platform-border);
+}
+
+.form-inspector .el-tabs__header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding-top: 8px;
+  background: #fff;
+}
+
+.form-inspector__actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.form-inspector .el-select,
+.form-inspector .el-input-number {
+  width: 100%;
+}
+
+.table-column-editor {
+  padding-top: 5px;
+  border-top: 1px solid var(--platform-border);
+}
+
+.table-column-editor__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px 30px;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+@media (max-width: 1650px) {
+  .form-designer-shell {
+    grid-template-areas:
+      'definitions canvas'
+      'palette canvas'
+      'inspector inspector';
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: 330px minmax(550px, 1fr) auto;
+  }
+
+  .form-inspector {
+    max-height: none;
+    border-top: 1px solid var(--platform-border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .form-designer-shell {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .form-designer-mobile-tabs {
+    display: block;
+    padding: 10px;
+    background: #fff;
+    border-bottom: 1px solid var(--platform-border);
+  }
+
+  .form-designer-mobile-tabs .el-segmented {
+    width: 100%;
+  }
+
+  .form-designer-mobile-tabs .el-segmented__item {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .form-designer-shell > .definition-nav,
+  .form-designer-shell > .form-palette,
+  .form-designer-shell > .form-canvas-workspace,
+  .form-designer-shell > .form-inspector {
+    display: none;
+  }
+
+  .form-designer-shell > .is-mobile-panel-active {
+    display: block;
+  }
+
+  .form-designer-shell > .definition-nav.is-mobile-panel-active {
+    display: flex;
+  }
+
+  .form-designer-shell > .definition-nav {
+    height: 300px;
+    border-right: 0;
+  }
+
+  .form-palette {
+    border-right: 0;
+    border-bottom: 1px solid var(--platform-border);
+  }
+
+  .form-palette__items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .a4-stage {
+    height: auto;
+    min-height: 520px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .form-canvas-workspace .designer-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-canvas-workspace .designer-toolbar > div {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .a4-zoom-controls {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .a4-zoom-controls .el-slider {
+    min-width: 90px;
+    flex: 1;
+  }
+}
+
+@media print {
+  .a4-sheet {
+    zoom: 1 !important;
+  }
+}

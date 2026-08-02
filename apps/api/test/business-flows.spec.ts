@@ -1,9 +1,14 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { hash } from 'argon2';
 import request from 'supertest';
+import type { Repository } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/errors/api-exception.filter';
+import { UserEntity } from '../src/common/auth/user.entity';
+import { DataScope } from '../src/common/iam/domain/data-scope';
+import { IamService } from '../src/common/iam/application/iam.service';
 
 interface LoginResponse {
   accessToken: string;
@@ -32,12 +37,14 @@ describe('首批业务模块集成流程', () => {
     process.env.OA_DATABASE_PATH = ':memory:';
     process.env.JWT_SECRET = 'test-secret';
     process.env.OA_DEMO_PASSWORD = 'Demo123!';
+    const { AppModule } = await import('../src/app.module');
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     app.useGlobalFilters(new ApiExceptionFilter());
     await app.init();
+    await seedGenericDocumentUser();
     server = app.getHttpServer() as Parameters<typeof request>[0];
     for (const username of [
       'applicant',
@@ -46,6 +53,7 @@ describe('首批业务模块集成流程', () => {
       'office',
       'procurement',
       'warehouse',
+      'generic',
     ]) {
       const response = await request(server)
         .post('/api/v1/auth/login')
@@ -61,6 +69,79 @@ describe('首批业务模块集成流程', () => {
     await app?.close();
   });
 
+  it('enforces functional permissions and exposes only a minimal user directory', async () => {
+    const applicantSession = await request(server)
+      .get('/api/v1/auth/me')
+      .auth(token('applicant'), { type: 'bearer' })
+      .expect(200);
+    expect(applicantSession.body.permissionCodes).toEqual(
+      expect.arrayContaining([
+        'CONTRACT_CREATE',
+        'CONTRACT_VIEW',
+        'SEAL_CREATE',
+        'SEAL_VIEW',
+        'SUPPLY_CREATE',
+        'SUPPLY_VIEW',
+      ]),
+    );
+
+    const deniedCreate = await request(server)
+      .post('/api/v1/contracts/requests')
+      .auth(token('manager'), { type: 'bearer' })
+      .send({})
+      .expect(403);
+    const deniedSealExecution = await request(server)
+      .post(`/api/v1/seals/use-requests/${crypto.randomUUID()}/execute`)
+      .auth(token('applicant'), { type: 'bearer' })
+      .send({})
+      .expect(403);
+    const deniedSupplyIssue = await request(server)
+      .post(`/api/v1/supplies/requisitions/${crypto.randomUUID()}/issue`)
+      .auth(token('applicant'), { type: 'bearer' })
+      .send({})
+      .expect(403);
+    const directory = await request(server)
+      .get('/api/v1/auth/users')
+      .auth(token('applicant'), { type: 'bearer' })
+      .expect(200);
+
+    expect(deniedCreate.body.code).toBe('PERMISSION_DENIED');
+    expect(deniedSealExecution.body.code).toBe('PERMISSION_DENIED');
+    expect(deniedSupplyIssue.body.code).toBe('PERMISSION_DENIED');
+    expect(directory.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'user-applicant',
+          displayName: '业务申请人',
+          departmentId: 'dept-business',
+          departmentName: '业务部',
+        }),
+      ]),
+    );
+    expect(directory.body[0]).not.toHaveProperty('permissionCodes');
+    expect(directory.body[0]).not.toHaveProperty('roleCodes');
+    expect(directory.body[0]).not.toHaveProperty('memberships');
+  });
+
+  it('does not let generic document permissions open every business package', async () => {
+    const deniedRequests = await Promise.all([
+      request(server)
+        .post('/api/v1/contracts/requests')
+        .auth(token('generic'), { type: 'bearer' })
+        .send({}),
+      request(server).get('/api/v1/seals/assets').auth(token('generic'), { type: 'bearer' }),
+      request(server).get('/api/v1/supplies/items').auth(token('generic'), { type: 'bearer' }),
+    ]);
+
+    for (const response of deniedRequests) {
+      expect(response.status).toBe(403);
+      expect(response.body.code).toBe('PERMISSION_DENIED');
+      expect(response.body.details.required).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^(CONTRACT|SEAL|SUPPLY)_(CREATE|VIEW)$/)]),
+      );
+    }
+  });
+
   it('supports contract request return, resubmit, contract approval, and payment guard', async () => {
     const requestDocument = await post<Envelope<CreatedDocument>>(
       'applicant',
@@ -73,6 +154,23 @@ describe('首批业务模块集成流程', () => {
         attachments: [],
       },
     );
+    const prematureContract = await request(server)
+      .post('/api/v1/contracts')
+      .auth(token('applicant'), { type: 'bearer' })
+      .send({
+        requestId: requestDocument.data.id,
+        signingDepartmentId: 'dept-business',
+        signingDate: '2026-07-11',
+        name: '未审批请示关联测试',
+        amountCents: 500000,
+        counterpartyFullName: '上海示例维保有限公司',
+        contentReason: '验证未通过请示不能发起合同',
+        needsSeal: false,
+        attachments: [],
+      })
+      .expect(422);
+    expect(prematureContract.body.code).toBe('CONTRACT_REQUEST_NOT_APPROVED');
+
     await submit('applicant', requestDocument.data.id);
     let task = await firstTask('manager');
     await request(server)
@@ -133,6 +231,43 @@ describe('首批业务模块集成流程', () => {
       })
       .expect(422);
     expect(overflow.body.code).toBe('INSUFFICIENT_AMOUNT');
+
+    const payment = await post<
+      Envelope<{
+        contractSigningDate: string;
+        contractAmountCents: number;
+        counterpartyFullName: string;
+      }>
+    >('applicant', '/contracts/payments', {
+      contractId: contract.data.id,
+      project: '合同快照可信校验',
+      contractStartDate: '2026-07-11',
+      contractEndDate: '2027-07-10',
+      contractSigningDate: '2000-01-01',
+      contractAmountCents: 1,
+      budgetAmountCents: 500000,
+      budgetExecutedCents: 0,
+      accountingSubject: '维修费',
+      maintenanceEstimateCents: 0,
+      counterpartyFullName: '伪造乙方',
+      plannedPaymentCount: 2,
+      paymentSequence: 1,
+      executedAmountCents: 0,
+      plannedProgress: '50%',
+      actualProgress: '50%',
+      paymentMethod: 'CHEQUE',
+      paymentReason: '首付款',
+      invoiceNumber: 'FP002',
+      warrantyStartDate: '2026-07-11',
+      warrantyEndDate: '2027-07-10',
+      paymentAmountCents: 100000,
+      attachments: [],
+    });
+    expect(payment.data).toMatchObject({
+      contractSigningDate: '2026-07-11',
+      contractAmountCents: 500000,
+      counterpartyFullName: '上海示例维保有限公司',
+    });
   });
 
   it('supports seal borrow approval, checkout, return, and date validation', async () => {
@@ -239,6 +374,34 @@ describe('首批业务模块集成流程', () => {
       .send(body)
       .expect(201);
     return response.body as T;
+  }
+
+  async function seedGenericDocumentUser(): Promise<void> {
+    const users = app.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
+    const iam = app.get(IamService);
+    await users.save({
+      id: 'user-generic-document',
+      username: 'generic',
+      displayName: '通用单据用户',
+      passwordHash: await hash('Demo123!'),
+      departmentId: 'dept-business',
+      roleCodes: [],
+      active: true,
+    });
+    const role =
+      (await iam.listRoles()).find((item) => item.code === 'GENERIC_DOCUMENT_USER') ??
+      (await iam.createRole({ code: 'GENERIC_DOCUMENT_USER', name: '通用单据用户' }));
+    const permissions = await iam.listPermissions();
+    await iam.updateRolePermissions(
+      role.id,
+      permissions
+        .filter((item) => ['DOCUMENT_CREATE', 'DOCUMENT_VIEW'].includes(item.code))
+        .map((item) => item.id),
+    );
+    await iam.updateUserAssignments('user-generic-document', {
+      memberships: [{ departmentId: 'dept-business', isPrimary: true }],
+      roles: [{ roleId: role.id, dataScope: DataScope.SELF }],
+    });
   }
 
   async function submit(username: string, documentId: string): Promise<void> {

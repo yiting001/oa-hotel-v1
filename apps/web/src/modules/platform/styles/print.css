@@ -1,0 +1,51 @@
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body,
+  #app {
+    width: 210mm;
+    min-width: 210mm;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+  }
+
+  /* Keep designer print isolation from hiding business document print routes. */
+  .form-page * {
+    visibility: hidden !important;
+  }
+
+  .form-page .form-canvas-workspace {
+    display: block !important;
+  }
+
+  .form-page .a4-sheet,
+  .form-page .a4-sheet * {
+    visibility: visible !important;
+  }
+
+  .form-page .a4-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .form-page .a4-grid__field {
+    break-inside: avoid;
+    outline: 0 !important;
+  }
+
+  .form-page .a4-sheet__footer {
+    break-inside: avoid;
+  }
+}

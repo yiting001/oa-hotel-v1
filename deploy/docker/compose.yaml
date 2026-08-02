@@ -1,0 +1,52 @@
+services:
+  api:
+    image: oa-hotel-api:${OA_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: api
+      args:
+        OA_NPM_REGISTRY: ${OA_NPM_REGISTRY:-https://registry.npmjs.org/}
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      OA_DATABASE_PATH: /app/data/oa.sqlite
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be configured in deploy/docker/.env}
+    volumes:
+      - ${OA_DATA_DIR:?OA_DATA_DIR must be configured}:/app/data:Z
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
+
+  web:
+    image: oa-hotel-web:${OA_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: web
+      args:
+        OA_NPM_REGISTRY: ${OA_NPM_REGISTRY:-https://registry.npmjs.org/}
+        VITE_OA_TIME_ZONE: ${VITE_OA_TIME_ZONE:-Asia/Shanghai}
+        VITE_OA_COMPANY_NAME: ${VITE_OA_COMPANY_NAME:-东方饭店}
+        VITE_OA_PRODUCT_NAME: ${VITE_OA_PRODUCT_NAME:-企业协同办公}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${OA_HTTP_PORT:-8080}:80
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'

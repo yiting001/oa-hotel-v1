@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post } from '@nestjs/common';
 import type { SessionUser } from '@oa/contracts';
 import { CurrentUser } from '../../auth/current-user.decorator';
+import { RequirePermissions } from '../../auth/required-permissions.decorator';
 import { DocumentWorkflowService } from '../application/document-workflow.service';
 import { CompleteTaskDto, SubmitDocumentDto } from './workflow-command.dto';
 
@@ -21,11 +22,12 @@ export class WorkflowController {
   }
 
   @Get('documents/:id/history')
-  history(@Param('id') documentId: string) {
-    return this.workflow.history(documentId);
+  history(@Param('id') documentId: string, @CurrentUser() user: SessionUser) {
+    return this.workflow.history(documentId, user);
   }
 
   @Post('documents/:id/submit')
+  @RequirePermissions('DOCUMENT_CREATE')
   submit(
     @Param('id') documentId: string,
     @Body() dto: SubmitDocumentDto,
@@ -35,6 +37,7 @@ export class WorkflowController {
   }
 
   @Post('tasks/:id/approve')
+  @RequirePermissions('WORKFLOW_APPROVE')
   approve(
     @Param('id') taskId: string,
     @Body() dto: CompleteTaskDto,
@@ -44,6 +47,7 @@ export class WorkflowController {
   }
 
   @Post('tasks/:id/return')
+  @RequirePermissions('WORKFLOW_APPROVE')
   returnTask(
     @Param('id') taskId: string,
     @Body() dto: CompleteTaskDto,

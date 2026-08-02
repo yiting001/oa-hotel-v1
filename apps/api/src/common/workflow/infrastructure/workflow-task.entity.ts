@@ -12,6 +12,15 @@ export class WorkflowTaskEntity {
   @Column('integer')
   stepIndex!: number;
 
+  @Column('text', { nullable: true })
+  processNodeId!: string | null;
+
+  @Column('text', { default: 'ROLE' })
+  assigneeType!: 'APPLICANT_DEPARTMENT_MANAGER' | 'ROLE' | 'USER';
+
+  @Column('text', { nullable: true })
+  assigneeValue!: string | null;
+
   @Index()
   @Column('text')
   assigneeRole!: string;

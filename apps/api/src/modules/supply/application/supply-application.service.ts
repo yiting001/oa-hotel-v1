@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { createDocumentNumber } from '../../../common/domain/document-number';
 import { Quantity } from '../../../common/domain/quantity';
 import { DomainError } from '../../../common/errors/domain-error';
+import { IamService } from '../../../common/iam/application/iam.service';
 import { DocumentWorkflowService } from '../../../common/workflow/application/document-workflow.service';
 import { calculatePurchaseTotals } from '../domain/material-purchase';
 import { SUPPLY_REPOSITORY, type SupplyRepository } from '../domain/supply.repository';
@@ -21,6 +22,8 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
     private readonly repository: SupplyRepository,
     @Inject(DocumentWorkflowService)
     private readonly workflow: DocumentWorkflowService,
+    @Inject(IamService)
+    private readonly iam: IamService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -66,7 +69,13 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
       if (!current) {
         throw new NotFoundException('物资申购单不存在');
       }
-      return this.withIndex(await this.repository.savePurchase({ ...current, ...fields }));
+      const saved = await this.repository.savePurchase({ ...current, ...fields });
+      await this.workflow.updateDraftTitle(
+        id,
+        `物资申购：${dto.items[0].name}等${dto.items.length}项`,
+        user,
+      );
+      return this.withIndex(saved);
     }
     const documentId = randomUUID();
     const saved = await this.repository.savePurchase({
@@ -95,15 +104,19 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
       if (!current) {
         throw new NotFoundException('领用申请单不存在');
       }
-      return this.withIndex(
-        await this.repository.saveRequisition({
-          ...current,
-          applicationDate: dto.applicationDate,
-          contactUserId: dto.contactUserId,
-          items,
-          attachments: dto.attachments,
-        }),
+      const saved = await this.repository.saveRequisition({
+        ...current,
+        applicationDate: dto.applicationDate,
+        contactUserId: dto.contactUserId,
+        items,
+        attachments: dto.attachments,
+      });
+      await this.workflow.updateDraftTitle(
+        id,
+        `物资领用：${items[0].name}等${items.length}项`,
+        user,
       );
+      return this.withIndex(saved);
     }
     const documentId = randomUUID();
     const saved = await this.repository.saveRequisition({
@@ -131,12 +144,18 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
   }
 
   async issue(id: string, dto: IssueRequisitionDto, user: SessionUser) {
-    if (!user.roleCodes.includes('WAREHOUSE_MANAGER')) {
-      throw new DomainError('WAREHOUSE_MANAGER_REQUIRED', '只有仓库管理员可以登记实发');
-    }
     const requisition = await this.repository.findRequisition(id);
     if (!requisition) {
       throw new NotFoundException('领用申请单不存在');
+    }
+    const canIssue = await this.iam.canAccessResource(
+      user.id,
+      'SUPPLY_ISSUE',
+      requisition.applicantId,
+      requisition.departmentId,
+    );
+    if (!canIssue) {
+      throw new DomainError('SUPPLY_DATA_SCOPE_DENIED', '当前用户不能登记该领用单实发');
     }
     const document = await this.workflow.getDocument(id);
     if (document.status !== 'APPROVED') {
@@ -163,7 +182,8 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
     );
   }
 
-  async getPurchase(id: string) {
+  async getPurchase(id: string, user: SessionUser) {
+    await this.workflow.getViewableDocument(id, user);
     const entity = await this.repository.findPurchase(id);
     if (!entity) {
       throw new NotFoundException('物资申购单不存在');
@@ -171,7 +191,8 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
     return this.withIndex(entity);
   }
 
-  async getRequisition(id: string) {
+  async getRequisition(id: string, user: SessionUser) {
+    await this.workflow.getViewableDocument(id, user);
     const entity = await this.repository.findRequisition(id);
     if (!entity) {
       throw new NotFoundException('领用申请单不存在');
@@ -209,7 +230,7 @@ export class SupplyApplicationService implements OnApplicationBootstrap {
     return {
       data: entity,
       document: await this.workflow.getDocument(entity.id),
-      opinions: await this.workflow.history(entity.id),
+      opinions: await this.workflow.readOpinions(entity.id),
     };
   }
 }

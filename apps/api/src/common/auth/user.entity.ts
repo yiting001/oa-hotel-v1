@@ -23,4 +23,13 @@ export class UserEntity {
 
   @Column('boolean', { default: true })
   active!: boolean;
+
+  @Column('boolean', { default: false })
+  passwordChangeRequired?: boolean;
+
+  @Column('datetime', { nullable: true })
+  passwordChangedAt?: Date | null;
+
+  @Column('integer', { default: 0 })
+  credentialVersion?: number;
 }

@@ -4,7 +4,11 @@ import { AppController } from './app.controller';
 import { AuthModule } from './common/auth/auth.module';
 import { createDatabaseOptions } from './common/database/database-options';
 import { WorkflowModule } from './common/workflow/workflow.module';
+import { WorkbenchModule } from './common/workbench/workbench.module';
+import { FormDesignModule } from './common/form-design/form-design.module';
+import { ProcessDesignModule } from './common/process-design/process-design.module';
 import { ContractModule } from './modules/contract/contract.module';
+import { PortalModule } from './modules/portal/portal.module';
 import { SealModule } from './modules/seal/seal.module';
 import { SupplyModule } from './modules/supply/supply.module';
 
@@ -12,7 +16,11 @@ import { SupplyModule } from './modules/supply/supply.module';
   imports: [
     TypeOrmModule.forRoot(createDatabaseOptions()),
     AuthModule,
+    FormDesignModule,
+    ProcessDesignModule,
     WorkflowModule,
+    WorkbenchModule,
+    PortalModule,
     ContractModule,
     SealModule,
     SupplyModule,

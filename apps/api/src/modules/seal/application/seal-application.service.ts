@@ -3,8 +3,9 @@ import type { SessionUser } from '@oa/contracts';
 import { randomUUID } from 'node:crypto';
 import { createDocumentNumber } from '../../../common/domain/document-number';
 import { DomainError } from '../../../common/errors/domain-error';
+import { IamService } from '../../../common/iam/application/iam.service';
 import { DocumentWorkflowService } from '../../../common/workflow/application/document-workflow.service';
-import { requireSealManager, validateBorrowPeriod } from '../domain/seal-request';
+import { validateBorrowPeriod } from '../domain/seal-request';
 import { SEAL_REPOSITORY, type SealRepository } from '../domain/seal.repository';
 import type {
   SealBorrowDto,
@@ -21,6 +22,8 @@ export class SealApplicationService implements OnApplicationBootstrap {
     private readonly repository: SealRepository,
     @Inject(DocumentWorkflowService)
     private readonly workflow: DocumentWorkflowService,
+    @Inject(IamService)
+    private readonly iam: IamService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -65,6 +68,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
         throw new NotFoundException('外借申请不存在');
       }
       const saved = await this.repository.saveBorrow({ ...current, ...dto });
+      await this.workflow.updateDraftTitle(id, `印章证照外借：${dto.destination}`, user);
       return this.withIndex(saved);
     }
     const documentId = randomUUID();
@@ -102,6 +106,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
         throw new NotFoundException('用印申请不存在');
       }
       const saved = await this.repository.saveUse({ ...current, ...dto });
+      await this.workflow.updateDraftTitle(id, `印章证照使用：${dto.purpose}`, user);
       return this.withIndex(saved);
     }
     const documentId = randomUUID();
@@ -130,8 +135,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async checkout(id: string, dto: SealCheckoutDto, user: SessionUser) {
-    requireSealManager(user.roleCodes);
-    const request = await this.getApprovedBorrow(id);
+    const request = await this.getApprovedBorrow(id, user);
     if (request.executionStatus !== 'NOT_CHECKED_OUT') {
       throw new DomainError('SEAL_ALREADY_CHECKED_OUT', '该申请已完成领用登记');
     }
@@ -143,8 +147,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async returnBorrow(id: string, dto: SealReturnDto, user: SessionUser) {
-    requireSealManager(user.roleCodes);
-    const request = await this.getApprovedBorrow(id);
+    const request = await this.getApprovedBorrow(id, user);
     if (request.executionStatus !== 'CHECKED_OUT') {
       throw new DomainError('SEAL_NOT_CHECKED_OUT', '该申请尚未领用或已归还');
     }
@@ -157,11 +160,11 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async executeUse(id: string, dto: SealExecuteDto, user: SessionUser) {
-    requireSealManager(user.roleCodes);
     const request = await this.repository.findUse(id);
     if (!request) {
       throw new NotFoundException('用印申请不存在');
     }
+    await this.assertExecutionAccess(user, request.applicantId, request.departmentId);
     const document = await this.workflow.getDocument(id);
     if (document.status !== 'APPROVED') {
       throw new DomainError('DOCUMENT_NOT_APPROVED', '审批完成后才能登记用印');
@@ -173,7 +176,8 @@ export class SealApplicationService implements OnApplicationBootstrap {
     return this.withIndex(await this.repository.saveUse(request));
   }
 
-  async getBorrow(id: string) {
+  async getBorrow(id: string, user: SessionUser) {
+    await this.workflow.getViewableDocument(id, user);
     const request = await this.repository.findBorrow(id);
     if (!request) {
       throw new NotFoundException('外借申请不存在');
@@ -181,7 +185,8 @@ export class SealApplicationService implements OnApplicationBootstrap {
     return this.withIndex(request);
   }
 
-  async getUse(id: string) {
+  async getUse(id: string, user: SessionUser) {
+    await this.workflow.getViewableDocument(id, user);
     const request = await this.repository.findUse(id);
     if (!request) {
       throw new NotFoundException('用印申请不存在');
@@ -189,16 +194,33 @@ export class SealApplicationService implements OnApplicationBootstrap {
     return this.withIndex(request);
   }
 
-  private async getApprovedBorrow(id: string) {
+  private async getApprovedBorrow(id: string, user: SessionUser) {
     const request = await this.repository.findBorrow(id);
     if (!request) {
       throw new NotFoundException('外借申请不存在');
     }
+    await this.assertExecutionAccess(user, request.applicantId, request.departmentId);
     const document = await this.workflow.getDocument(id);
     if (document.status !== 'APPROVED') {
       throw new DomainError('DOCUMENT_NOT_APPROVED', '审批完成后才能登记外借');
     }
     return request;
+  }
+
+  private async assertExecutionAccess(
+    user: SessionUser,
+    ownerUserId: string,
+    departmentId: string,
+  ): Promise<void> {
+    const canExecute = await this.iam.canAccessResource(
+      user.id,
+      'SEAL_EXECUTE',
+      ownerUserId,
+      departmentId,
+    );
+    if (!canExecute) {
+      throw new DomainError('SEAL_DATA_SCOPE_DENIED', '当前用户不能登记该用印业务');
+    }
   }
 
   private async ensureAssets(ids: string[]): Promise<void> {
@@ -212,7 +234,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
     return {
       data: entity,
       document: await this.workflow.getDocument(entity.id),
-      opinions: await this.workflow.history(entity.id),
+      opinions: await this.workflow.readOpinions(entity.id),
     };
   }
 }

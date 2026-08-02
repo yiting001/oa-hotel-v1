@@ -9,10 +9,18 @@ import { DepartmentEntity } from './department.entity';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { UserEntity } from './user.entity';
+import { IamModule } from '../iam/iam.module';
+import { PermissionGuard } from './permission.guard';
+import { PasswordChangeRequiredGuard } from './password-change-required.guard';
+import { LoginAttemptLimiter } from './login-attempt-limiter.service';
+import { LoginPasswordVerifier } from './login-password-verifier.service';
+import { LoginAttemptStateEntity } from './login-attempt-state.entity';
+import { LoginAttemptStateRepository } from './login-attempt-state.repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity, DepartmentEntity]),
+    TypeOrmModule.forFeature([UserEntity, DepartmentEntity, LoginAttemptStateEntity]),
+    IamModule,
     PassportModule,
     JwtModule.register({
       secret: AuthService.jwtSecret,
@@ -22,10 +30,21 @@ import { UserEntity } from './user.entity';
   controllers: [AuthController],
   providers: [
     AuthService,
+    LoginAttemptLimiter,
+    LoginAttemptStateRepository,
+    LoginPasswordVerifier,
     JwtStrategy,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PasswordChangeRequiredGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
     },
   ],
   exports: [AuthService],

@@ -1,63 +1,12 @@
-:root {
-  color: #172033;
-  background: #f5f7fb;
-  font-family:
-    Inter,
-    'PingFang SC',
-    'Microsoft YaHei',
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-.page-card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(21, 35, 72, 0.08);
-  padding: 24px;
-}
-
-.responsive-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.full {
-  grid-column: 1 / -1;
-}
-
-.bottom-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-@media (max-width: 767px) {
-  .responsive-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .page-card {
-    border-radius: 0;
-    box-shadow: none;
-    padding: 16px;
-  }
-
-  .bottom-actions {
-    position: sticky;
-    bottom: 0;
-    background: #fff;
-    padding: 12px 0;
-  }
-}
+@import './styles/foundation.css';
+@import './styles/shell.css';
+@import './styles/workspace.css';
+@import './styles/forms.css';
+@import './styles/utility-pages.css';
+@import './styles/responsive.css';
+@import './modules/portal/styles/portal.css';
+@import './modules/portal/styles/portal-drawers.css';
+@import './modules/portal/styles/portal-admin.css';
+@import './modules/workbench/styles/workbench.css';
+@import './modules/workbench/styles/process-start.css';
+@import './styles/portal-workbench-responsive.css';

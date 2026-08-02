@@ -1,13 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { credentialPolicy } from './credential-policy';
 
 export class LoginDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(credentialPolicy.usernameMaxLength)
   username!: string;
 
   @ApiProperty()
   @IsString()
-  @MinLength(8)
+  @IsNotEmpty()
+  @MaxLength(credentialPolicy.loginPasswordMaxLength)
   password!: string;
 }

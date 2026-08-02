@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { IamModule } from '../../common/iam/iam.module';
 import { WorkflowModule } from '../../common/workflow/workflow.module';
 import { SupplyApplicationService } from './application/supply-application.service';
 import { SUPPLY_REPOSITORY } from './domain/supply.repository';
@@ -11,6 +12,7 @@ import { SupplyController } from './presentation/supply.controller';
 
 @Module({
   imports: [
+    IamModule,
     WorkflowModule,
     TypeOrmModule.forFeature([
       MaterialItemEntity,

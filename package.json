@@ -12,8 +12,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
-    "test": "npm run test -w @oa/contracts && npm run test -w @oa/api && npm run test -w @oa/web",
+    "package:production": "node scripts/assert-node-version.mjs && npm run build:bundle -w @oa/api && npm run build -w @oa/web && node scripts/build-production-package.mjs",
+    "smoke:production": "node scripts/smoke-production-package.mjs",
+    "test": "npm run build -w @oa/contracts && npm run test -w @oa/contracts && npm run test -w @oa/api && npm run test -w @oa/web",
     "test:e2e": "playwright test",
+    "verify:production": "npm run package:production && npm run smoke:production",
     "typecheck": "npm run build -w @oa/contracts && npm run typecheck -w @oa/api && npm run typecheck -w @oa/web"
   },
   "devDependencies": {

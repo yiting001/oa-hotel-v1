@@ -1,0 +1,114 @@
+.portal-category-list {
+  min-height: 240px;
+}
+
+.portal-category-list > button {
+  display: flex;
+  width: 100%;
+  min-height: 92px;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 4px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+}
+
+.portal-category-list > button > span:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.portal-category-list strong,
+.portal-category-list p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-category-list small {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.portal-category-list p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.portal-category-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.portal-content-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.portal-content-detail__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.portal-content-detail h1 {
+  margin: 18px 0 8px;
+  font-size: 26px;
+  line-height: 1.4;
+}
+
+.portal-content-detail__summary {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  color: #465464;
+  background: #f2f5f7;
+  border-left: 3px solid var(--color-primary);
+  line-height: 1.7;
+}
+
+.portal-content-detail__body {
+  white-space: pre-wrap;
+  line-height: 1.9;
+}
+
+.portal-content-detail__attachments {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.portal-content-detail__attachments > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+@media (max-width: 767px) {
+  .portal-category-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .portal-category-pagination .el-pagination {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}

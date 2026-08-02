@@ -72,6 +72,8 @@ stateDiagram-v2
 
 ## 权限矩阵
 
+查看要求 `DOCUMENT_VIEW + SUPPLY_VIEW`，创建、修改和提交要求 `DOCUMENT_CREATE + SUPPLY_CREATE`，实发登记额外要求 `SUPPLY_ISSUE` 并按其数据范围校验目标领用单。
+
 | 动作      | 申请人 | 部门总监 | 采购     | 财务     | 仓库     |
 | --------- | ------ | -------- | -------- | -------- | -------- |
 | 创建/提交 | 本人   | 否       | 否       | 否       | 否       |
@@ -92,7 +94,7 @@ stateDiagram-v2
 
 ## 数据迁移
 
-`InitialSchema` 创建 `material_items`、`material_purchase_requests`、`material_requisitions`。开发种子包含 A4 纸和中性笔库存。
+`InitialSchema` 创建 `material_items`、`material_purchase_requests`、`material_requisitions`；`BusinessModulePermissions1784100000000` 幂等初始化物资模块权限。开发种子包含 A4 纸和中性笔库存。
 
 ## 测试说明
 
@@ -102,7 +104,7 @@ stateDiagram-v2
 
 ## PC/手机 UI 验收
 
-PC 展示库存表和申购/领用双栏；手机单列显示，明细字段不隐藏。
+PC 使用物资目录/本人单据工作台、独立申购/领用制单页和实发登记页；手机将动态明细转为纵向卡片，字段不隐藏。详细实现与缺口见 [物资申购领用企业级前端模块](supply-enterprise-ui.md)。
 
 ## 打印和归档
 

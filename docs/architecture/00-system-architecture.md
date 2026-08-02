@@ -10,9 +10,9 @@
 | Web | Vue 3 + Vite + TypeScript |
 | 状态管理 | Pinia |
 | 路由 | Vue Router |
-| UI | Ant Design Vue 或同等级企业组件库 + 自定义设计令牌 |
+| UI | Element Plus（新平台标准）+ 存量 Ant Design Vue 渐进迁移 + 自定义设计令牌 |
 | 图表 | ECharts |
-| 工作流画布 | LogicFlow，首期可先用结构化编辑器 |
+| 工作流画布 | Vue Flow；发布时转换并校验为运行时定义 |
 | API 契约 | OpenAPI 生成前端客户端与类型 |
 | 测试 | Vitest、Nest testing、Playwright |
 
@@ -116,7 +116,7 @@ flowchart LR
 
 禁止在条件表达式中执行任意 JavaScript。条件应存为结构化 JSON AST，只允许白名单字段、比较符和逻辑运算。
 
-可视化设计器使用 LogicFlow：画布模型只负责节点位置、连线和编辑交互，发布时转换并校验为工作流内核的领域定义。运行引擎不直接依赖 LogicFlow 数据结构，避免前端画布库绑定后端领域模型。
+可视化设计器使用 Vue Flow：画布模型只负责节点位置、连线和编辑交互，发布时转换并校验为工作流内核的领域定义。运行引擎通过已发布版本解析节点，不直接依赖 Vue Flow 运行时，避免前端画布库绑定后端领域模型。
 
 ## 6. 表单平台
 

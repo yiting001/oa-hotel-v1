@@ -84,6 +84,8 @@ stateDiagram-v2
 
 ## 权限矩阵
 
+接口权限采用双层校验：查看要求 `DOCUMENT_VIEW + CONTRACT_VIEW`，创建、修改和提交要求 `DOCUMENT_CREATE + CONTRACT_CREATE`。流程参与关系及 `CONTRACT_VIEW` / `CONTRACT_CREATE` 数据范围继续作为资源级二次校验。
+
 | 动作          | 申请人   | 部门总监 | 财务审核 | 办公室   |
 | ------------- | -------- | -------- | -------- | -------- |
 | 创建/修改草稿 | 本人     | 否       | 否       | 否       |
@@ -107,7 +109,7 @@ stateDiagram-v2
 
 ## 数据迁移
 
-`InitialSchema` 创建 `contract_requests`、`contracts`、`contract_payments` 以及共享工作流表。SQLite 启用外键和 WAL。
+`InitialSchema` 创建 `contract_requests`、`contracts`、`contract_payments` 以及共享工作流表；`BusinessModulePermissions1784100000000` 幂等初始化合同模块权限。SQLite 启用外键和 WAL。
 
 ## 测试说明
 
@@ -117,8 +119,9 @@ stateDiagram-v2
 
 ## PC/手机 UI 验收
 
-- PC：请示、合同、付款三卡片布局；审批侧栏通过工作台待办处理。
-- 手机：单列卡片，底部操作按钮保持可触达；字段不因响应式布局丢失。
+- PC：合同单据列表、三类独立制单页、统一详情页和审批工作台；表单主体与流程侧栏分区展示。
+- 手机：筛选和单据切换为单列，制单字段与桌面端一致，底部操作保持可触达。
+- 详细实现与缺口见 [合同与支出模块企业级 UI](contract-enterprise-ui.md)。
 
 ## 打印和归档
 

@@ -18,6 +18,24 @@ export class WorkflowOpinionEntity {
   @Column('text')
   actorName!: string;
 
+  @Column('text', { nullable: true })
+  actorDepartmentId!: string | null;
+
+  @Column('text', { nullable: true })
+  actorDepartmentName!: string | null;
+
+  @Column('text', { nullable: true })
+  actorPositionId!: string | null;
+
+  @Column('text', { nullable: true })
+  actorPositionName!: string | null;
+
+  @Column('text', { nullable: true })
+  processNodeId!: string | null;
+
+  @Column('text', { nullable: true })
+  processNodeName!: string | null;
+
   @Column('text')
   action!: string;
 

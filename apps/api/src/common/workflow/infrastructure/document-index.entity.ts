@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import type { BusinessModule } from '@oa/contracts';
 
 @Entity('document_indexes')
 export class DocumentIndexEntity {
@@ -11,7 +12,7 @@ export class DocumentIndexEntity {
 
   @Index()
   @Column('text')
-  module!: string;
+  module!: BusinessModule;
 
   @Column('text')
   title!: string;
@@ -36,6 +37,12 @@ export class DocumentIndexEntity {
 
   @Column('text')
   workflowCode!: string;
+
+  @Column('text', { nullable: true })
+  processVersionId!: string | null;
+
+  @Column('text', { nullable: true })
+  formVersionId!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

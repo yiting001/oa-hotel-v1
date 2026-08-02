@@ -1,0 +1,84 @@
+.portal-calendar-panel__controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.portal-calendar-weekdays,
+.portal-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.portal-calendar-weekdays span {
+  padding: 3px 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-align: center;
+}
+
+.portal-calendar-grid button {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  height: 30px;
+  place-items: center;
+  color: #a0a8b1;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.portal-calendar-grid button.is-current {
+  color: var(--color-text);
+}
+
+.portal-calendar-grid button.is-selected {
+  color: #fff;
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+.portal-calendar-grid button i {
+  position: absolute;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  background: #d13c3c;
+  border-radius: 50%;
+}
+
+.portal-calendar-agenda {
+  min-height: 56px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.portal-calendar-agenda article {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.portal-calendar-agenda article span,
+.portal-calendar-agenda article small {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.portal-calendar-agenda article small {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.portal-calendar-agenda .el-empty {
+  padding: 4px 0 0;
+}
+
+.portal-calendar-agenda .el-empty__description {
+  margin-top: 4px;
+}

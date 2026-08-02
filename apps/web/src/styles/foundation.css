@@ -1,0 +1,66 @@
+:root {
+  --color-primary: #0d7069;
+  --color-primary-strong: #075650;
+  --color-sidebar: #20282d;
+  --color-sidebar-active: #0f615b;
+  --color-surface: #ffffff;
+  --color-canvas: #f3f6f8;
+  --color-border: #d9e0e7;
+  --color-border-strong: #c3ced8;
+  --color-text: #182230;
+  --color-text-secondary: #5b6877;
+  --color-success: #27864d;
+  --color-warning: #b46a13;
+  --color-danger: #c23a3a;
+  --shadow-panel: 0 4px 16px rgba(29, 44, 63, 0.06);
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-rgb: 13, 112, 105;
+  --el-color-primary-dark-2: #0a5a54;
+  --el-color-primary-light-3: #569b96;
+  --el-color-primary-light-5: #86b8b4;
+  --el-color-primary-light-7: #b6d4d2;
+  --el-color-primary-light-8: #cfe2e1;
+  --el-color-primary-light-9: #e7f1f0;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  font-family:
+    Inter,
+    'PingFang SC',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-synthesis: none;
+  letter-spacing: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  background: var(--color-canvas);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 3px solid rgba(13, 112, 105, 0.28);
+  outline-offset: 2px;
+}

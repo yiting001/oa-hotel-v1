@@ -1,0 +1,356 @@
+.personal-workbench-page {
+  min-width: 0;
+  color: var(--color-text);
+  letter-spacing: 0;
+}
+
+.workbench-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.workbench-page-header > div:first-child > span {
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workbench-page-header h1 {
+  margin: 3px 0 0;
+  font-size: 24px;
+}
+
+.workbench-page-header p {
+  margin: 5px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.workbench-page-header > div:last-child {
+  display: flex;
+  gap: 9px;
+}
+
+.workbench-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-bottom: 16px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.workbench-surface {
+  padding: 16px 18px 8px;
+}
+
+.workbench-filter-bar {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.workbench-filter-controls {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(240px, 1.8fr) repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.workbench-filter-controls > .el-input {
+  width: 100%;
+}
+
+.workbench-filter-controls > .el-select {
+  width: 100%;
+}
+
+.workbench-filter-controls > .el-date-editor {
+  width: 100%;
+  min-width: 230px;
+}
+
+.workbench-filter-controls.is-stacked {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.workbench-filter-controls.is-stacked > * {
+  width: 100%;
+}
+
+.workbench-mobile-filter {
+  display: none;
+}
+
+.workbench-mobile-tab-select {
+  display: none;
+}
+
+.workbench-mobile-filter__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.workbench-tabs > .el-tabs__header {
+  margin-bottom: 10px;
+}
+
+.workbench-tabs .el-badge {
+  margin-left: 8px;
+}
+
+.workbench-batch-toolbar {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+}
+
+.workbench-batch-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-table-link {
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-table--mobile {
+  display: none;
+}
+
+.portal-card-list {
+  gap: 9px;
+}
+
+.portal-card-list > button {
+  display: flex;
+  width: 100%;
+  min-height: 92px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  padding: 13px;
+  color: inherit;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.workbench-task-card {
+  display: flex;
+  min-width: 0;
+  min-height: 92px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.workbench-task-card > .el-checkbox {
+  flex: 0 0 auto;
+  margin: 17px 0 0 13px;
+}
+
+.workbench-task-card__open {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.workbench-task-card__open > span {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workbench-task-card__open small {
+  color: var(--color-text-secondary);
+}
+
+.workbench-copy-state {
+  margin-left: 8px;
+}
+
+.portal-card-list > button > span {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.portal-card-list small {
+  color: var(--color-text-secondary);
+}
+
+.workbench-reading-list > button {
+  display: flex;
+  width: 100%;
+  min-height: 88px;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 4px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workbench-reading-list__marker {
+  margin-top: 8px;
+}
+
+.workbench-reading-list__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.workbench-reading-list__copy > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workbench-reading-list__copy p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-reading-list__copy small {
+  color: var(--color-text-secondary);
+}
+
+.workbench-task-detail > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.workbench-task-detail > header span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.workbench-task-detail h2 {
+  margin: 3px 0 0;
+  font-size: 22px;
+}
+
+.workbench-task-detail__header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.workbench-task-detail section {
+  margin-top: 24px;
+}
+
+.workbench-task-detail h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.workbench-task-detail__items {
+  margin-top: 12px;
+}
+
+.workbench-task-detail__attachments {
+  display: grid;
+  gap: 8px;
+}
+
+.workbench-task-detail__attachments span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 11px;
+  overflow-wrap: anywhere;
+  background: #f5f7f9;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.workbench-task-detail__version {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.workbench-task-detail .el-timeline-item__content {
+  display: grid;
+  gap: 3px;
+}
+
+.workbench-task-detail .el-timeline-item__content span,
+.workbench-task-detail .el-timeline-item__content p {
+  color: var(--color-text-secondary);
+}
+
+.workbench-task-detail .el-timeline-item__content p {
+  margin: 0;
+}
+
+.workbench-task-detail__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.workbench-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding-top: 8px;
+  color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border);
+  font-size: 12px;
+}

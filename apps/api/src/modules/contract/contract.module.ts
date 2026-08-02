@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { IamModule } from '../../common/iam/iam.module';
 import { WorkflowModule } from '../../common/workflow/workflow.module';
 import { ContractApplicationService } from './application/contract-application.service';
 import { CONTRACT_REPOSITORY } from './domain/contract.repository';
@@ -11,6 +12,7 @@ import { ContractController } from './presentation/contract.controller';
 
 @Module({
   imports: [
+    IamModule,
     WorkflowModule,
     TypeOrmModule.forFeature([ContractRequestEntity, ContractEntity, ContractPaymentEntity]),
   ],

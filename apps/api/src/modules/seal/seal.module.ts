@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { IamModule } from '../../common/iam/iam.module';
 import { WorkflowModule } from '../../common/workflow/workflow.module';
 import { SealApplicationService } from './application/seal-application.service';
 import { SEAL_REPOSITORY } from './domain/seal.repository';
@@ -11,6 +12,7 @@ import { SealController } from './presentation/seal.controller';
 
 @Module({
   imports: [
+    IamModule,
     WorkflowModule,
     TypeOrmModule.forFeature([SealAssetEntity, SealBorrowEntity, SealUseEntity]),
   ],

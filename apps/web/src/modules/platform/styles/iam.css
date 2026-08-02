@@ -1,0 +1,273 @@
+.iam-page {
+  container-name: iam-page;
+  container-type: inline-size;
+}
+
+.iam-split-panel,
+.iam-user-layout,
+.iam-role-layout {
+  display: grid;
+  min-height: 590px;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.iam-tree-panel,
+.iam-user-list,
+.iam-role-list {
+  min-width: 0;
+  padding: 18px;
+  background: #f8fafc;
+  border-right: 1px solid var(--platform-border);
+}
+
+.iam-tree-actions {
+  display: flex;
+  gap: 8px;
+  margin: 15px 0 12px;
+}
+
+.iam-tree-panel .el-tree {
+  background: transparent;
+}
+
+.iam-tree-panel .el-tree-node__content {
+  min-height: 38px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+}
+
+.iam-tree-node {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 8px;
+}
+
+.iam-detail-panel,
+.iam-user-editor,
+.iam-permission-editor {
+  min-width: 0;
+  padding: 22px 24px 28px;
+}
+
+.iam-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 18px 0 8px;
+  border: 1px solid var(--platform-border);
+  border-radius: 5px;
+}
+
+.iam-facts > div {
+  padding: 13px 16px;
+  border-right: 1px solid var(--platform-border);
+}
+
+.iam-facts > div:last-child {
+  border-right: 0;
+}
+
+.iam-facts dt {
+  margin-bottom: 5px;
+  color: var(--platform-muted);
+  font-size: 12px;
+}
+
+.iam-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.iam-user-list .el-input,
+.iam-permission-editor > .el-input {
+  margin: 14px 0;
+}
+
+.iam-user-list__items {
+  max-height: 510px;
+  overflow: auto;
+}
+
+.iam-user-list__items > button,
+.iam-role-list > button {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.iam-user-list__items > button:hover,
+.iam-role-list > button:hover {
+  background: #edf3f7;
+}
+
+.iam-user-list__items > button.is-active,
+.iam-role-list > button.is-active {
+  background: var(--platform-primary-soft);
+  border-color: #b9d2e8;
+}
+
+.iam-user-list__items > button > span:nth-child(2),
+.iam-role-list > button > span:first-child {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.iam-user-list__items small,
+.iam-role-list small {
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.iam-user-avatar {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  color: #fff;
+  background: #426b8e;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.iam-user-editor .el-table,
+.iam-detail-panel .el-table {
+  border: 1px solid var(--platform-border);
+}
+
+.iam-user-editor .el-select,
+.iam-user-editor .el-input {
+  width: 100%;
+}
+
+.iam-role-list .platform-panel-heading {
+  margin-bottom: 14px;
+}
+
+.permission-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.permission-group {
+  border: 1px solid var(--platform-border);
+  border-radius: 5px;
+}
+
+.permission-group > header {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #f6f8fa;
+  border-bottom: 1px solid var(--platform-border);
+}
+
+.permission-group > header > div,
+.permission-group__items .el-checkbox__label > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.permission-group > header small,
+.permission-group__items small {
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.permission-group__items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0;
+  padding: 4px 14px 10px;
+}
+
+.permission-group__items .el-checkbox {
+  min-height: 54px;
+  margin-right: 0;
+  padding: 6px 8px;
+}
+
+@media (max-width: 1100px) {
+  .permission-group__items {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+/* Keep the 582px assignment table visible beside the directory when space allows. */
+@container iam-page (max-width: 1023px) {
+  .iam-user-list {
+    padding: 16px;
+  }
+
+  .iam-user-editor {
+    padding: 18px 16px 24px;
+  }
+
+  .iam-user-list__items > button > span:nth-child(2) > strong,
+  .iam-user-list__items > button > span:nth-child(2) > small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@container iam-page (min-width: 840px) and (max-width: 1023px) {
+  .iam-user-layout {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+}
+
+@container iam-page (max-width: 839px) {
+  .iam-user-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .iam-user-list {
+    border-right: 0;
+    border-bottom: 1px solid var(--platform-border);
+  }
+
+  .iam-user-list__items {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 800px) {
+  .iam-split-panel,
+  .iam-role-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .iam-tree-panel,
+  .iam-role-list {
+    border-right: 0;
+    border-bottom: 1px solid var(--platform-border);
+  }
+
+  .iam-facts,
+  .permission-group__items {
+    grid-template-columns: 1fr;
+  }
+
+  .iam-facts > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--platform-border);
+  }
+}
