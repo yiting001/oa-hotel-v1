@@ -147,10 +147,18 @@ function buildLegacyModel(
             ['合同/协议对方单位全称', 'counterpartyFullName', 2],
             ['金额', 'amountCents'],
             ['需要用印', 'needsSeal'],
+            ['乙方联系人', 'counterpartyContact'],
+            ['联系电话', 'counterpartyPhone'],
+            ['付款方式', 'paymentMethod'],
+            ['合同有效期开始', 'validFrom'],
+            ['合同有效期结束', 'validTo'],
           ],
           references,
         ),
-        contentBlocks: [block('合同/协议内容及理由', display(data, 'contentReason'), 'large')],
+        contentBlocks: [
+          block('合同/协议内容及理由', display(data, 'contentReason'), 'large'),
+          block('备注', display(data, 'remark'), 'normal'),
+        ],
       };
     case 'CONTRACT_PAYMENT':
       return {
@@ -255,7 +263,7 @@ function createBaseModel(envelope: DocumentPrintEnvelope): BusinessDocumentPrint
     documentType: envelope.document.documentType,
     title: '',
     numberLabel: '单据编号',
-    number: stringValue(envelope.data.number),
+    number: envelope.document.documentNo ?? stringValue(envelope.data.number),
     fields: [],
     contentBlocks: [],
     table: null,

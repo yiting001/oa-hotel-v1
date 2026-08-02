@@ -57,9 +57,37 @@ export class ContractApprovalDto {
   @MaxLength(300)
   counterpartyFullName!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  counterpartyContact!: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  counterpartyPhone!: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentMethod!: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  validFrom!: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  validTo!: string | null;
+
   @IsString()
   @MaxLength(5000)
   contentReason!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  remark!: string | null;
 
   @IsBoolean()
   needsSeal!: boolean;

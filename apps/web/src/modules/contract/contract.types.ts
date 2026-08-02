@@ -26,7 +26,13 @@ export interface ContractApprovalData {
   name: string;
   amountCents: number;
   counterpartyFullName: string;
+  counterpartyContact: string | null;
+  counterpartyPhone: string | null;
+  paymentMethod: string | null;
+  validFrom: string | null;
+  validTo: string | null;
   contentReason: string;
+  remark: string | null;
   needsSeal: boolean;
   applicantId: string;
   attachments: string[];
@@ -40,7 +46,13 @@ export type ContractApprovalPayload = Pick<
   | 'name'
   | 'amountCents'
   | 'counterpartyFullName'
+  | 'counterpartyContact'
+  | 'counterpartyPhone'
+  | 'paymentMethod'
+  | 'validFrom'
+  | 'validTo'
   | 'contentReason'
+  | 'remark'
   | 'needsSeal'
   | 'attachments'
 >;
