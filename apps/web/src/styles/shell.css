@@ -125,8 +125,58 @@
   font-size: 17px;
 }
 
+.app-navigation-menu .el-sub-menu__title {
+  height: 42px;
+  margin: 3px 10px;
+  padding: 0 12px !important;
+  color: rgba(255, 255, 255, 0.82);
+  border-radius: 6px;
+  line-height: 42px;
+  font-weight: 600;
+}
+
+.app-navigation-menu .el-sub-menu__title:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-navigation-menu .el-sub-menu__title .el-icon {
+  color: inherit;
+  font-size: 17px;
+}
+
+.app-navigation-menu .el-sub-menu .el-menu {
+  background: transparent;
+}
+
+.app-navigation-menu .el-sub-menu .el-menu-item {
+  padding-left: 34px !important;
+}
+
+.app-navigation-menu .el-sub-menu.is-active > .el-sub-menu__title {
+  color: #fff;
+}
+
 .app-navigation-menu .el-menu--collapse {
   width: 72px;
+}
+
+.app-navigation-popup .el-menu {
+  background: #1f2733;
+}
+
+.app-navigation-popup .el-menu-item {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.app-navigation-popup .el-menu-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-navigation-popup .el-menu-item.is-active {
+  color: #fff;
+  background: var(--color-sidebar-active);
 }
 
 .app-navigation-menu .el-menu--collapse .el-menu-item {

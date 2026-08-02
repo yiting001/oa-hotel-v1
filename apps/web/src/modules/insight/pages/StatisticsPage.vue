@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ReloadOutlined } from '@ant-design/icons-vue';
+import type { EChartsOption } from 'echarts';
 import { message } from 'ant-design-vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { apiRequest } from '../../../shared/api';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
+import EChart from '../../../shared/components/EChart.vue';
 import { formatYuan } from '../../petty/petty.format';
 import { INSIGHT_API, TRACKED_DOCUMENT_TYPE_OPTIONS } from '../insight.config';
 import type { StatisticsBucket } from '../insight.types';
@@ -71,6 +73,70 @@ const periodRows = computed<PeriodRow[]>(() => {
   }
   return rows.reverse();
 });
+
+const chronologicalRows = computed(() => [...periodRows.value].reverse());
+
+const trendChartOption = computed<EChartsOption>(() => ({
+  tooltip: { trigger: 'axis' },
+  legend: { data: ['提交单量', '金额（元）'] },
+  grid: { left: 56, right: 72, top: 42, bottom: 32 },
+  xAxis: { type: 'category', data: chronologicalRows.value.map((row) => row.period) },
+  yAxis: [
+    { type: 'value', name: '单量', minInterval: 1 },
+    { type: 'value', name: '金额（元）' },
+  ],
+  series: [
+    {
+      name: '提交单量',
+      type: 'line',
+      smooth: true,
+      data: chronologicalRows.value.map((row) => row.totalCount),
+    },
+    {
+      name: '金额（元）',
+      type: 'line',
+      smooth: true,
+      yAxisIndex: 1,
+      data: chronologicalRows.value.map((row) => Math.round(row.totalAmountCents / 100)),
+    },
+  ],
+}));
+
+const typeBarChartOption = computed<EChartsOption>(() => ({
+  tooltip: { trigger: 'axis' },
+  legend: { data: typeColumns.map((type) => type.label) },
+  grid: { left: 56, right: 24, top: 42, bottom: 32 },
+  xAxis: { type: 'category', data: chronologicalRows.value.map((row) => row.period) },
+  yAxis: { type: 'value', name: '金额（元）' },
+  series: typeColumns.map((type) => ({
+    name: type.label,
+    type: 'bar' as const,
+    stack: 'amount',
+    data: chronologicalRows.value.map((row) =>
+      Math.round((row.byType[type.value]?.amountCents ?? 0) / 100),
+    ),
+  })),
+}));
+
+const typePieChartOption = computed<EChartsOption>(() => ({
+  tooltip: { trigger: 'item', formatter: '{b}：{c} 元（{d}%）' },
+  legend: { bottom: 0 },
+  series: [
+    {
+      type: 'pie',
+      radius: ['38%', '66%'],
+      avoidLabelOverlap: true,
+      data: typeColumns.map((type) => ({
+        name: type.label,
+        value: Math.round(
+          buckets.value
+            .filter((bucket) => bucket.documentType === type.value)
+            .reduce((sum, bucket) => sum + bucket.amountCents, 0) / 100,
+        ),
+      })),
+    },
+  ],
+}));
 
 const summary = computed(() => ({
   totalCount: periodRows.value.reduce((sum, row) => sum + row.totalCount, 0),
@@ -155,6 +221,23 @@ onMounted(() => {
         </a-card>
       </a-col>
     </a-row>
+
+    <a-row :gutter="16" style="margin-bottom: 16px">
+      <a-col :lg="14" :span="24">
+        <a-card size="small" title="单量与金额趋势">
+          <EChart :option="trendChartOption" />
+        </a-card>
+      </a-col>
+      <a-col :lg="10" :span="24">
+        <a-card size="small" title="各模块金额占比">
+          <EChart :option="typePieChartOption" />
+        </a-card>
+      </a-col>
+    </a-row>
+
+    <a-card size="small" style="margin-bottom: 16px" title="各模块金额堆叠对比">
+      <EChart :option="typeBarChartOption" />
+    </a-card>
 
     <a-table
       :columns="columns"

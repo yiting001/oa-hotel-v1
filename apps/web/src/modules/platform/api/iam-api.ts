@@ -1,3 +1,4 @@
+import type { RoleMenuConfig } from '@oa/contracts';
 import { apiRequest } from '../../../shared/api';
 import type {
   DepartmentInput,
@@ -22,6 +23,8 @@ const endpoint = {
   role: (id: string) => `/iam/roles/${id}`,
   rolePermissions: (id: string) => `/iam/roles/${id}/permissions`,
   users: '/iam/users',
+  menuConfig: '/iam/menus/config',
+  roleMenus: (id: string) => `/iam/roles/${id}/menus`,
   userAssignments: (id: string) => `/iam/users/${id}/assignments`,
 } as const;
 
@@ -61,6 +64,15 @@ export const iamApi = {
     return apiRequest<RoleSummary>(endpoint.rolePermissions(roleId), {
       method: 'PUT',
       body: { permissionIds },
+    });
+  },
+  listRoleMenuConfigs(): Promise<RoleMenuConfig[]> {
+    return apiRequest<RoleMenuConfig[]>(endpoint.menuConfig);
+  },
+  saveRoleHiddenMenus(roleId: string, hiddenMenuIds: string[]): Promise<RoleMenuConfig> {
+    return apiRequest<RoleMenuConfig>(endpoint.roleMenus(roleId), {
+      method: 'PUT',
+      body: { hiddenMenuIds },
     });
   },
   listUsers(): Promise<IamUser[]> {

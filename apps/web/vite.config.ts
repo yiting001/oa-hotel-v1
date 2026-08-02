@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
+    allowedHosts: process.env.OA_DEV_ALLOWED_HOSTS?.split(',') ?? [],
     proxy: {
       '/api': apiOrigin,
     },

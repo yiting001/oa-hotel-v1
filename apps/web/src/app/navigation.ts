@@ -6,6 +6,7 @@ import {
   EditPen,
   Grid,
   House,
+  Menu,
   OfficeBuilding,
   Share,
   ShoppingCart,
@@ -35,6 +36,7 @@ export type NavigationItemId =
   | 'seal'
   | 'supply'
   | 'iam'
+  | 'menus'
   | 'processes'
   | 'approval-chains'
   | 'forms';
@@ -170,6 +172,13 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: ['IAM_VIEW'],
       },
       {
+        id: 'menus',
+        path: '/system/menus',
+        label: '菜单管理',
+        icon: Menu,
+        requiredPermissions: ['IAM_MANAGE'],
+      },
+      {
         id: 'petty-materials',
         path: '/system/petty-materials',
         label: '零星采买物资库',
@@ -204,12 +213,15 @@ const navigationGroups: readonly NavigationGroup[] = [
 export function visibleNavigationGroups(
   permissionCodes: readonly string[],
   processStartCount: number,
+  hiddenMenuIds: readonly string[] = [],
 ): NavigationGroup[] {
   const granted = new Set(permissionCodes);
+  const hidden = new Set(hiddenMenuIds);
   return navigationGroups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
+        if (hidden.has(item.id)) return false;
         if (item.requiresProcessStarts && processStartCount === 0) return false;
         return (item.requiredPermissions ?? []).every((permission) => granted.has(permission));
       }),
