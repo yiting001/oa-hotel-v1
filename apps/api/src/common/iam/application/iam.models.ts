@@ -120,3 +120,16 @@ export interface UserAssignmentsWriteInput {
   memberships: MembershipWriteInput[];
   roles: RoleAssignmentWriteInput[];
 }
+
+export interface UserCreateInput {
+  username: string;
+  displayName: string;
+  password: string;
+  memberships: MembershipWriteInput[];
+  roles: RoleAssignmentWriteInput[];
+}
+
+export interface UserUpdateInput {
+  displayName?: string;
+  active?: boolean;
+}
