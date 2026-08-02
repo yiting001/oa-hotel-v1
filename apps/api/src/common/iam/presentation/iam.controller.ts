@@ -1,11 +1,23 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import type { SessionUser } from '@oa/contracts';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import type { MenuInput, SessionUser } from '@oa/contracts';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { RequirePermissions } from '../../auth/required-permissions.decorator';
 import { IamService } from '../application/iam.service';
 import { IAM_PERMISSION } from '../domain/iam-permission';
 import {
   CreateRoleDto,
+  MenuWriteDto,
   UpdateRoleDto,
   UpdateRoleMenusDto,
   UpdateRolePermissionsDto,
@@ -17,6 +29,20 @@ import {
   UpdateDepartmentDto,
   UpdatePositionDto,
 } from './organization.dto';
+
+function toMenuInput(dto: MenuWriteDto): MenuInput {
+  return {
+    parentId: dto.parentId ?? null,
+    name: dto.name,
+    type: dto.type,
+    path: dto.path ?? null,
+    permissionCode: dto.permissionCode ?? null,
+    icon: dto.icon ?? null,
+    orderNum: dto.orderNum,
+    visible: dto.visible,
+    active: dto.active,
+  };
+}
 
 @Controller('iam')
 export class IamController {
@@ -88,21 +114,45 @@ export class IamController {
     return this.iamService.listUsers();
   }
 
-  @Get('menus/config')
+  @Get('menus')
   @RequirePermissions(IAM_PERMISSION.VIEW)
-  listRoleMenuConfigs() {
-    return this.iamService.listRoleMenuConfigs();
+  menuTree() {
+    return this.iamService.menuTree();
   }
 
   @Get('menus/mine')
-  myHiddenMenus(@CurrentUser() user: SessionUser) {
-    return this.iamService.hiddenMenuIdsForUser(user);
+  myMenuTree(@CurrentUser() user: SessionUser) {
+    return this.iamService.menuTreeForUser(user);
+  }
+
+  @Get('menus/roles')
+  @RequirePermissions(IAM_PERMISSION.VIEW)
+  listRoleMenuAssignments() {
+    return this.iamService.listRoleMenuAssignments();
+  }
+
+  @Post('menus')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  createMenu(@Body() dto: MenuWriteDto) {
+    return this.iamService.createMenu(toMenuInput(dto));
+  }
+
+  @Patch('menus/:id')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  updateMenu(@Param('id') id: string, @Body() dto: MenuWriteDto) {
+    return this.iamService.updateMenu(id, toMenuInput(dto));
+  }
+
+  @Delete('menus/:id')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  deleteMenu(@Param('id') id: string) {
+    return this.iamService.deleteMenu(id);
   }
 
   @Put('roles/:roleId/menus')
   @RequirePermissions(IAM_PERMISSION.MANAGE)
   updateRoleMenus(@Param('roleId') roleId: string, @Body() dto: UpdateRoleMenusDto) {
-    return this.iamService.updateRoleHiddenMenus(roleId, dto.hiddenMenuIds);
+    return this.iamService.updateRoleMenus(roleId, dto.menuIds);
   }
 
   @Put('roles/:roleId/permissions')

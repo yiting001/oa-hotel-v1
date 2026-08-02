@@ -1,4 +1,4 @@
-import type { RoleMenuConfig } from '@oa/contracts';
+import type { MenuInput, MenuNode, MenuTreeNode, RoleMenuAssignment } from '@oa/contracts';
 import { apiRequest } from '../../../shared/api';
 import type {
   DepartmentInput,
@@ -23,7 +23,9 @@ const endpoint = {
   role: (id: string) => `/iam/roles/${id}`,
   rolePermissions: (id: string) => `/iam/roles/${id}/permissions`,
   users: '/iam/users',
-  menuConfig: '/iam/menus/config',
+  menus: '/iam/menus',
+  menu: (id: string) => `/iam/menus/${id}`,
+  menuRoles: '/iam/menus/roles',
   roleMenus: (id: string) => `/iam/roles/${id}/menus`,
   userAssignments: (id: string) => `/iam/users/${id}/assignments`,
 } as const;
@@ -66,13 +68,25 @@ export const iamApi = {
       body: { permissionIds },
     });
   },
-  listRoleMenuConfigs(): Promise<RoleMenuConfig[]> {
-    return apiRequest<RoleMenuConfig[]>(endpoint.menuConfig);
+  menuTree(): Promise<MenuTreeNode[]> {
+    return apiRequest<MenuTreeNode[]>(endpoint.menus);
   },
-  saveRoleHiddenMenus(roleId: string, hiddenMenuIds: string[]): Promise<RoleMenuConfig> {
-    return apiRequest<RoleMenuConfig>(endpoint.roleMenus(roleId), {
+  createMenu(input: MenuInput): Promise<MenuNode> {
+    return apiRequest<MenuNode>(endpoint.menus, { method: 'POST', body: input });
+  },
+  updateMenu(id: string, input: MenuInput): Promise<MenuNode> {
+    return apiRequest<MenuNode>(endpoint.menu(id), { method: 'PATCH', body: input });
+  },
+  deleteMenu(id: string): Promise<void> {
+    return apiRequest<void>(endpoint.menu(id), { method: 'DELETE' });
+  },
+  listRoleMenuAssignments(): Promise<RoleMenuAssignment[]> {
+    return apiRequest<RoleMenuAssignment[]>(endpoint.menuRoles);
+  },
+  saveRoleMenus(roleId: string, menuIds: string[]): Promise<RoleMenuAssignment> {
+    return apiRequest<RoleMenuAssignment>(endpoint.roleMenus(roleId), {
       method: 'PUT',
-      body: { hiddenMenuIds },
+      body: { menuIds },
     });
   },
   listUsers(): Promise<IamUser[]> {

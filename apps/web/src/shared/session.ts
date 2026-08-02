@@ -1,4 +1,4 @@
-import type { SessionUser } from '@oa/contracts';
+import type { MenuTreeNode, SessionUser } from '@oa/contracts';
 import { defineStore } from 'pinia';
 import {
   ApiRequestError,
@@ -16,7 +16,8 @@ export const useSessionStore = defineStore('session', {
     initialized: false,
     loading: false,
     changingPassword: false,
-    hiddenMenuIds: [] as string[],
+    menuTree: [] as MenuTreeNode[],
+    menuTreeLoaded: false,
   }),
   getters: {
     authenticated: (state) => state.user !== null,
@@ -44,7 +45,7 @@ export const useSessionStore = defineStore('session', {
         this.user = user;
         this.loading = false;
         this.initialized = true;
-        void this.loadMenuVisibility();
+        void this.loadMenuTree();
       } catch (error) {
         if (generation !== getAuthGeneration()) return;
         this.loading = false;
@@ -63,18 +64,24 @@ export const useSessionStore = defineStore('session', {
       try {
         this.user = await login(username, password);
         this.initialized = true;
-        void this.loadMenuVisibility();
+        void this.loadMenuTree();
       } finally {
         this.loading = false;
       }
     },
-    async loadMenuVisibility(): Promise<void> {
+    async loadMenuTree(): Promise<void> {
       const generation = getAuthGeneration();
       try {
-        const hidden = await apiRequest<string[]>('/iam/menus/mine');
-        if (generation === getAuthGeneration()) this.hiddenMenuIds = hidden;
+        const tree = await apiRequest<MenuTreeNode[]>('/iam/menus/mine');
+        if (generation === getAuthGeneration()) {
+          this.menuTree = tree;
+          this.menuTreeLoaded = true;
+        }
       } catch {
-        if (generation === getAuthGeneration()) this.hiddenMenuIds = [];
+        if (generation === getAuthGeneration()) {
+          this.menuTree = [];
+          this.menuTreeLoaded = false;
+        }
       }
     },
     async changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -91,7 +98,8 @@ export const useSessionStore = defineStore('session', {
       this.user = null;
       this.loading = false;
       this.changingPassword = false;
-      this.hiddenMenuIds = [];
+      this.menuTree = [];
+      this.menuTreeLoaded = false;
       this.initialized = true;
     },
   },
