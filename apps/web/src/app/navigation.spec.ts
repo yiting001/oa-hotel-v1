@@ -1,6 +1,8 @@
+import { DEFAULT_MENUS, buildMenuTree } from '@oa/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   mobilePrimaryNavigation,
+  navigationGroupsFromMenuTree,
   selectedNavigationPath,
   visibleNavigationGroups,
 } from './navigation';
@@ -59,17 +61,28 @@ describe('application navigation', () => {
     ]);
   });
 
-  it('hides menus disabled by role-menu configuration', () => {
-    const groups = visibleNavigationGroups(
-      ['DOCUMENT_VIEW', 'WORKFLOW_APPROVE', 'CONTRACT_VIEW', 'SEAL_VIEW'],
+  it('builds navigation from the served menu tree with permission filtering', () => {
+    const grantedIds = new Set([
+      'menu-business',
+      'menu-contract',
+      'menu-seal',
+      'menu-office',
+      'menu-workbench',
+    ]);
+    const tree = buildMenuTree(DEFAULT_MENUS.filter((menu) => grantedIds.has(menu.id)));
+    const groups = navigationGroupsFromMenuTree(
+      tree,
+      ['DOCUMENT_VIEW', 'WORKFLOW_APPROVE', 'CONTRACT_VIEW'],
       0,
-      ['seal', 'workbench'],
     );
     const ids = groups.flatMap((group) => group.items.map((item) => item.id));
 
     expect(ids).toContain('contract');
+    expect(ids).toContain('workbench');
+    // 授权了印章菜单，但用户缺少 SEAL_VIEW 功能权限，仍应过滤
     expect(ids).not.toContain('seal');
-    expect(ids).not.toContain('workbench');
+    // 未授权的菜单不出现
+    expect(ids).not.toContain('supply');
   });
 
   it('selects the dedicated approval entry for the pending workbench tab', () => {

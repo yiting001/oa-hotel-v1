@@ -1,5 +1,11 @@
 import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
-import type { RoleMenuConfig, SessionUser } from '@oa/contracts';
+import type {
+  MenuInput,
+  MenuNode,
+  MenuTreeNode,
+  RoleMenuAssignment,
+  SessionUser,
+} from '@oa/contracts';
 import type { PermissionEntity } from '../infrastructure/permission.entity';
 import type { PositionEntity } from '../infrastructure/position.entity';
 import { IamAccessService } from './iam-access.service';
@@ -87,8 +93,10 @@ export class IamService implements OnApplicationBootstrap {
     return this.access.listRoles();
   }
 
-  createRole(input: RoleCreateInput): Promise<RoleSummary> {
-    return this.roleManagement.create(input);
+  async createRole(input: RoleCreateInput): Promise<RoleSummary> {
+    const role = await this.roleManagement.create(input);
+    await this.menus.grantAllMenusToRole(role.id);
+    return role;
   }
 
   updateRole(roleId: string, input: RoleUpdateInput): Promise<RoleSummary> {
@@ -108,18 +116,35 @@ export class IamService implements OnApplicationBootstrap {
     return this.roleManagement.replacePermissions(roleId, permissionIds);
   }
 
-  async listRoleMenuConfigs(): Promise<RoleMenuConfig[]> {
+  async menuTree(): Promise<MenuTreeNode[]> {
     await this.legacyBootstrap.ensureInitialized();
-    return this.menus.listRoleMenuConfigs();
+    return this.menus.menuTree();
   }
 
-  updateRoleHiddenMenus(roleId: string, menuIds: string[]): Promise<RoleMenuConfig> {
-    return this.menus.replaceRoleHiddenMenus(roleId, menuIds);
+  createMenu(input: MenuInput): Promise<MenuNode> {
+    return this.menus.createMenu(input);
   }
 
-  async hiddenMenuIdsForUser(user: SessionUser): Promise<string[]> {
+  updateMenu(id: string, input: MenuInput): Promise<MenuNode> {
+    return this.menus.updateMenu(id, input);
+  }
+
+  deleteMenu(id: string): Promise<void> {
+    return this.menus.deleteMenu(id);
+  }
+
+  async listRoleMenuAssignments(): Promise<RoleMenuAssignment[]> {
     await this.legacyBootstrap.ensureInitialized();
-    return this.menus.hiddenMenuIdsForUser(user);
+    return this.menus.listRoleMenuAssignments();
+  }
+
+  updateRoleMenus(roleId: string, menuIds: string[]): Promise<RoleMenuAssignment> {
+    return this.menus.replaceRoleMenus(roleId, menuIds);
+  }
+
+  async menuTreeForUser(user: SessionUser): Promise<MenuTreeNode[]> {
+    await this.legacyBootstrap.ensureInitialized();
+    return this.menus.menuTreeForUser(user);
   }
 
   updateUserAssignments(

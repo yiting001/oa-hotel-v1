@@ -41,7 +41,7 @@ const groupIcons: Record<string, Component> = {
         popper-class="app-navigation-popup"
       >
         <template #title>
-          <el-icon><component :is="groupIcons[group.id] ?? Monitor" /></el-icon>
+          <el-icon><component :is="group.icon ?? groupIcons[group.id] ?? Monitor" /></el-icon>
           <span class="app-navigation-menu__group-title">{{ group.label }}</span>
         </template>
         <el-menu-item v-for="item in group.items" :key="item.path" :index="item.path">

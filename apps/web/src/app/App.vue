@@ -24,6 +24,7 @@ import AppNavigationMenu from './AppNavigationMenu.vue';
 import MobileBottomNavigation from './MobileBottomNavigation.vue';
 import {
   mobilePrimaryNavigation,
+  navigationGroupsFromMenuTree,
   selectedNavigationPath,
   visibleNavigationGroups,
 } from './navigation';
@@ -50,11 +51,13 @@ const pageTitle = computed(() =>
 );
 const quickStarts = computed(() => availableProcessStarts(session.user?.permissionCodes ?? []));
 const navigationGroups = computed(() =>
-  visibleNavigationGroups(
-    session.user?.permissionCodes ?? [],
-    quickStarts.value.length,
-    session.hiddenMenuIds,
-  ),
+  session.menuTreeLoaded
+    ? navigationGroupsFromMenuTree(
+        session.menuTree,
+        session.user?.permissionCodes ?? [],
+        quickStarts.value.length,
+      )
+    : visibleNavigationGroups(session.user?.permissionCodes ?? [], quickStarts.value.length),
 );
 const selectedPath = computed(() =>
   selectedNavigationPath(navigationGroups.value, route.path, route.query.tab),

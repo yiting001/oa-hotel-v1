@@ -20,6 +20,7 @@ import { ContractApprovalProcurementFields1784900000000 } from './migrations/178
 import { PurchaseModule1785000000000 } from './migrations/1785000000000-PurchaseModule';
 import { PettyModule1785100000000 } from './migrations/1785100000000-PettyModule';
 import { RoleMenuVisibility1785200000000 } from './migrations/1785200000000-RoleMenuVisibility';
+import { MenuRbacV21785300000000 } from './migrations/1785300000000-MenuRbacV2';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -58,6 +59,7 @@ export function createDatabaseOptions(
       PurchaseModule1785000000000,
       PettyModule1785100000000,
       RoleMenuVisibility1785200000000,
+      MenuRbacV21785300000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

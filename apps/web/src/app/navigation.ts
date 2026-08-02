@@ -1,19 +1,24 @@
 import {
   Box,
   Checked,
+  Connection,
   DataBoard,
   DocumentCopy,
   EditPen,
   Grid,
   House,
   Menu,
+  Monitor,
   OfficeBuilding,
+  Setting,
   Share,
   ShoppingCart,
   Stamp,
+  Suitcase,
   Tickets,
+  TrendCharts,
 } from '@element-plus/icons-vue';
-import { requiredBusinessModulePermissions } from '@oa/contracts';
+import { requiredBusinessModulePermissions, type MenuTreeNode } from '@oa/contracts';
 import type { Component } from 'vue';
 import {
   portalContentManagePermission,
@@ -42,7 +47,7 @@ export type NavigationItemId =
   | 'forms';
 
 export interface NavigationItem {
-  id: NavigationItemId;
+  id: string;
   path: string;
   label: string;
   icon: Component;
@@ -53,6 +58,7 @@ export interface NavigationItem {
 export interface NavigationGroup {
   id: string;
   label: string;
+  icon?: Component;
   items: NavigationItem[];
 }
 
@@ -213,20 +219,95 @@ const navigationGroups: readonly NavigationGroup[] = [
 export function visibleNavigationGroups(
   permissionCodes: readonly string[],
   processStartCount: number,
-  hiddenMenuIds: readonly string[] = [],
 ): NavigationGroup[] {
   const granted = new Set(permissionCodes);
-  const hidden = new Set(hiddenMenuIds);
   return navigationGroups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
-        if (hidden.has(item.id)) return false;
         if (item.requiresProcessStarts && processStartCount === 0) return false;
         return (item.requiredPermissions ?? []).every((permission) => granted.has(permission));
       }),
     }))
     .filter((group) => group.items.length > 0);
+}
+
+const menuIconComponents: Record<string, Component> = {
+  Box,
+  Checked,
+  Connection,
+  DataBoard,
+  DocumentCopy,
+  EditPen,
+  Grid,
+  House,
+  Menu,
+  Monitor,
+  OfficeBuilding,
+  Setting,
+  Share,
+  ShoppingCart,
+  Stamp,
+  Suitcase,
+  Tickets,
+  TrendCharts,
+};
+
+export function menuIconComponent(icon: string | null): Component {
+  return (icon && menuIconComponents[icon]) || Menu;
+}
+
+/** 基于服务端下发的菜单树构建导航：菜单授权为主，功能权限作二次过滤。 */
+export function navigationGroupsFromMenuTree(
+  tree: readonly MenuTreeNode[],
+  permissionCodes: readonly string[],
+  processStartCount: number,
+): NavigationGroup[] {
+  const granted = new Set(permissionCodes);
+  const toItem = (menu: MenuTreeNode): NavigationItem | null => {
+    if (!menu.path) return null;
+    if (menu.path === '/start' && processStartCount === 0) return null;
+    const required = menu.permissionCode
+      ? menu.permissionCode
+          .split(',')
+          .map((code) => code.trim())
+          .filter(Boolean)
+      : [];
+    if (!required.every((code) => granted.has(code))) return null;
+    return {
+      id: menu.id.replace(/^menu-/, ''),
+      path: menu.path,
+      label: menu.name,
+      icon: menuIconComponent(menu.icon),
+    };
+  };
+  const groups: NavigationGroup[] = [];
+  for (const node of tree) {
+    if (node.type === 'DIR') {
+      const items = node.children
+        .map(toItem)
+        .filter((item): item is NavigationItem => item !== null);
+      if (items.length > 0) {
+        groups.push({
+          id: node.id.replace(/^menu-/, ''),
+          label: node.name,
+          icon: menuIconComponent(node.icon),
+          items,
+        });
+      }
+    } else {
+      const item = toItem(node);
+      if (item) {
+        groups.push({
+          id: node.id.replace(/^menu-/, ''),
+          label: node.name,
+          icon: menuIconComponent(node.icon),
+          items: [item],
+        });
+      }
+    }
+  }
+  return groups;
 }
 
 export function selectedNavigationPath(
@@ -255,7 +336,7 @@ export function selectedNavigationPath(
 }
 
 export function mobilePrimaryNavigation(groups: readonly NavigationGroup[]): NavigationItem[] {
-  const primaryIds: NavigationItemId[] = ['portal', 'approval', 'start', 'workbench'];
+  const primaryIds: string[] = ['portal', 'approval', 'start', 'workbench'];
   const items = groups.flatMap((group) => group.items);
   return primaryIds
     .map((id) => items.find((item) => item.id === id))

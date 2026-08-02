@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -67,7 +68,56 @@ export class UpdateRoleMenusDto {
   @IsArray()
   @ArrayUnique()
   @IsString({ each: true })
-  hiddenMenuIds!: string[];
+  menuIds!: string[];
+}
+
+export class MenuWriteDto {
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  parentId?: string | null;
+
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(60)
+  name!: string;
+
+  @IsEnum({ DIR: 'DIR', MENU: 'MENU' })
+  type!: 'DIR' | 'MENU';
+
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @Transform(trim)
+  @IsString()
+  @MaxLength(200)
+  path?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @Transform(trim)
+  @IsString()
+  @MaxLength(200)
+  permissionCode?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @Transform(trim)
+  @IsString()
+  @MaxLength(60)
+  icon?: string | null;
+
+  @Type(() => Number)
+  @IsInt()
+  orderNum!: number;
+
+  @IsBoolean()
+  visible!: boolean;
+
+  @IsBoolean()
+  active!: boolean;
 }
 
 export class UpdateRolePermissionsDto {
