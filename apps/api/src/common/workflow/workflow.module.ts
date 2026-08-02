@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApprovalChainService } from './application/approval-chain.service';
+import { DocumentNumberService } from './application/document-number.service';
 import { DocumentWorkflowService } from './application/document-workflow.service';
 import { DocumentPrintTemplateService } from './application/document-print-template.service';
 import { WorkflowBatchApprovalService } from './application/workflow-batch-approval.service';
@@ -13,6 +15,8 @@ import { WorkflowDefinitionEntity } from './infrastructure/workflow-definition.e
 import { WorkflowOpinionEntity } from './infrastructure/workflow-opinion.entity';
 import { WorkflowTaskEntity } from './infrastructure/workflow-task.entity';
 import { WorkflowTaskCandidateEntity } from './infrastructure/workflow-task-candidate.entity';
+import { DocumentNumberSequenceEntity } from './infrastructure/document-number-sequence.entity';
+import { ApprovalChainController } from './presentation/approval-chain.controller';
 import { CompletedTasksController } from './presentation/completed-tasks.controller';
 import { DocumentOverviewController } from './presentation/document-overview.controller';
 import { WorkflowBatchApprovalController } from './presentation/workflow-batch-approval.controller';
@@ -22,6 +26,7 @@ import { IamModule } from '../iam/iam.module';
 import { FormDesignModule } from '../form-design/form-design.module';
 import { ProcessDesignModule } from '../process-design/process-design.module';
 import { UserEntity } from '../auth/user.entity';
+import { RoleEntity } from '../iam/infrastructure/role.entity';
 
 const entities = [
   DocumentIndexEntity,
@@ -32,12 +37,15 @@ const entities = [
   WorkflowBatchCommandEntity,
   WorkflowCopyEntity,
   WorkflowTaskCandidateEntity,
+  DocumentNumberSequenceEntity,
   UserEntity,
+  RoleEntity,
 ];
 
 @Module({
   imports: [TypeOrmModule.forFeature(entities), IamModule, FormDesignModule, ProcessDesignModule],
   controllers: [
+    ApprovalChainController,
     WorkflowController,
     WorkflowBatchApprovalController,
     WorkflowCopyController,
@@ -45,6 +53,8 @@ const entities = [
     DocumentOverviewController,
   ],
   providers: [
+    ApprovalChainService,
+    DocumentNumberService,
     DocumentWorkflowService,
     DocumentPrintTemplateService,
     WorkflowCandidateService,

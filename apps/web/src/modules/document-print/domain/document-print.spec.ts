@@ -333,6 +333,7 @@ function document(documentType: DocumentType): DocumentSummary {
     applicantId: 'user-applicant',
     departmentId: 'dept-business',
     status: 'APPROVED',
+    documentNo: null,
     revision: 2,
     currentStep: null,
     workflowCode: 'TEST_FLOW',

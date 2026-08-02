@@ -45,7 +45,9 @@ const copyDialogOpen = ref(false);
 const documentType = computed(() => route.params.documentType as DocumentType);
 const meta = computed<DocumentTypeMeta | null>(() => documentTypeMeta[documentType.value] ?? null);
 const documentId = computed(() => String(route.params.id));
-const documentNumber = computed(() => String(envelope.value?.data.number ?? ''));
+const documentNumber = computed(() =>
+  String(envelope.value?.data.number ?? envelope.value?.document.documentNo ?? ''),
+);
 const editable = computed(() => {
   const document = envelope.value?.document;
   return (

@@ -256,6 +256,48 @@ export class AuthService implements OnApplicationBootstrap {
         departmentId: 'dept-supply',
         roleCodes: ['WAREHOUSE_MANAGER'],
       },
+      {
+        id: 'user-initiator',
+        username: 'initiator',
+        displayName: '采购发起人',
+        departmentId: 'dept-business',
+        roleCodes: ['INITIATOR'],
+      },
+      {
+        id: 'user-admin-approver',
+        username: 'adminapprove',
+        displayName: '行政审批人',
+        departmentId: 'dept-office',
+        roleCodes: ['ADMIN_APPROVER'],
+      },
+      {
+        id: 'user-business-approver',
+        username: 'bizapprove',
+        displayName: '商务审批人',
+        departmentId: 'dept-business',
+        roleCodes: ['BUSINESS_APPROVER'],
+      },
+      {
+        id: 'user-catering-approver',
+        username: 'cateringapprove',
+        displayName: '餐饮审批人',
+        departmentId: 'dept-office',
+        roleCodes: ['CATERING_APPROVER'],
+      },
+      {
+        id: 'user-exec-pre',
+        username: 'execpre',
+        displayName: '高管预审批',
+        departmentId: 'dept-office',
+        roleCodes: ['EXEC_PRE_APPROVER'],
+      },
+      {
+        id: 'user-exec',
+        username: 'exec',
+        displayName: '高管审批',
+        departmentId: 'dept-office',
+        roleCodes: ['EXEC_APPROVER'],
+      },
     ];
     await this.users.save(
       seeds.map((seed) => ({

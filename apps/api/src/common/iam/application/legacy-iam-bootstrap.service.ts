@@ -16,6 +16,11 @@ const crossDepartmentLegacyRoles = new Set([
   'SEAL_MANAGER',
   'PROCUREMENT',
   'WAREHOUSE_MANAGER',
+  'ADMIN_APPROVER',
+  'BUSINESS_APPROVER',
+  'CATERING_APPROVER',
+  'EXEC_PRE_APPROVER',
+  'EXEC_APPROVER',
 ]);
 
 interface LegacyRoleScope {
@@ -169,7 +174,7 @@ export class LegacyIamBootstrapService {
  * Administrators can narrow or widen these grants after the compatibility migration.
  */
 export function resolveLegacyRoleScope(roleCode: string, departmentId: string): LegacyRoleScope {
-  if (roleCode === 'APPLICANT') {
+  if (roleCode === 'APPLICANT' || roleCode === 'INITIATOR') {
     return { dataScope: DataScope.SELF, scopeDepartmentId: null };
   }
   if (crossDepartmentLegacyRoles.has(roleCode)) {

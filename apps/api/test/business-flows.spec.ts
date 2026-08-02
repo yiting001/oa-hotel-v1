@@ -53,6 +53,10 @@ describe('首批业务模块集成流程', () => {
       'office',
       'procurement',
       'warehouse',
+      'adminapprove',
+      'bizapprove',
+      'execpre',
+      'exec',
       'generic',
     ]) {
       const response = await request(server)
@@ -196,7 +200,7 @@ describe('首批业务模块集成流程', () => {
       attachments: [],
     });
     await submit('applicant', contract.data.id);
-    for (const role of ['manager', 'finance', 'office']) {
+    for (const role of ['adminapprove', 'bizapprove', 'execpre', 'exec']) {
       task = await firstTask(role);
       await approve(role, task.id);
     }

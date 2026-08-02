@@ -10,6 +10,12 @@ export const WORKFLOW_ROLE_LABELS: Readonly<Record<string, string>> = {
   PROCUREMENT: '采购经办',
   WAREHOUSE_MANAGER: '仓库管理员',
   DIRECT_USER: '指定办理人',
+  INITIATOR: '发起人',
+  ADMIN_APPROVER: '行政审批人',
+  BUSINESS_APPROVER: '商务审批人',
+  CATERING_APPROVER: '餐饮审批人',
+  EXEC_PRE_APPROVER: '高管预审批',
+  EXEC_APPROVER: '高管审批',
 };
 
 export const WORKBENCH_BOXES = [

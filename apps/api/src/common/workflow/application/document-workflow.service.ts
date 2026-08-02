@@ -49,6 +49,7 @@ import {
 import { buildOpinionSnapshot } from './workflow-opinion.snapshot';
 import { toApprovalOpinion, toDocumentSummary, toTaskSummary } from './workflow-read-model.mapper';
 import { WorkflowCandidateService } from './workflow-candidate.service';
+import { DocumentNumberService } from './document-number.service';
 
 interface RegisterDraftInput {
   id: string;
@@ -82,6 +83,8 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     private readonly formDesign: FormDesignService,
     @Inject(ProcessDesignService)
     private readonly processDesign: ProcessDesignService,
+    @Inject(DocumentNumberService)
+    private readonly documentNumbers: DocumentNumberService,
     @Inject(DataSource)
     private readonly dataSource: DataSource,
   ) {}
@@ -149,9 +152,15 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
 
       const definition = await this.loadRuntimeDefinition(document);
       await this.createPendingTask(manager, document, 0, definition.tasks[0]);
+      const prefix = this.documentNumbers.documentNumberPrefix(
+        document.documentType as DocumentType,
+      );
+      const documentNo =
+        document.documentNo ??
+        (prefix ? await this.documentNumbers.generate(manager, prefix) : null);
       const submitted = await documentRepository.update(
         { id: document.id, status: document.status, revision: document.revision },
-        { status: 'IN_REVIEW', currentStep: 0, revision: document.revision + 1 },
+        { status: 'IN_REVIEW', currentStep: 0, revision: document.revision + 1, documentNo },
       );
       if (submitted.affected !== 1) {
         throw new DomainError('DOCUMENT_STATE_CHANGED', '单据状态已变化，请刷新后重试');
@@ -438,8 +447,12 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
   }
 
   private async seedLegacyDefinitions(): Promise<void> {
-    if (process.env.NODE_ENV === 'production' || (await this.definitions.count()) > 0) return;
-    await this.definitions.save(LEGACY_WORKFLOW_DEFINITIONS);
+    if (process.env.NODE_ENV === 'production') return;
+    const existing = new Set((await this.definitions.find()).map((definition) => definition.code));
+    const missing = LEGACY_WORKFLOW_DEFINITIONS.filter(
+      (definition) => !existing.has(definition.code),
+    );
+    if (missing.length > 0) await this.definitions.save(missing);
   }
 
   private async backfillPendingTaskCandidates(): Promise<void> {

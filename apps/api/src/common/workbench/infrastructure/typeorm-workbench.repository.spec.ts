@@ -294,6 +294,7 @@ function documentRow(
     applicantId: options.applicantId ?? 'user-applicant',
     departmentId: options.departmentId ?? 'dept-business',
     status,
+    documentNo: null,
     revision: 1,
     currentStep: status === 'IN_REVIEW' ? 0 : null,
     workflowCode: 'FLOW',

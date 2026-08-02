@@ -9,6 +9,7 @@ import { WorkflowTaskEntity } from '../workflow/infrastructure/workflow-task.ent
 import { WorkflowTaskCandidateEntity } from '../workflow/infrastructure/workflow-task-candidate.entity';
 import { WorkflowBatchCommandEntity } from '../workflow/infrastructure/workflow-batch-command.entity';
 import { WorkflowCopyEntity } from '../workflow/infrastructure/workflow-copy.entity';
+import { DocumentNumberSequenceEntity } from '../workflow/infrastructure/document-number-sequence.entity';
 import { DocumentFollowEntity } from '../workbench/infrastructure/document-follow.entity';
 import { iamEntities } from '../iam/infrastructure/entities';
 import { FormDefinitionEntity } from '../form-design/infrastructure/form-definition.entity';
@@ -38,6 +39,7 @@ export const databaseEntities = [
   WorkflowTaskCandidateEntity,
   WorkflowBatchCommandEntity,
   WorkflowCopyEntity,
+  DocumentNumberSequenceEntity,
   DocumentFollowEntity,
   FormDefinitionEntity,
   FormVersionEntity,
