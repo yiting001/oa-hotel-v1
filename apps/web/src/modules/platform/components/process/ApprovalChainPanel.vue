@@ -2,8 +2,8 @@
 import { WORKFLOW_ROLE_LABELS } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import { computed, onMounted, ref } from 'vue';
-import { approvalChainApi, type ApprovalChainSummary } from '../api/approval-chain-api';
-import { useSessionStore } from '../../../shared/session';
+import { approvalChainApi, type ApprovalChainSummary } from '../../api/approval-chain-api';
+import { useSessionStore } from '../../../../shared/session';
 
 const session = useSessionStore();
 const loading = ref(false);
@@ -79,14 +79,14 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <div class="approval-chain-page">
+  <div class="approval-chain-panel">
     <el-card shadow="never">
       <template #header>
         <div class="page-header">
           <div>
-            <h2>审批链路配置</h2>
+            <h2>链路快捷配置</h2>
             <p class="page-hint">
-              配置各类单据提交后的角色审批顺序；发起人提交单据将按此链路逐级流转，支持通过与回退。
+              直接编排各单据类型的角色审批顺序，保存后自动发布为新的流程版本；复杂编排请用流程画布。
             </p>
           </div>
         </div>
@@ -154,8 +154,8 @@ async function save(): Promise<void> {
 </template>
 
 <style scoped>
-.approval-chain-page {
-  padding: 16px;
+.approval-chain-panel {
+  padding: 0;
 }
 
 .page-header h2 {

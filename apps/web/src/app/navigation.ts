@@ -42,7 +42,6 @@ export type NavigationItemId =
   | 'iam'
   | 'menus'
   | 'processes'
-  | 'approval-chains'
   | 'forms';
 
 export interface NavigationItem {
@@ -188,13 +187,6 @@ const navigationGroups: readonly NavigationGroup[] = [
         path: '/system/processes',
         label: '审批流程设计',
         icon: Share,
-        requiredPermissions: ['PROCESS_DESIGN_VIEW'],
-      },
-      {
-        id: 'approval-chains',
-        path: '/system/approval-chains',
-        label: '审批链路配置',
-        icon: Checked,
         requiredPermissions: ['PROCESS_DESIGN_VIEW'],
       },
       {

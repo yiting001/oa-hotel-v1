@@ -23,6 +23,7 @@ import { RoleMenuVisibility1785200000000 } from './migrations/1785200000000-Role
 import { MenuRbacV21785300000000 } from './migrations/1785300000000-MenuRbacV2';
 import { RequestLogs1785400000000 } from './migrations/1785400000000-RequestLogs';
 import { MenuReorganization1785500000000 } from './migrations/1785500000000-MenuReorganization';
+import { MergeApprovalChainMenu1785600000000 } from './migrations/1785600000000-MergeApprovalChainMenu';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -64,6 +65,7 @@ export function createDatabaseOptions(
       MenuRbacV21785300000000,
       RequestLogs1785400000000,
       MenuReorganization1785500000000,
+      MergeApprovalChainMenu1785600000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,
