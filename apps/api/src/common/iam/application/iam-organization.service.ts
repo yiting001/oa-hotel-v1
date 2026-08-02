@@ -165,6 +165,37 @@ export class IamOrganizationService {
     });
   }
 
+  async deleteDepartment(id: string): Promise<void> {
+    const department = await this.departments.findOneBy({ id });
+    if (!department) throw new NotFoundException('部门不存在');
+    const profiles = await this.departmentProfiles.find();
+    if (profiles.some((profile) => profile.parentDepartmentId === id)) {
+      throw new BadRequestException('请先删除或迁移下级部门');
+    }
+    const [membershipCount, positionCount] = await Promise.all([
+      this.memberships.countBy({ departmentId: id }),
+      this.positions.countBy({ departmentId: id }),
+    ]);
+    if (membershipCount > 0) throw new BadRequestException('部门下存在人员任职，无法删除');
+    if (positionCount > 0) throw new BadRequestException('部门下存在岗位，请先删除岗位');
+    if (await this.users.exist({ where: { departmentId: id } })) {
+      throw new BadRequestException('部门被用户档案引用，无法删除');
+    }
+    await this.dataSource.transaction(async (manager) => {
+      await manager.getRepository(DepartmentProfileEntity).delete({ departmentId: id });
+      await manager.getRepository(DepartmentEntity).delete({ id });
+    });
+  }
+
+  async deletePosition(id: string): Promise<void> {
+    const position = await this.positions.findOneBy({ id });
+    if (!position) throw new NotFoundException('岗位不存在');
+    if (await this.memberships.exist({ where: { positionId: id } })) {
+      throw new BadRequestException('岗位已被人员任职引用，无法删除');
+    }
+    await this.positions.delete({ id });
+  }
+
   async departmentDescendants(departmentId: string): Promise<Set<string>> {
     const exists = await this.departments.exist({ where: { id: departmentId } });
     if (!exists) throw new NotFoundException('部门不存在');

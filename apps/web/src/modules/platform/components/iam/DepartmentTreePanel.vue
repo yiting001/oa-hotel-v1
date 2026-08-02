@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Edit, Plus, Refresh } from '@element-plus/icons-vue';
+import { Delete, Edit, Plus, Refresh } from '@element-plus/icons-vue';
 import {
   ElButton,
   ElDialog,
@@ -9,6 +9,7 @@ import {
   ElInput,
   ElInputNumber,
   ElMessage,
+  ElMessageBox,
   ElOption,
   ElSelect,
   ElSwitch,
@@ -161,6 +162,55 @@ async function savePosition(): Promise<void> {
     saving.value = false;
   }
 }
+
+async function removeDepartment(): Promise<void> {
+  const department = selectedDepartment.value;
+  if (props.readonly || !department) return;
+  try {
+    await ElMessageBox.confirm(
+      `确定删除部门「${department.name}」吗？需先清空下级部门、岗位和人员任职。`,
+      '删除部门',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  saving.value = true;
+  try {
+    await iamApi.deleteDepartment(department.id);
+    ElMessage.success('部门已删除');
+    selectedId.value = null;
+    emit('refresh');
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '部门删除失败'));
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function removePosition(value: unknown): Promise<void> {
+  if (props.readonly) return;
+  const position = value as Position;
+  try {
+    await ElMessageBox.confirm(`确定删除岗位「${position.name}」吗？`, '删除岗位', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+  } catch {
+    return;
+  }
+  saving.value = true;
+  try {
+    await iamApi.deletePosition(position.id);
+    ElMessage.success('岗位已删除');
+    emit('refresh');
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '岗位删除失败'));
+  } finally {
+    saving.value = false;
+  }
+}
 </script>
 
 <template>
@@ -206,9 +256,14 @@ async function savePosition(): Promise<void> {
             <strong>{{ selectedDepartment.name }}</strong>
             <small>{{ selectedDepartment.code }} · 排序 {{ selectedDepartment.sortOrder }}</small>
           </div>
-          <ElButton v-if="!readonly" @click="openDepartment('edit')"
-            ><ElIcon><Edit /></ElIcon>编辑部门</ElButton
-          >
+          <div class="platform-inline-actions">
+            <ElButton v-if="!readonly" @click="openDepartment('edit')"
+              ><ElIcon><Edit /></ElIcon>编辑部门</ElButton
+            >
+            <ElButton v-if="!readonly" type="danger" @click="removeDepartment"
+              ><ElIcon><Delete /></ElIcon>删除部门</ElButton
+            >
+          </div>
         </div>
         <dl class="iam-facts">
           <div>
@@ -241,10 +296,11 @@ async function savePosition(): Promise<void> {
               }}</ElTag></template
             >
           </ElTableColumn>
-          <ElTableColumn v-if="!readonly" label="操作" width="90">
-            <template #default="{ row }"
-              ><ElButton link type="primary" @click="openPosition(row)">编辑</ElButton></template
-            >
+          <ElTableColumn v-if="!readonly" label="操作" width="130">
+            <template #default="{ row }">
+              <ElButton link type="primary" @click="openPosition(row)">编辑</ElButton>
+              <ElButton link type="danger" @click="removePosition(row)">删除</ElButton>
+            </template>
           </ElTableColumn>
         </ElTable>
       </div>

@@ -11,9 +11,11 @@ import {
   IsString,
   Matches,
   MaxLength,
+  MinLength,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { credentialPolicy } from '../../auth/credential-policy';
 import { DataScope } from '../domain/data-scope';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -177,4 +179,55 @@ export class UpdateUserAssignmentsDto {
   @ValidateNested({ each: true })
   @Type(() => RoleAssignmentDto)
   roles!: RoleAssignmentDto[];
+}
+
+export class CreateUserDto {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Matches(/^[A-Za-z0-9_.@-]+$/, { message: '登录账号只能使用字母、数字和 _ . @ - 符号' })
+  username!: string;
+
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  displayName!: string;
+
+  @IsString()
+  @MinLength(credentialPolicy.newPasswordMinLength)
+  @MaxLength(credentialPolicy.newPasswordMaxLength)
+  password!: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => MembershipAssignmentDto)
+  memberships!: MembershipAssignmentDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RoleAssignmentDto)
+  roles!: RoleAssignmentDto[];
+}
+
+export class UpdateUserDto {
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  displayName?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class ResetUserPasswordDto {
+  @IsString()
+  @MinLength(credentialPolicy.newPasswordMinLength)
+  @MaxLength(credentialPolicy.newPasswordMaxLength)
+  password!: string;
 }

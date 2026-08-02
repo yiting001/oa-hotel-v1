@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Edit, Plus, Search } from '@element-plus/icons-vue';
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue';
 import type { MenuTreeNode, RoleMenuAssignment } from '@oa/contracts';
 import {
   ElButton,
@@ -11,6 +11,7 @@ import {
   ElIcon,
   ElInput,
   ElMessage,
+  ElMessageBox,
   ElSwitch,
   ElTag,
   ElTree,
@@ -184,6 +185,31 @@ async function savePermissions(): Promise<void> {
   }
 }
 
+async function removeRole(): Promise<void> {
+  const role = selectedRole.value;
+  if (props.readonly || !role || role.code === 'SYSTEM_ADMIN') return;
+  try {
+    await ElMessageBox.confirm(
+      `确定删除角色「${role.name}」吗？删除后其权限与菜单授权一并移除，不可恢复。`,
+      '删除角色',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  saving.value = true;
+  try {
+    await iamApi.deleteRole(role.id);
+    ElMessage.success('角色已删除');
+    selectedRoleId.value = null;
+    emit('refresh');
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '角色删除失败'));
+  } finally {
+    saving.value = false;
+  }
+}
+
 async function saveRole(): Promise<void> {
   if (props.readonly) return;
   const code = roleForm.code.trim().toUpperCase();
@@ -254,6 +280,9 @@ async function saveRole(): Promise<void> {
         <div class="platform-inline-actions">
           <ElButton v-if="!readonly" @click="openRole(selectedRole)">
             <ElIcon><Edit /></ElIcon>编辑角色
+          </ElButton>
+          <ElButton v-if="!readonly && !isSystemAdmin" type="danger" @click="removeRole">
+            <ElIcon><Delete /></ElIcon>删除角色
           </ElButton>
           <ElButton v-if="!readonly" :loading="saving" type="primary" @click="savePermissions">
             保存授权

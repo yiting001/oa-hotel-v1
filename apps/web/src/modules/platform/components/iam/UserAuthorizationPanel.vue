@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { Delete, Plus, Search } from '@element-plus/icons-vue';
+import { Delete, Edit, Key, Plus, Search } from '@element-plus/icons-vue';
 import {
   ElButton,
   ElCheckbox,
+  ElDialog,
+  ElForm,
+  ElFormItem,
   ElIcon,
   ElInput,
   ElMessage,
@@ -13,7 +16,7 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus';
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { iamApi } from '../../api/iam-api';
 import type {
   DataScope,
@@ -57,6 +60,20 @@ const selectedUserId = ref<string | null>(null);
 const memberships = ref<MembershipDraft[]>([]);
 const roleAssignments = ref<RoleDraft[]>([]);
 const saving = ref(false);
+
+const createDialogOpen = ref(false);
+const createForm = reactive({
+  username: '',
+  displayName: '',
+  password: '',
+  departmentId: '' as string,
+  positionId: null as string | null,
+  roleIds: [] as string[],
+});
+const profileDialogOpen = ref(false);
+const profileForm = reactive({ displayName: '', active: true });
+const passwordDialogOpen = ref(false);
+const passwordForm = reactive({ password: '', confirm: '' });
 
 const departments = computed(() => flattenDepartments(props.departments));
 const selectedUser = computed(
@@ -171,6 +188,120 @@ function validate(): string | null {
   return null;
 }
 
+function openCreate(): void {
+  if (props.readonly) return;
+  Object.assign(createForm, {
+    username: '',
+    displayName: '',
+    password: '',
+    departmentId: '',
+    positionId: null,
+    roleIds: [],
+  });
+  createDialogOpen.value = true;
+}
+
+async function createUser(): Promise<void> {
+  if (props.readonly) return;
+  const username = createForm.username.trim();
+  const displayName = createForm.displayName.trim();
+  if (!username || !displayName || !createForm.departmentId) {
+    ElMessage.warning('请填写登录账号、姓名并选择主部门');
+    return;
+  }
+  if (createForm.password.length < 8) {
+    ElMessage.warning('初始密码至少 8 位');
+    return;
+  }
+  saving.value = true;
+  try {
+    const created = await iamApi.createUser({
+      username,
+      displayName,
+      password: createForm.password,
+      memberships: [
+        {
+          departmentId: createForm.departmentId,
+          positionId: createForm.positionId,
+          isPrimary: true,
+          isDepartmentHead: false,
+          active: true,
+        },
+      ],
+      roles: createForm.roleIds.map((roleId) => ({
+        roleId,
+        dataScope: 'SELF' as const,
+        scopeDepartmentId: null,
+      })),
+    });
+    ElMessage.success('用户已创建，首次登录需修改密码');
+    createDialogOpen.value = false;
+    selectedUserId.value = created.id;
+    emit('refresh');
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '用户创建失败'));
+  } finally {
+    saving.value = false;
+  }
+}
+
+function openProfile(): void {
+  const user = selectedUser.value;
+  if (props.readonly || !user) return;
+  Object.assign(profileForm, { displayName: user.displayName, active: user.active });
+  profileDialogOpen.value = true;
+}
+
+async function saveProfile(): Promise<void> {
+  const user = selectedUser.value;
+  if (props.readonly || !user) return;
+  const displayName = profileForm.displayName.trim();
+  if (!displayName) {
+    ElMessage.warning('用户姓名不能为空');
+    return;
+  }
+  saving.value = true;
+  try {
+    await iamApi.updateUser(user.id, { displayName, active: profileForm.active });
+    ElMessage.success('用户资料已更新');
+    profileDialogOpen.value = false;
+    emit('refresh');
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '用户资料保存失败'));
+  } finally {
+    saving.value = false;
+  }
+}
+
+function openPassword(): void {
+  if (props.readonly || !selectedUser.value) return;
+  Object.assign(passwordForm, { password: '', confirm: '' });
+  passwordDialogOpen.value = true;
+}
+
+async function resetPassword(): Promise<void> {
+  const user = selectedUser.value;
+  if (props.readonly || !user) return;
+  if (passwordForm.password.length < 8) {
+    ElMessage.warning('新密码至少 8 位');
+    return;
+  }
+  if (passwordForm.password !== passwordForm.confirm) {
+    ElMessage.warning('两次输入的密码不一致');
+    return;
+  }
+  saving.value = true;
+  try {
+    await iamApi.resetUserPassword(user.id, passwordForm.password);
+    ElMessage.success('密码已重置，用户下次登录需修改密码');
+    passwordDialogOpen.value = false;
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '密码重置失败'));
+  } finally {
+    saving.value = false;
+  }
+}
+
 async function save(): Promise<void> {
   if (props.readonly) return;
   const user = selectedUser.value;
@@ -216,6 +347,16 @@ async function save(): Promise<void> {
         <div>
           <strong>用户目录</strong><small>{{ users.length }} 名系统用户</small>
         </div>
+        <ElButton
+          v-if="!readonly"
+          circle
+          size="small"
+          title="新建用户"
+          type="primary"
+          @click="openCreate"
+        >
+          <ElIcon><Plus /></ElIcon>
+        </ElButton>
       </div>
       <ElInput v-model="keyword" clearable placeholder="搜索姓名或账号">
         <template #prefix
@@ -248,9 +389,17 @@ async function save(): Promise<void> {
           <strong>{{ selectedUser.displayName }} 的组织授权</strong>
           <small>任职决定组织归属，角色决定功能权限，数据范围决定可见边界</small>
         </div>
-        <ElButton v-if="!readonly" :loading="saving" type="primary" @click="save"
-          >保存授权</ElButton
-        >
+        <div class="platform-inline-actions">
+          <ElButton v-if="!readonly" @click="openProfile"
+            ><ElIcon><Edit /></ElIcon>编辑资料</ElButton
+          >
+          <ElButton v-if="!readonly" @click="openPassword"
+            ><ElIcon><Key /></ElIcon>重置密码</ElButton
+          >
+          <ElButton v-if="!readonly" :loading="saving" type="primary" @click="save"
+            >保存授权</ElButton
+          >
+        </div>
       </div>
 
       <div class="platform-subheading">
@@ -393,4 +542,106 @@ async function save(): Promise<void> {
       </ElTable>
     </section>
   </div>
+
+  <ElDialog v-model="createDialogOpen" title="新建用户" width="520px">
+    <ElForm label-position="top">
+      <div class="platform-form-grid">
+        <ElFormItem label="登录账号">
+          <ElInput v-model="createForm.username" maxlength="100" placeholder="例如：zhangsan" />
+        </ElFormItem>
+        <ElFormItem label="用户姓名">
+          <ElInput v-model="createForm.displayName" maxlength="100" placeholder="例如：张三" />
+        </ElFormItem>
+      </div>
+      <ElFormItem label="初始密码">
+        <ElInput
+          v-model="createForm.password"
+          maxlength="128"
+          placeholder="至少 8 位，首次登录强制修改"
+          show-password
+          type="password"
+        />
+      </ElFormItem>
+      <div class="platform-form-grid">
+        <ElFormItem label="主部门">
+          <ElSelect
+            v-model="createForm.departmentId"
+            filterable
+            placeholder="选择主部门"
+            @change="createForm.positionId = null"
+          >
+            <ElOption
+              v-for="item in departments"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="岗位（可选）">
+          <ElSelect v-model="createForm.positionId" clearable filterable placeholder="可选">
+            <ElOption
+              v-for="item in positionsFor(createForm.departmentId)"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </ElSelect>
+        </ElFormItem>
+      </div>
+      <ElFormItem label="初始角色（可选，默认仅本人数据范围，可在保存后调整）">
+        <ElSelect v-model="createForm.roleIds" clearable filterable multiple placeholder="可选">
+          <ElOption
+            v-for="role in roles.filter((item) => item.active)"
+            :key="role.id"
+            :label="role.name"
+            :value="role.id"
+          />
+        </ElSelect>
+      </ElFormItem>
+    </ElForm>
+    <template #footer>
+      <ElButton @click="createDialogOpen = false">取消</ElButton>
+      <ElButton :loading="saving" type="primary" @click="createUser">创建用户</ElButton>
+    </template>
+  </ElDialog>
+
+  <ElDialog v-model="profileDialogOpen" title="编辑用户资料" width="420px">
+    <ElForm label-position="top">
+      <ElFormItem label="登录账号">
+        <ElInput :model-value="selectedUser?.username ?? ''" disabled />
+      </ElFormItem>
+      <ElFormItem label="用户姓名">
+        <ElInput v-model="profileForm.displayName" maxlength="100" />
+      </ElFormItem>
+      <ElFormItem label="账号状态">
+        <ElSwitch v-model="profileForm.active" active-text="启用" inactive-text="停用" />
+      </ElFormItem>
+    </ElForm>
+    <template #footer>
+      <ElButton @click="profileDialogOpen = false">取消</ElButton>
+      <ElButton :loading="saving" type="primary" @click="saveProfile">保存</ElButton>
+    </template>
+  </ElDialog>
+
+  <ElDialog v-model="passwordDialogOpen" title="重置登录密码" width="420px">
+    <ElForm label-position="top">
+      <ElFormItem label="新密码">
+        <ElInput
+          v-model="passwordForm.password"
+          maxlength="128"
+          placeholder="至少 8 位"
+          show-password
+          type="password"
+        />
+      </ElFormItem>
+      <ElFormItem label="确认密码">
+        <ElInput v-model="passwordForm.confirm" maxlength="128" show-password type="password" />
+      </ElFormItem>
+    </ElForm>
+    <template #footer>
+      <ElButton @click="passwordDialogOpen = false">取消</ElButton>
+      <ElButton :loading="saving" type="primary" @click="resetPassword">重置密码</ElButton>
+    </template>
+  </ElDialog>
 </template>

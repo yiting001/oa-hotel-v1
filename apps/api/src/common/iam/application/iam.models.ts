@@ -133,3 +133,7 @@ export interface UserUpdateInput {
   displayName?: string;
   active?: boolean;
 }
+
+export interface UserPasswordResetInput {
+  password: string;
+}
