@@ -59,6 +59,19 @@ describe('application navigation', () => {
     ]);
   });
 
+  it('hides menus disabled by role-menu configuration', () => {
+    const groups = visibleNavigationGroups(
+      ['DOCUMENT_VIEW', 'WORKFLOW_APPROVE', 'CONTRACT_VIEW', 'SEAL_VIEW'],
+      0,
+      ['seal', 'workbench'],
+    );
+    const ids = groups.flatMap((group) => group.items.map((item) => item.id));
+
+    expect(ids).toContain('contract');
+    expect(ids).not.toContain('seal');
+    expect(ids).not.toContain('workbench');
+  });
+
   it('selects the dedicated approval entry for the pending workbench tab', () => {
     const groups = visibleNavigationGroups(['WORKFLOW_APPROVE'], 0);
 

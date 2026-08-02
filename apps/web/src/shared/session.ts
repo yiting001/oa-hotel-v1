@@ -16,6 +16,7 @@ export const useSessionStore = defineStore('session', {
     initialized: false,
     loading: false,
     changingPassword: false,
+    hiddenMenuIds: [] as string[],
   }),
   getters: {
     authenticated: (state) => state.user !== null,
@@ -43,6 +44,7 @@ export const useSessionStore = defineStore('session', {
         this.user = user;
         this.loading = false;
         this.initialized = true;
+        void this.loadMenuVisibility();
       } catch (error) {
         if (generation !== getAuthGeneration()) return;
         this.loading = false;
@@ -61,8 +63,18 @@ export const useSessionStore = defineStore('session', {
       try {
         this.user = await login(username, password);
         this.initialized = true;
+        void this.loadMenuVisibility();
       } finally {
         this.loading = false;
+      }
+    },
+    async loadMenuVisibility(): Promise<void> {
+      const generation = getAuthGeneration();
+      try {
+        const hidden = await apiRequest<string[]>('/iam/menus/mine');
+        if (generation === getAuthGeneration()) this.hiddenMenuIds = hidden;
+      } catch {
+        if (generation === getAuthGeneration()) this.hiddenMenuIds = [];
       }
     },
     async changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -79,6 +91,7 @@ export const useSessionStore = defineStore('session', {
       this.user = null;
       this.loading = false;
       this.changingPassword = false;
+      this.hiddenMenuIds = [];
       this.initialized = true;
     },
   },

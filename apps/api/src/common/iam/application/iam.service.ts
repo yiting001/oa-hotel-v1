@@ -1,4 +1,5 @@
 import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
+import type { RoleMenuConfig, SessionUser } from '@oa/contracts';
 import type { PermissionEntity } from '../infrastructure/permission.entity';
 import type { PositionEntity } from '../infrastructure/position.entity';
 import { IamAccessService } from './iam-access.service';
@@ -15,6 +16,7 @@ import type {
   UserAccessSummary,
   UserAssignmentsWriteInput,
 } from './iam.models';
+import { IamMenuService } from './iam-menu.service';
 import { IamOrganizationService } from './iam-organization.service';
 import { IamRoleService } from './iam-role.service';
 import { IamResourceAuthorizationService } from './iam-resource-authorization.service';
@@ -31,6 +33,8 @@ export class IamService implements OnApplicationBootstrap {
     private readonly access: IamAccessService,
     @Inject(IamRoleService)
     private readonly roleManagement: IamRoleService,
+    @Inject(IamMenuService)
+    private readonly menus: IamMenuService,
     @Inject(IamSessionProfileService)
     private readonly sessionProfiles: IamSessionProfileService,
     @Inject(IamResourceAuthorizationService)
@@ -102,6 +106,20 @@ export class IamService implements OnApplicationBootstrap {
 
   updateRolePermissions(roleId: string, permissionIds: string[]): Promise<RoleSummary> {
     return this.roleManagement.replacePermissions(roleId, permissionIds);
+  }
+
+  async listRoleMenuConfigs(): Promise<RoleMenuConfig[]> {
+    await this.legacyBootstrap.ensureInitialized();
+    return this.menus.listRoleMenuConfigs();
+  }
+
+  updateRoleHiddenMenus(roleId: string, menuIds: string[]): Promise<RoleMenuConfig> {
+    return this.menus.replaceRoleHiddenMenus(roleId, menuIds);
+  }
+
+  async hiddenMenuIdsForUser(user: SessionUser): Promise<string[]> {
+    await this.legacyBootstrap.ensureInitialized();
+    return this.menus.hiddenMenuIdsForUser(user);
   }
 
   updateUserAssignments(

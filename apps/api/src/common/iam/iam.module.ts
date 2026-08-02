@@ -5,6 +5,7 @@ import { UserEntity } from '../auth/user.entity';
 import { IamAccessService } from './application/iam-access.service';
 import { IamOrganizationService } from './application/iam-organization.service';
 import { IamService } from './application/iam.service';
+import { IamMenuService } from './application/iam-menu.service';
 import { IamRoleService } from './application/iam-role.service';
 import { IamResourceAuthorizationService } from './application/iam-resource-authorization.service';
 import { IamSessionProfileService } from './application/iam-session-profile.service';
@@ -20,6 +21,7 @@ import { IamController } from './presentation/iam.controller';
     IamOrganizationService,
     IamAccessService,
     IamRoleService,
+    IamMenuService,
     IamSessionProfileService,
     IamResourceAuthorizationService,
     LegacyIamBootstrapService,

@@ -14,10 +14,11 @@ import {
 import { message } from 'ant-design-vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { apiRequest } from '../shared/api';
+import { apiRequest, requestId } from '../shared/api';
 import DocumentDataView from '../shared/components/DocumentDataView.vue';
 import DocumentFormLayout from '../shared/components/DocumentFormLayout.vue';
 import FormSection from '../shared/components/FormSection.vue';
+import WorkflowFlowGraph from '../shared/components/WorkflowFlowGraph.vue';
 import WorkflowSidebar from '../shared/components/WorkflowSidebar.vue';
 import { documentEditPath, documentTypeMeta, type DocumentTypeMeta } from '../shared/document';
 import { useSessionStore } from '../shared/session';
@@ -43,6 +44,11 @@ const loading = ref(false);
 const envelope = ref<DetailEnvelope | null>(null);
 const overview = ref<WorkflowOverview | null>(null);
 const copyDialogOpen = ref(false);
+const approvalDialogOpen = ref(false);
+const approvalAction = ref<'approve' | 'return'>('approve');
+const approvalComment = ref('');
+const approvalSubmitting = ref(false);
+const approvalRequestId = ref<string | null>(null);
 
 const documentType = computed(() => route.params.documentType as DocumentType);
 const pettyData = computed(() =>
@@ -66,6 +72,13 @@ const editable = computed(() => {
     document.applicantId === session.user?.id
   );
 });
+const myPendingTask = computed(
+  () =>
+    workflow.tasks.find(
+      (task) => task.documentId === documentId.value && task.status === 'PENDING',
+    ) ?? null,
+);
+
 const executionPath = computed(() => {
   const document = envelope.value?.document;
   if (!document || document.status !== 'APPROVED') return null;
@@ -95,10 +108,47 @@ async function load(): Promise<void> {
     ]);
     envelope.value = detail;
     overview.value = workflowOverview;
+    if (session.can('WORKFLOW_APPROVE')) {
+      try {
+        await workflow.refresh();
+      } catch {
+        /* 待办列表加载失败不影响单据详情展示 */
+      }
+    }
   } catch (error) {
     message.error(error instanceof Error ? error.message : '单据加载失败');
   } finally {
     loading.value = false;
+  }
+}
+
+function openApproval(): void {
+  if (!myPendingTask.value) return;
+  approvalAction.value = 'approve';
+  approvalComment.value = '';
+  approvalRequestId.value = requestId();
+  approvalDialogOpen.value = true;
+}
+
+async function submitApproval(): Promise<void> {
+  const task = myPendingTask.value;
+  if (!task || !approvalRequestId.value || !approvalComment.value.trim()) return;
+  approvalSubmitting.value = true;
+  try {
+    await workflow.completeTask(
+      task.id,
+      approvalAction.value,
+      approvalComment.value.trim(),
+      approvalRequestId.value,
+    );
+    message.success(approvalAction.value === 'approve' ? '审批已提交' : '单据已退回发起人');
+    approvalDialogOpen.value = false;
+    approvalRequestId.value = null;
+    await load();
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '审批处理失败');
+  } finally {
+    approvalSubmitting.value = false;
   }
 }
 
@@ -154,6 +204,14 @@ async function refreshWorkbenchSummary(): Promise<void> {
       </a-space>
     </template>
 
+    <FormSection v-if="overview" title="审批流程">
+      <WorkflowFlowGraph
+        :actionable-task-id="myPendingTask?.id ?? null"
+        :overview="overview"
+        @act="openApproval"
+      />
+    </FormSection>
+
     <FormSection v-if="envelope" title="单据信息">
       <PettyProcurementDetail v-if="pettyData" :data="pettyData" @changed="load" />
       <DocumentDataView v-else :data="envelope.data" />
@@ -164,4 +222,24 @@ async function refreshWorkbenchSummary(): Promise<void> {
     </template>
   </DocumentFormLayout>
   <WorkflowCopyDialog v-model:open="copyDialogOpen" :document-id="documentId" />
+
+  <a-modal
+    v-model:open="approvalDialogOpen"
+    :confirm-loading="approvalSubmitting"
+    :ok-button-props="{ disabled: !approvalComment.trim() }"
+    :title="approvalAction === 'approve' ? '同意审批' : '退回单据'"
+    @ok="submitApproval"
+  >
+    <a-radio-group v-model:value="approvalAction" style="margin-bottom: 12px">
+      <a-radio-button value="approve">同意</a-radio-button>
+      <a-radio-button value="return">退回</a-radio-button>
+    </a-radio-group>
+    <a-textarea
+      v-model:value="approvalComment"
+      :maxlength="500"
+      placeholder="请输入审批意见"
+      :rows="4"
+      show-count
+    />
+  </a-modal>
 </template>

@@ -287,5 +287,6 @@ export interface PortalReadReceiptResult {
   readAt: string;
 }
 
+export * from './menu-registry.js';
 export * from './portal-operations.js';
 export * from './workbench-collaboration.js';

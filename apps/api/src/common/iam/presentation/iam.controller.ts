@@ -1,10 +1,13 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import type { SessionUser } from '@oa/contracts';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import { RequirePermissions } from '../../auth/required-permissions.decorator';
 import { IamService } from '../application/iam.service';
 import { IAM_PERMISSION } from '../domain/iam-permission';
 import {
   CreateRoleDto,
   UpdateRoleDto,
+  UpdateRoleMenusDto,
   UpdateRolePermissionsDto,
   UpdateUserAssignmentsDto,
 } from './access.dto';
@@ -83,6 +86,23 @@ export class IamController {
   @RequirePermissions(IAM_PERMISSION.VIEW)
   listUsers() {
     return this.iamService.listUsers();
+  }
+
+  @Get('menus/config')
+  @RequirePermissions(IAM_PERMISSION.VIEW)
+  listRoleMenuConfigs() {
+    return this.iamService.listRoleMenuConfigs();
+  }
+
+  @Get('menus/mine')
+  myHiddenMenus(@CurrentUser() user: SessionUser) {
+    return this.iamService.hiddenMenuIdsForUser(user);
+  }
+
+  @Put('roles/:roleId/menus')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  updateRoleMenus(@Param('roleId') roleId: string, @Body() dto: UpdateRoleMenusDto) {
+    return this.iamService.updateRoleHiddenMenus(roleId, dto.hiddenMenuIds);
   }
 
   @Put('roles/:roleId/permissions')

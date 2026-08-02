@@ -63,6 +63,13 @@ export class UpdateRoleDto {
   active?: boolean;
 }
 
+export class UpdateRoleMenusDto {
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  hiddenMenuIds!: string[];
+}
+
 export class UpdateRolePermissionsDto {
   @IsArray()
   @ArrayUnique()

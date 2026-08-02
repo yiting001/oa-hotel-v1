@@ -6,6 +6,7 @@ import './styles/platform.css';
 
 export const platformRouteNames = {
   iam: 'platform-iam',
+  menus: 'platform-menus',
   processes: 'platform-processes',
   approvalChains: 'platform-approval-chains',
   forms: 'platform-forms',
@@ -17,6 +18,12 @@ export const platformRoutes: RouteRecordRaw[] = [
     name: platformRouteNames.iam,
     component: () => import('./pages/IamManagementPage.vue'),
     meta: { title: '组织与权限', requiredPermission: 'IAM_VIEW' },
+  },
+  {
+    path: '/system/menus',
+    name: platformRouteNames.menus,
+    component: () => import('./pages/MenuManagementPage.vue'),
+    meta: { title: '菜单管理', requiredPermission: 'IAM_MANAGE' },
   },
   {
     path: '/system/processes',
