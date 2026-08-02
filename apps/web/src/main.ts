@@ -36,6 +36,7 @@ import {
   Tag,
   Timeline,
   Tooltip,
+  Tree,
   Typography,
   Upload,
 } from 'ant-design-vue';
@@ -88,6 +89,7 @@ const uiComponents = [
   Tag,
   Timeline,
   Tooltip,
+  Tree,
   Typography,
   Upload,
 ];
