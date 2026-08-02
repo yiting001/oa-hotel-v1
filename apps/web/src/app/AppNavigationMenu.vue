@@ -11,7 +11,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{ navigate: [path: string] }>();
 
-const openedGroups = computed(() => props.groups.map((group) => group.id));
+const openedGroups = computed(() =>
+  props.groups
+    .filter((group) => group.items.some((item) => item.path === props.activePath))
+    .map((group) => group.id),
+);
 
 const groupIcons: Record<string, Component> = {
   office: Monitor,
@@ -30,7 +34,12 @@ const groupIcons: Record<string, Component> = {
       :default-openeds="openedGroups"
       @select="emit('navigate', String($event))"
     >
-      <el-sub-menu v-for="group in groups" :key="group.id" :index="group.id">
+      <el-sub-menu
+        v-for="group in groups"
+        :key="group.id"
+        :index="group.id"
+        popper-class="app-navigation-popup"
+      >
         <template #title>
           <el-icon><component :is="groupIcons[group.id] ?? Monitor" /></el-icon>
           <span class="app-navigation-menu__group-title">{{ group.label }}</span>
