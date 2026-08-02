@@ -45,8 +45,28 @@ const {
   openContent: openReading,
   setDrawerOpen: setContentDrawerOpen,
 } = usePortalContentReader('待阅内容加载失败');
+const isApprovalCenter = computed(() => route.path.startsWith('/approval'));
+const approvalTabs: readonly WorkbenchTab[] = ['pending', 'completed'];
+const personalTabs: readonly WorkbenchTab[] = [
+  'mine',
+  'drafts',
+  'following',
+  'copied',
+  'unread',
+  'read',
+];
+const allowedTabs = computed(() => (isApprovalCenter.value ? approvalTabs : personalTabs));
+function clampTab(tab: WorkbenchTab): WorkbenchTab {
+  return allowedTabs.value.includes(tab) ? tab : allowedTabs.value[0];
+}
 const activeTab = ref<WorkbenchTab>(
-  resolveWorkbenchTab(route.query.tab, session.can('CONTENT_VIEW'), session.can('DOCUMENT_FOLLOW')),
+  clampTab(
+    resolveWorkbenchTab(
+      route.query.tab,
+      session.can('CONTENT_VIEW'),
+      session.can('DOCUMENT_FOLLOW'),
+    ),
+  ),
 );
 const filters = reactive<WorkbenchFilters>(createEmptyWorkbenchFilters());
 const mobileFilters = reactive<WorkbenchFilters>(createEmptyWorkbenchFilters());
@@ -93,7 +113,6 @@ const canFollowDocuments = computed(() => session.can('DOCUMENT_FOLLOW'));
 const canBatchApprove = computed(
   () => session.can('WORKFLOW_APPROVE') && session.can('WORKFLOW_BATCH_APPROVE'),
 );
-const isApprovalCenter = computed(() => route.query.tab === 'pending');
 const headerContent = computed(() =>
   isApprovalCenter.value
     ? {
@@ -120,7 +139,9 @@ const metricItems = computed(() =>
     { key: 'drafts', label: '草稿', count: workbench.count('DRAFTS'), hint: '继续编辑' },
     { key: 'following', label: '我的关注', count: workbench.count('FOLLOWING'), hint: '持续跟踪' },
     { key: 'copied', label: '抄送我的', count: workbench.count('COPIED'), hint: '协同查阅' },
-  ].filter((item) => item.key !== 'following' || canFollowDocuments.value),
+  ]
+    .filter((item) => allowedTabs.value.includes(item.key as WorkbenchTab))
+    .filter((item) => item.key !== 'following' || canFollowDocuments.value),
 );
 const activeFilterCount = computed(() => {
   let count = 0;
@@ -149,7 +170,7 @@ const workbenchTabOptions = computed<Array<{ label: string; value: WorkbenchTab 
       { value: 'read', label: `已阅 (${portal.readingTotal('READ')})` },
     );
   }
-  return options;
+  return options.filter((option) => allowedTabs.value.includes(option.value));
 });
 
 onMounted(() => {
@@ -170,10 +191,15 @@ watch(activeTab, (tab) => {
 watch(
   () => route.query.tab,
   (value) => {
-    const tab = resolveWorkbenchTab(value, canReadContent.value, canFollowDocuments.value);
+    const tab = clampTab(
+      resolveWorkbenchTab(value, canReadContent.value, canFollowDocuments.value),
+    );
     if (tab !== activeTab.value) activeTab.value = tab;
   },
 );
+watch(isApprovalCenter, () => {
+  activeTab.value = clampTab(activeTab.value);
+});
 watch(
   filters,
   () => {
@@ -402,7 +428,7 @@ async function scrollActiveTabIntoView(): Promise<void> {
       </div>
 
       <el-tabs v-model="activeTab" class="workbench-tabs">
-        <el-tab-pane name="pending"
+        <el-tab-pane v-if="isApprovalCenter" name="pending"
           ><template #label>待办<el-badge :value="workbench.count('PENDING')" /></template>
           <div v-if="canBatchApprove" class="workbench-batch-toolbar">
             <span>已选择 {{ selectedPendingTasks.length }} 条本页待办</span>
@@ -428,48 +454,48 @@ async function scrollActiveTabIntoView(): Promise<void> {
             @open="openTask"
             @selection-change="updatePendingSelection"
         /></el-tab-pane>
-        <el-tab-pane name="completed" label="已办"
+        <el-tab-pane v-if="isApprovalCenter" name="completed" label="已办"
           ><WorkbenchTaskTable
             action-label="查看"
             :loading="workbench.pageLoading.COMPLETED"
             :tasks="workbench.pages.COMPLETED.items"
             @open="openTask"
         /></el-tab-pane>
-        <el-tab-pane name="mine" label="我发起的"
+        <el-tab-pane v-if="!isApprovalCenter" name="mine" label="我发起的"
           ><WorkbenchDocumentTable
             :documents="workbench.pages.MINE.items"
             :loading="workbench.pageLoading.MINE"
             @open="openDocument"
         /></el-tab-pane>
-        <el-tab-pane name="drafts"
+        <el-tab-pane v-if="!isApprovalCenter" name="drafts"
           ><template #label>草稿<el-badge :value="workbench.count('DRAFTS')" /></template
           ><WorkbenchDocumentTable
             :documents="workbench.pages.DRAFTS.items"
             :loading="workbench.pageLoading.DRAFTS"
             @open="openDocument"
         /></el-tab-pane>
-        <el-tab-pane v-if="canFollowDocuments" name="following"
+        <el-tab-pane v-if="!isApprovalCenter && canFollowDocuments" name="following"
           ><template #label>关注<el-badge :value="workbench.count('FOLLOWING')" /></template
           ><WorkbenchDocumentTable
             :documents="workbench.pages.FOLLOWING.items"
             :loading="workbench.pageLoading.FOLLOWING"
             @open="openDocument"
         /></el-tab-pane>
-        <el-tab-pane name="copied"
+        <el-tab-pane v-if="!isApprovalCenter" name="copied"
           ><template #label>抄送我<el-badge :value="workbench.count('COPIED')" /></template
           ><WorkbenchDocumentTable
             :documents="workbench.pages.COPIED.items"
             :loading="workbench.pageLoading.COPIED"
             @open="openDocument"
         /></el-tab-pane>
-        <el-tab-pane v-if="canReadContent" name="unread"
+        <el-tab-pane v-if="!isApprovalCenter && canReadContent" name="unread"
           ><template #label>待阅<el-badge :value="portal.readingTotal('UNREAD')" /></template
           ><WorkbenchReadingList
             :items="portal.readings.UNREAD"
             :loading="portal.readingLoadingByStatus.UNREAD"
             @open="openReading"
         /></el-tab-pane>
-        <el-tab-pane v-if="canReadContent" name="read" label="已阅"
+        <el-tab-pane v-if="!isApprovalCenter && canReadContent" name="read" label="已阅"
           ><WorkbenchReadingList
             :items="portal.readings.READ"
             :loading="portal.readingLoadingByStatus.READ"

@@ -75,7 +75,7 @@ const navigationGroups: readonly NavigationGroup[] = [
       { id: 'workbench', path: '/workbench', label: '个人工作台', icon: DataBoard },
       {
         id: 'approval',
-        path: '/workbench?tab=pending',
+        path: '/approval',
         label: '审批中心',
         icon: Checked,
         requiredPermissions: ['WORKFLOW_APPROVE'],
@@ -297,16 +297,8 @@ export function navigationGroupsFromMenuTree(
 export function selectedNavigationPath(
   groups: readonly NavigationGroup[],
   routePath: string,
-  workbenchTab: unknown,
 ): string {
   const items = groups.flatMap((group) => group.items);
-  if (
-    routePath === '/workbench' &&
-    workbenchTab === 'pending' &&
-    items.some((item) => item.id === 'approval')
-  ) {
-    return '/workbench?tab=pending';
-  }
   const candidates = items
     .filter((item) => {
       if (item.path.includes('?')) return false;

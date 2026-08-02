@@ -77,10 +77,10 @@ describe('application navigation', () => {
     expect(ids).not.toContain('supply');
   });
 
-  it('selects the dedicated approval entry for the pending workbench tab', () => {
+  it('selects the dedicated approval entry for the approval center route', () => {
     const groups = visibleNavigationGroups(['WORKFLOW_APPROVE'], 0);
 
-    expect(selectedNavigationPath(groups, '/workbench', 'pending')).toBe('/workbench?tab=pending');
-    expect(selectedNavigationPath(groups, '/workbench', 'completed')).toBe('/workbench');
+    expect(selectedNavigationPath(groups, '/approval')).toBe('/approval');
+    expect(selectedNavigationPath(groups, '/workbench')).toBe('/workbench');
   });
 });

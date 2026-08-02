@@ -59,9 +59,7 @@ const navigationGroups = computed(() =>
       )
     : visibleNavigationGroups(session.user?.permissionCodes ?? [], quickStarts.value.length),
 );
-const selectedPath = computed(() =>
-  selectedNavigationPath(navigationGroups.value, route.path, route.query.tab),
-);
+const selectedPath = computed(() => selectedNavigationPath(navigationGroups.value, route.path));
 const mobileNavigationItems = computed(() => mobilePrimaryNavigation(navigationGroups.value));
 const siderWidth = computed(() => (siderCollapsed.value ? '72px' : '236px'));
 const passwordChangeRequired = computed(() => session.user?.passwordChangeRequired === true);

@@ -121,7 +121,7 @@ export const DEFAULT_MENUS: readonly MenuNode[] = [
     parentId: 'menu-office',
     name: '审批中心',
     type: 'MENU',
-    path: '/workbench?tab=pending',
+    path: '/approval',
     permissionCode: 'WORKFLOW_APPROVE',
     icon: 'Checked',
     orderNum: 3,
