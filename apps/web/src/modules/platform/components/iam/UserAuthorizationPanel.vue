@@ -1,21 +1,14 @@
 <script setup lang="ts">
-import { Delete, Edit, Key, Plus, Search, Setting } from '@element-plus/icons-vue';
 import {
-  ElButton,
-  ElCheckbox,
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElIcon,
-  ElInput,
-  ElMessage,
-  ElOption,
-  ElSelect,
-  ElSwitch,
-  ElTable,
-  ElTableColumn,
-  ElTag,
-} from 'element-plus';
+  DeleteOutlined,
+  EditOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  SettingOutlined,
+} from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 import { computed, reactive, ref } from 'vue';
 import { iamApi } from '../../api/iam-api';
 import type {
@@ -55,37 +48,46 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ refresh: [] }>();
 
-const keyword = ref('');
-const statusFilter = ref<'all' | 'active' | 'inactive'>('all');
+const filters = reactive({
+  keyword: '',
+  status: undefined as 'active' | 'inactive' | undefined,
+});
+const appliedFilters = reactive({ ...filters });
 const saving = ref(false);
 
-const assignDialogOpen = ref(false);
+const assignOpen = ref(false);
 const assignUserId = ref<string | null>(null);
 const memberships = ref<MembershipDraft[]>([]);
 const roleAssignments = ref<RoleDraft[]>([]);
 
-const createDialogOpen = ref(false);
+const createOpen = ref(false);
 const createForm = reactive({
   username: '',
   displayName: '',
   password: '',
-  departmentId: '' as string,
-  positionId: null as string | null,
+  departmentId: undefined as string | undefined,
+  positionId: undefined as string | undefined,
   roleIds: [] as string[],
 });
-const profileDialogOpen = ref(false);
+const profileOpen = ref(false);
 const profileUserId = ref<string | null>(null);
 const profileForm = reactive({ displayName: '', active: true });
-const passwordDialogOpen = ref(false);
+const passwordOpen = ref(false);
 const passwordUserId = ref<string | null>(null);
 const passwordForm = reactive({ password: '', confirm: '' });
 
 const departments = computed(() => flattenDepartments(props.departments));
+const departmentOptions = computed(() =>
+  departments.value.map((item) => ({ value: item.id, label: item.name })),
+);
 const departmentNames = computed(
   () => new Map(departments.value.map((item) => [item.id, item.name])),
 );
 const positionNames = computed(() => new Map(props.positions.map((item) => [item.id, item.name])));
 const roleNames = computed(() => new Map(props.roles.map((item) => [item.id, item.name])));
+const activeRoleOptions = computed(() =>
+  props.roles.filter((item) => item.active).map((item) => ({ value: item.id, label: item.name })),
+);
 
 const assignUser = computed(
   () => props.users.find((user) => user.id === assignUserId.value) ?? null,
@@ -93,23 +95,45 @@ const assignUser = computed(
 const profileUser = computed(
   () => props.users.find((user) => user.id === profileUserId.value) ?? null,
 );
+
 const filteredUsers = computed(() => {
-  const query = keyword.value.trim().toLowerCase();
+  const query = appliedFilters.keyword.trim().toLowerCase();
   return props.users.filter((user) => {
-    if (statusFilter.value === 'active' && !user.active) return false;
-    if (statusFilter.value === 'inactive' && user.active) return false;
+    if (appliedFilters.status === 'active' && !user.active) return false;
+    if (appliedFilters.status === 'inactive' && user.active) return false;
     return !query || `${user.displayName} ${user.username}`.toLowerCase().includes(query);
   });
 });
 
-function primaryDepartmentName(value: unknown): string {
-  const user = value as IamUser;
-  const primary = user.memberships.find((item) => item.isPrimary) ?? user.memberships[0];
-  return primary ? (departmentNames.value.get(primary.departmentId) ?? '—') : '—';
+const columns = [
+  { title: '姓名', key: 'displayName', width: 130 },
+  { title: '登录账号', dataIndex: 'username', width: 140 },
+  { title: '主部门', key: 'primaryDepartment', width: 130 },
+  { title: '岗位', key: 'positions', width: 150 },
+  { title: '角色', key: 'roles' },
+  { title: '状态', key: 'status', width: 90, align: 'center' as const },
+  ...(props.readonly ? [] : [{ title: '操作', key: 'actions', width: 300 }]),
+];
+
+function filterByLabel(input: string, option: { label?: string }): boolean {
+  return (option.label ?? '').includes(input);
 }
 
-function userPositionNames(value: unknown): string[] {
-  const user = value as IamUser;
+function search(): void {
+  Object.assign(appliedFilters, filters);
+}
+
+function resetFilters(): void {
+  Object.assign(filters, { keyword: '', status: undefined });
+  search();
+}
+
+function primaryDepartmentName(user: IamUser): string {
+  const primary = user.memberships.find((item) => item.isPrimary) ?? user.memberships[0];
+  return primary ? (departmentNames.value.get(primary.departmentId) ?? '-') : '-';
+}
+
+function userPositionNames(user: IamUser): string[] {
   return [
     ...new Set(
       user.memberships
@@ -119,15 +143,13 @@ function userPositionNames(value: unknown): string[] {
   ];
 }
 
-function userRoleNames(value: unknown): string[] {
-  const user = value as IamUser;
+function userRoleNames(user: IamUser): string[] {
   return user.roles
     .map((item) => roleNames.value.get(item.roleId))
     .filter((name): name is string => Boolean(name));
 }
 
-function openAssign(value: unknown): void {
-  const user = value as IamUser;
+function openAssign(user: IamUser): void {
   assignUserId.value = user.id;
   memberships.value = user.memberships.map((item) => ({
     key: item.id || crypto.randomUUID(),
@@ -143,7 +165,7 @@ function openAssign(value: unknown): void {
     dataScope: item.dataScope,
     scopeDepartmentId: item.scopeDepartmentId,
   }));
-  assignDialogOpen.value = true;
+  assignOpen.value = true;
 }
 
 function addMembership(): void {
@@ -166,25 +188,49 @@ function addRole(): void {
   });
 }
 
-function setPrimary(value: unknown): void {
-  const target = value as MembershipDraft;
+function setPrimary(target: MembershipDraft): void {
   if (!target.isPrimary) return;
   memberships.value.forEach((item) => {
     if (item.key !== target.key) item.isPrimary = false;
   });
 }
 
-function positionsFor(departmentId: string): Position[] {
-  return props.positions.filter(
-    (position) =>
-      position.active && (position.departmentId === departmentId || position.departmentId === null),
-  );
+function positionOptionsFor(departmentId: string): Array<{ value: string; label: string }> {
+  return props.positions
+    .filter(
+      (position) =>
+        position.active &&
+        (position.departmentId === departmentId || position.departmentId === null),
+    )
+    .map((item) => ({ value: item.id, label: item.name }));
 }
 
-function normalizeScope(value: unknown): void {
-  const item = value as RoleDraft;
+function normalizeScope(item: RoleDraft): void {
   if (item.dataScope === 'SELF' || item.dataScope === 'ALL') item.scopeDepartmentId = null;
 }
+
+const membershipColumns = [
+  { title: '部门', key: 'department', width: 190 },
+  { title: '岗位', key: 'position', width: 170 },
+  { title: '主部门', key: 'isPrimary', width: 80, align: 'center' as const },
+  { title: '部门负责人', key: 'isDepartmentHead', width: 100, align: 'center' as const },
+  { title: '启用', key: 'active', width: 70, align: 'center' as const },
+  { title: '', key: 'remove', width: 50 },
+];
+
+const roleColumns = [
+  { title: '角色', key: 'role', width: 220 },
+  { title: '数据范围', key: 'dataScope', width: 180 },
+  { title: '范围部门', key: 'scopeDepartment' },
+  { title: '', key: 'remove', width: 50 },
+];
+
+const dataScopeOptions = [
+  { value: 'SELF', label: '仅本人' },
+  { value: 'DEPARTMENT', label: '指定部门' },
+  { value: 'DEPARTMENT_TREE', label: '指定部门及下级' },
+  { value: 'ALL', label: '全部数据' },
+];
 
 function validate(): string | null {
   if (memberships.value.length === 0) return '用户至少需要一个部门任职';
@@ -218,7 +264,7 @@ async function saveAssignments(): Promise<void> {
   if (props.readonly || !assignUserId.value) return;
   const error = validate();
   if (error) {
-    ElMessage.warning(error);
+    message.warning(error);
     return;
   }
   const input: UserAssignmentsInput = {
@@ -240,11 +286,11 @@ async function saveAssignments(): Promise<void> {
   saving.value = true;
   try {
     await iamApi.saveUserAssignments(assignUserId.value, input);
-    ElMessage.success('用户任职与角色授权已保存');
-    assignDialogOpen.value = false;
+    message.success('用户任职与角色授权已保存');
+    assignOpen.value = false;
     emit('refresh');
   } catch (cause) {
-    ElMessage.error(platformErrorMessage(cause, '用户授权保存失败'));
+    message.error(platformErrorMessage(cause, '用户授权保存失败'));
   } finally {
     saving.value = false;
   }
@@ -256,11 +302,11 @@ function openCreate(): void {
     username: '',
     displayName: '',
     password: '',
-    departmentId: '',
-    positionId: null,
+    departmentId: undefined,
+    positionId: undefined,
     roleIds: [],
   });
-  createDialogOpen.value = true;
+  createOpen.value = true;
 }
 
 async function createUser(): Promise<void> {
@@ -268,11 +314,11 @@ async function createUser(): Promise<void> {
   const username = createForm.username.trim();
   const displayName = createForm.displayName.trim();
   if (!username || !displayName || !createForm.departmentId) {
-    ElMessage.warning('请填写登录账号、姓名并选择主部门');
+    message.warning('请填写登录账号、姓名并选择主部门');
     return;
   }
   if (createForm.password.length < 8) {
-    ElMessage.warning('初始密码至少 8 位');
+    message.warning('初始密码至少 8 位');
     return;
   }
   saving.value = true;
@@ -284,7 +330,7 @@ async function createUser(): Promise<void> {
       memberships: [
         {
           departmentId: createForm.departmentId,
-          positionId: createForm.positionId,
+          positionId: createForm.positionId ?? null,
           isPrimary: true,
           isDepartmentHead: false,
           active: true,
@@ -296,84 +342,81 @@ async function createUser(): Promise<void> {
         scopeDepartmentId: null,
       })),
     });
-    ElMessage.success('用户已创建，首次登录需修改密码');
-    createDialogOpen.value = false;
+    message.success('用户已创建，首次登录需修改密码');
+    createOpen.value = false;
     emit('refresh');
   } catch (cause) {
-    ElMessage.error(platformErrorMessage(cause, '用户创建失败'));
+    message.error(platformErrorMessage(cause, '用户创建失败'));
   } finally {
     saving.value = false;
   }
 }
 
-function openProfile(value: unknown): void {
-  const user = value as IamUser;
+function openProfile(user: IamUser): void {
   if (props.readonly) return;
   profileUserId.value = user.id;
   Object.assign(profileForm, { displayName: user.displayName, active: user.active });
-  profileDialogOpen.value = true;
+  profileOpen.value = true;
 }
 
 async function saveProfile(): Promise<void> {
   if (props.readonly || !profileUserId.value) return;
   const displayName = profileForm.displayName.trim();
   if (!displayName) {
-    ElMessage.warning('用户姓名不能为空');
+    message.warning('用户姓名不能为空');
     return;
   }
   saving.value = true;
   try {
     await iamApi.updateUser(profileUserId.value, { displayName, active: profileForm.active });
-    ElMessage.success('用户资料已更新');
-    profileDialogOpen.value = false;
+    message.success('用户资料已更新');
+    profileOpen.value = false;
     emit('refresh');
   } catch (cause) {
-    ElMessage.error(platformErrorMessage(cause, '用户资料保存失败'));
+    message.error(platformErrorMessage(cause, '用户资料保存失败'));
   } finally {
     saving.value = false;
   }
 }
 
-async function toggleActive(value: unknown): Promise<void> {
-  const user = value as IamUser;
+async function toggleActive(user: IamUser): Promise<void> {
   if (props.readonly) return;
   saving.value = true;
   try {
     await iamApi.updateUser(user.id, { active: !user.active });
-    ElMessage.success(user.active ? '账号已停用' : '账号已启用');
+    message.success(user.active ? '账号已停用' : '账号已启用');
     emit('refresh');
   } catch (cause) {
-    ElMessage.error(platformErrorMessage(cause, '账号状态更新失败'));
+    message.error(platformErrorMessage(cause, '账号状态更新失败'));
   } finally {
     saving.value = false;
   }
 }
 
-function openPassword(value: unknown): void {
-  const user = value as IamUser;
+function openPassword(user: IamUser): void {
   if (props.readonly) return;
   passwordUserId.value = user.id;
   Object.assign(passwordForm, { password: '', confirm: '' });
-  passwordDialogOpen.value = true;
+  passwordOpen.value = true;
 }
 
 async function resetPassword(): Promise<void> {
   if (props.readonly || !passwordUserId.value) return;
   if (passwordForm.password.length < 8) {
-    ElMessage.warning('新密码至少 8 位');
+    message.warning('新密码至少 8 位');
     return;
   }
   if (passwordForm.password !== passwordForm.confirm) {
-    ElMessage.warning('两次输入的密码不一致');
+    message.warning('两次输入的密码不一致');
     return;
   }
   saving.value = true;
   try {
     await iamApi.resetUserPassword(passwordUserId.value, passwordForm.password);
-    ElMessage.success('密码已重置，用户下次登录需修改密码');
-    passwordDialogOpen.value = false;
+    message.success('密码已重置，用户下次登录需修改密码');
+    passwordOpen.value = false;
   } catch (cause) {
-    ElMessage.error(platformErrorMessage(cause, '密码重置失败'));
+    message.error(platformErrorMessage(cause, '密码重置失败'));
   } finally {
     saving.value = false;
   }
@@ -381,361 +424,389 @@ async function resetPassword(): Promise<void> {
 </script>
 
 <template>
-  <div v-loading="loading" class="iam-user-table-panel">
-    <div class="platform-toolbar">
-      <div class="platform-inline-actions">
-        <ElInput
-          v-model="keyword"
-          class="platform-toolbar__search"
-          clearable
-          placeholder="搜索姓名或账号"
-          style="width: 220px"
+  <div class="iam-user-panel">
+    <a-card size="small" style="margin-bottom: 16px">
+      <a-space wrap>
+        <a-input
+          v-model:value="filters.keyword"
+          allow-clear
+          placeholder="姓名或登录账号"
+          style="width: 200px"
+          @press-enter="search"
+        />
+        <a-select
+          v-model:value="filters.status"
+          allow-clear
+          :options="[
+            { value: 'active', label: '正常' },
+            { value: 'inactive', label: '停用' },
+          ]"
+          placeholder="状态"
+          style="width: 120px"
+        />
+        <a-button type="primary" @click="search">
+          <template #icon><SearchOutlined /></template>
+          查询
+        </a-button>
+        <a-button @click="resetFilters">
+          <template #icon><ReloadOutlined /></template>
+          重置
+        </a-button>
+        <a-button v-if="!readonly" type="primary" ghost @click="openCreate">
+          <template #icon><PlusOutlined /></template>
+          新增用户
+        </a-button>
+      </a-space>
+    </a-card>
+
+    <a-table
+      :columns="columns"
+      :data-source="filteredUsers"
+      :loading="loading"
+      :pagination="{ pageSize: 20, showTotal: (total: number) => `共 ${total} 名用户` }"
+      row-key="id"
+      size="middle"
+    >
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'displayName'">
+          <strong>{{ (record as IamUser).displayName }}</strong>
+        </template>
+        <template v-else-if="column.key === 'primaryDepartment'">
+          {{ primaryDepartmentName(record as IamUser) }}
+        </template>
+        <template v-else-if="column.key === 'positions'">
+          <template v-if="userPositionNames(record as IamUser).length > 0">
+            <a-tag v-for="name in userPositionNames(record as IamUser)" :key="name">{{
+              name
+            }}</a-tag>
+          </template>
+          <span v-else>-</span>
+        </template>
+        <template v-else-if="column.key === 'roles'">
+          <template v-if="userRoleNames(record as IamUser).length > 0">
+            <a-tag v-for="name in userRoleNames(record as IamUser)" :key="name" color="blue">{{
+              name
+            }}</a-tag>
+          </template>
+          <span v-else>未授权</span>
+        </template>
+        <template v-else-if="column.key === 'status'">
+          <a-tag :color="(record as IamUser).active ? 'green' : 'default'">
+            {{ (record as IamUser).active ? '正常' : '停用' }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.key === 'actions'">
+          <a-space size="small">
+            <a-button size="small" type="link" @click="openAssign(record as IamUser)">
+              <template #icon><SettingOutlined /></template>
+              分配授权
+            </a-button>
+            <a-button size="small" type="link" @click="openProfile(record as IamUser)">
+              <template #icon><EditOutlined /></template>
+              编辑
+            </a-button>
+            <a-button size="small" type="link" @click="openPassword(record as IamUser)">
+              <template #icon><KeyOutlined /></template>
+              重置密码
+            </a-button>
+            <a-popconfirm
+              :title="(record as IamUser).active ? '确定停用该账号吗？' : '确定启用该账号吗？'"
+              @confirm="toggleActive(record as IamUser)"
+            >
+              <a-button danger size="small" type="link">
+                {{ (record as IamUser).active ? '停用' : '启用' }}
+              </a-button>
+            </a-popconfirm>
+          </a-space>
+        </template>
+      </template>
+    </a-table>
+
+    <a-modal
+      v-model:open="assignOpen"
+      :confirm-loading="saving"
+      :title="`分配授权：${assignUser?.displayName ?? ''}（${assignUser?.username ?? ''}）`"
+      width="920px"
+      @ok="saveAssignments"
+    >
+      <div class="iam-assign-section">
+        <div class="iam-assign-section__heading">
+          <div>
+            <strong>部门任职</strong>
+            <span class="iam-assign-section__hint"
+              >支持一人多部门、多岗位，并且只能有一个主部门</span
+            >
+          </div>
+          <a-button size="small" @click="addMembership">
+            <template #icon><PlusOutlined /></template>
+            添加任职
+          </a-button>
+        </div>
+        <a-table
+          :columns="membershipColumns"
+          :data-source="memberships"
+          :pagination="false"
+          row-key="key"
+          size="small"
         >
-          <template #prefix
-            ><ElIcon><Search /></ElIcon
-          ></template>
-        </ElInput>
-        <ElSelect v-model="statusFilter" style="width: 120px">
-          <ElOption label="全部状态" value="all" />
-          <ElOption label="正常" value="active" />
-          <ElOption label="停用" value="inactive" />
-        </ElSelect>
-      </div>
-      <ElButton v-if="!readonly" type="primary" @click="openCreate">
-        <ElIcon><Plus /></ElIcon>新增用户
-      </ElButton>
-    </div>
-
-    <ElTable :data="filteredUsers" empty-text="暂无用户" row-key="id" scrollbar-always-on>
-      <ElTableColumn label="姓名" min-width="120">
-        <template #default="{ row }">
-          <strong>{{ row.displayName }}</strong>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="登录账号" min-width="120" prop="username" />
-      <ElTableColumn label="主部门" min-width="120">
-        <template #default="{ row }">{{ primaryDepartmentName(row) }}</template>
-      </ElTableColumn>
-      <ElTableColumn label="岗位" min-width="140">
-        <template #default="{ row }">
-          <template v-if="userPositionNames(row).length > 0">
-            <ElTag
-              v-for="name in userPositionNames(row)"
-              :key="name"
-              class="iam-cell-tag"
-              effect="plain"
-              size="small"
-              >{{ name }}</ElTag
-            >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'department'">
+              <a-select
+                v-model:value="(record as MembershipDraft).departmentId"
+                :options="departmentOptions"
+                placeholder="选择部门"
+                show-search
+                style="width: 100%"
+                :filter-option="filterByLabel"
+                @change="(record as MembershipDraft).positionId = null"
+              />
+            </template>
+            <template v-else-if="column.key === 'position'">
+              <a-select
+                v-model:value="(record as MembershipDraft).positionId"
+                allow-clear
+                :options="positionOptionsFor((record as MembershipDraft).departmentId)"
+                placeholder="可选"
+                style="width: 100%"
+              />
+            </template>
+            <template v-else-if="column.key === 'isPrimary'">
+              <a-checkbox
+                v-model:checked="(record as MembershipDraft).isPrimary"
+                @change="setPrimary(record as MembershipDraft)"
+              />
+            </template>
+            <template v-else-if="column.key === 'isDepartmentHead'">
+              <a-checkbox v-model:checked="(record as MembershipDraft).isDepartmentHead" />
+            </template>
+            <template v-else-if="column.key === 'active'">
+              <a-switch v-model:checked="(record as MembershipDraft).active" size="small" />
+            </template>
+            <template v-else-if="column.key === 'remove'">
+              <a-button
+                danger
+                size="small"
+                type="text"
+                @click="
+                  memberships.splice(
+                    memberships.findIndex((item) => item.key === (record as MembershipDraft).key),
+                    1,
+                  )
+                "
+              >
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </template>
           </template>
-          <span v-else class="platform-muted">—</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="角色" min-width="180">
-        <template #default="{ row }">
-          <template v-if="userRoleNames(row).length > 0">
-            <ElTag
-              v-for="name in userRoleNames(row)"
-              :key="name"
-              class="iam-cell-tag"
-              size="small"
-              type="info"
-              >{{ name }}</ElTag
-            >
+        </a-table>
+      </div>
+
+      <div class="iam-assign-section">
+        <div class="iam-assign-section__heading">
+          <div>
+            <strong>角色与数据范围</strong>
+            <span class="iam-assign-section__hint">功能权限和数据权限分开授予</span>
+          </div>
+          <a-button size="small" @click="addRole">
+            <template #icon><PlusOutlined /></template>
+            添加角色
+          </a-button>
+        </div>
+        <a-table
+          :columns="roleColumns"
+          :data-source="roleAssignments"
+          :pagination="false"
+          row-key="key"
+          size="small"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'role'">
+              <a-select
+                v-model:value="(record as RoleDraft).roleId"
+                :options="activeRoleOptions"
+                placeholder="选择角色"
+                show-search
+                style="width: 100%"
+                :filter-option="filterByLabel"
+              />
+            </template>
+            <template v-else-if="column.key === 'dataScope'">
+              <a-select
+                v-model:value="(record as RoleDraft).dataScope"
+                :options="dataScopeOptions"
+                style="width: 100%"
+                @change="normalizeScope(record as RoleDraft)"
+              />
+            </template>
+            <template v-else-if="column.key === 'scopeDepartment'">
+              <a-select
+                v-if="['DEPARTMENT', 'DEPARTMENT_TREE'].includes((record as RoleDraft).dataScope)"
+                v-model:value="(record as RoleDraft).scopeDepartmentId"
+                :options="departmentOptions"
+                placeholder="选择范围部门（必选）"
+                show-search
+                style="width: 100%"
+                :filter-option="filterByLabel"
+              />
+              <span v-else>不适用</span>
+            </template>
+            <template v-else-if="column.key === 'remove'">
+              <a-button
+                danger
+                size="small"
+                type="text"
+                @click="
+                  roleAssignments.splice(
+                    roleAssignments.findIndex((item) => item.key === (record as RoleDraft).key),
+                    1,
+                  )
+                "
+              >
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </template>
           </template>
-          <span v-else class="platform-muted">未授权</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn align="center" label="状态" width="90">
-        <template #default="{ row }">
-          <ElTag :type="row.active ? 'success' : 'info'" effect="plain" size="small">
-            {{ row.active ? '正常' : '停用' }}
-          </ElTag>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn v-if="!readonly" label="操作" width="270">
-        <template #default="{ row }">
-          <ElButton link size="small" type="primary" @click="openAssign(row)">
-            <ElIcon><Setting /></ElIcon>分配授权
-          </ElButton>
-          <ElButton link size="small" type="primary" @click="openProfile(row)">
-            <ElIcon><Edit /></ElIcon>编辑
-          </ElButton>
-          <ElButton link size="small" type="warning" @click="openPassword(row)">
-            <ElIcon><Key /></ElIcon>重置密码
-          </ElButton>
-          <ElButton
-            link
-            size="small"
-            :type="row.active ? 'danger' : 'success'"
-            @click="toggleActive(row)"
-          >
-            {{ row.active ? '停用' : '启用' }}
-          </ElButton>
-        </template>
-      </ElTableColumn>
-    </ElTable>
-  </div>
+        </a-table>
+      </div>
+    </a-modal>
 
-  <ElDialog
-    v-model="assignDialogOpen"
-    :title="`分配授权：${assignUser?.displayName ?? ''}（${assignUser?.username ?? ''}）`"
-    top="6vh"
-    width="880px"
-  >
-    <div class="platform-subheading">
-      <div>
-        <strong>部门任职</strong><small>支持一人多部门、多岗位，并且只能有一个主部门</small>
-      </div>
-      <ElButton v-if="!readonly" @click="addMembership"
-        ><ElIcon><Plus /></ElIcon>添加任职</ElButton
-      >
-    </div>
-    <ElTable :data="memberships" empty-text="尚未配置部门任职" row-key="key" scrollbar-always-on>
-      <ElTableColumn label="部门" min-width="150">
-        <template #default="{ row }">
-          <ElSelect
-            v-model="row.departmentId"
-            :disabled="readonly"
-            filterable
-            placeholder="选择部门"
-            @change="row.positionId = null"
-          >
-            <ElOption
-              v-for="item in departments"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </ElSelect>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="岗位" min-width="130">
-        <template #default="{ row }">
-          <ElSelect
-            v-model="row.positionId"
-            clearable
-            :disabled="readonly"
-            filterable
-            placeholder="可选"
-          >
-            <ElOption
-              v-for="item in positionsFor(row.departmentId)"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </ElSelect>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn align="center" label="主部门" width="82">
-        <template #default="{ row }"
-          ><ElCheckbox v-model="row.isPrimary" :disabled="readonly" @change="setPrimary(row)"
-        /></template>
-      </ElTableColumn>
-      <ElTableColumn align="center" label="部门负责人" width="102">
-        <template #default="{ row }"
-          ><ElCheckbox v-model="row.isDepartmentHead" :disabled="readonly"
-        /></template>
-      </ElTableColumn>
-      <ElTableColumn align="center" label="启用" width="72">
-        <template #default="{ row }"
-          ><ElSwitch v-model="row.active" :disabled="readonly"
-        /></template>
-      </ElTableColumn>
-      <ElTableColumn v-if="!readonly" label="" width="46">
-        <template #default="{ $index }"
-          ><ElButton circle text type="danger" @click="memberships.splice($index, 1)"
-            ><ElIcon><Delete /></ElIcon></ElButton
-        ></template>
-      </ElTableColumn>
-    </ElTable>
-
-    <div class="platform-subheading platform-subheading--spaced">
-      <div>
-        <strong>角色与数据范围</strong
-        ><small>功能权限和数据权限分开授予，避免角色编码承载组织范围</small>
-      </div>
-      <ElButton v-if="!readonly" @click="addRole"
-        ><ElIcon><Plus /></ElIcon>添加角色</ElButton
-      >
-    </div>
-    <ElTable :data="roleAssignments" empty-text="尚未授予角色" row-key="key" scrollbar-always-on>
-      <ElTableColumn label="角色" min-width="180">
-        <template #default="{ row }">
-          <ElSelect v-model="row.roleId" :disabled="readonly" filterable placeholder="选择角色">
-            <ElOption
-              v-for="role in roles.filter((item) => item.active)"
-              :key="role.id"
-              :label="role.name"
-              :value="role.id"
-            />
-          </ElSelect>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="数据范围" min-width="170">
-        <template #default="{ row }">
-          <ElSelect v-model="row.dataScope" :disabled="readonly" @change="normalizeScope(row)">
-            <ElOption label="仅本人" value="SELF" />
-            <ElOption label="指定部门" value="DEPARTMENT" />
-            <ElOption label="指定部门及下级" value="DEPARTMENT_TREE" />
-            <ElOption label="全部数据" value="ALL" />
-          </ElSelect>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="范围部门" min-width="170">
-        <template #default="{ row }">
-          <ElSelect
-            v-if="['DEPARTMENT', 'DEPARTMENT_TREE'].includes(row.dataScope)"
-            v-model="row.scopeDepartmentId"
-            :disabled="readonly"
-            filterable
-            placeholder="选择范围部门（必选）"
-          >
-            <ElOption
-              v-for="item in departments"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </ElSelect>
-          <span v-else class="platform-muted">不适用</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn v-if="!readonly" label="" width="46">
-        <template #default="{ $index }"
-          ><ElButton circle text type="danger" @click="roleAssignments.splice($index, 1)"
-            ><ElIcon><Delete /></ElIcon></ElButton
-        ></template>
-      </ElTableColumn>
-    </ElTable>
-    <template #footer>
-      <ElButton @click="assignDialogOpen = false">取消</ElButton>
-      <ElButton v-if="!readonly" :loading="saving" type="primary" @click="saveAssignments"
-        >保存授权</ElButton
-      >
-    </template>
-  </ElDialog>
-
-  <ElDialog v-model="createDialogOpen" title="新增用户" width="520px">
-    <ElForm label-position="top">
-      <div class="platform-form-grid">
-        <ElFormItem label="登录账号">
-          <ElInput v-model="createForm.username" maxlength="100" placeholder="例如：zhangsan" />
-        </ElFormItem>
-        <ElFormItem label="用户姓名">
-          <ElInput v-model="createForm.displayName" maxlength="100" placeholder="例如：张三" />
-        </ElFormItem>
-      </div>
-      <ElFormItem label="初始密码">
-        <ElInput
-          v-model="createForm.password"
-          maxlength="128"
-          placeholder="至少 8 位，首次登录强制修改"
-          show-password
-          type="password"
-        />
-      </ElFormItem>
-      <div class="platform-form-grid">
-        <ElFormItem label="主部门">
-          <ElSelect
-            v-model="createForm.departmentId"
-            filterable
-            placeholder="选择主部门"
-            @change="createForm.positionId = null"
-          >
-            <ElOption
-              v-for="item in departments"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="岗位（可选）">
-          <ElSelect v-model="createForm.positionId" clearable filterable placeholder="可选">
-            <ElOption
-              v-for="item in positionsFor(createForm.departmentId)"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </ElSelect>
-        </ElFormItem>
-      </div>
-      <ElFormItem label="初始角色（可选，默认仅本人数据范围，可在保存后调整）">
-        <ElSelect v-model="createForm.roleIds" clearable filterable multiple placeholder="可选">
-          <ElOption
-            v-for="role in roles.filter((item) => item.active)"
-            :key="role.id"
-            :label="role.name"
-            :value="role.id"
+    <a-modal
+      v-model:open="createOpen"
+      :confirm-loading="saving"
+      ok-text="创建用户"
+      title="新增用户"
+      width="560px"
+      @ok="createUser"
+    >
+      <a-form layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="登录账号" required>
+              <a-input
+                v-model:value="createForm.username"
+                :maxlength="100"
+                placeholder="例如：zhangsan"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="用户姓名" required>
+              <a-input
+                v-model:value="createForm.displayName"
+                :maxlength="100"
+                placeholder="例如：张三"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item label="初始密码" required>
+          <a-input-password
+            v-model:value="createForm.password"
+            :maxlength="128"
+            placeholder="至少 8 位，首次登录强制修改"
           />
-        </ElSelect>
-      </ElFormItem>
-    </ElForm>
-    <template #footer>
-      <ElButton @click="createDialogOpen = false">取消</ElButton>
-      <ElButton :loading="saving" type="primary" @click="createUser">创建用户</ElButton>
-    </template>
-  </ElDialog>
+        </a-form-item>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="主部门" required>
+              <a-select
+                v-model:value="createForm.departmentId"
+                :options="departmentOptions"
+                placeholder="选择主部门"
+                show-search
+                :filter-option="filterByLabel"
+                @change="createForm.positionId = undefined"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="岗位（可选）">
+              <a-select
+                v-model:value="createForm.positionId"
+                allow-clear
+                :options="
+                  createForm.departmentId ? positionOptionsFor(createForm.departmentId) : []
+                "
+                placeholder="可选"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item label="初始角色（可选，默认仅本人数据范围，可在分配授权中调整）">
+          <a-select
+            v-model:value="createForm.roleIds"
+            allow-clear
+            mode="multiple"
+            :options="activeRoleOptions"
+            placeholder="可选"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
-  <ElDialog v-model="profileDialogOpen" title="编辑用户资料" width="420px">
-    <ElForm label-position="top">
-      <ElFormItem label="登录账号">
-        <ElInput :model-value="profileUser?.username ?? ''" disabled />
-      </ElFormItem>
-      <ElFormItem label="用户姓名">
-        <ElInput v-model="profileForm.displayName" maxlength="100" />
-      </ElFormItem>
-      <ElFormItem label="账号状态">
-        <ElSwitch v-model="profileForm.active" active-text="启用" inactive-text="停用" />
-      </ElFormItem>
-    </ElForm>
-    <template #footer>
-      <ElButton @click="profileDialogOpen = false">取消</ElButton>
-      <ElButton :loading="saving" type="primary" @click="saveProfile">保存</ElButton>
-    </template>
-  </ElDialog>
+    <a-modal
+      v-model:open="profileOpen"
+      :confirm-loading="saving"
+      title="编辑用户资料"
+      width="460px"
+      @ok="saveProfile"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="登录账号">
+          <a-input disabled :value="profileUser?.username ?? ''" />
+        </a-form-item>
+        <a-form-item label="用户姓名" required>
+          <a-input v-model:value="profileForm.displayName" :maxlength="100" />
+        </a-form-item>
+        <a-form-item label="账号状态">
+          <a-switch
+            v-model:checked="profileForm.active"
+            checked-children="启用"
+            un-checked-children="停用"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
-  <ElDialog v-model="passwordDialogOpen" title="重置登录密码" width="420px">
-    <ElForm label-position="top">
-      <ElFormItem label="新密码">
-        <ElInput
-          v-model="passwordForm.password"
-          maxlength="128"
-          placeholder="至少 8 位"
-          show-password
-          type="password"
-        />
-      </ElFormItem>
-      <ElFormItem label="确认密码">
-        <ElInput v-model="passwordForm.confirm" maxlength="128" show-password type="password" />
-      </ElFormItem>
-    </ElForm>
-    <template #footer>
-      <ElButton @click="passwordDialogOpen = false">取消</ElButton>
-      <ElButton :loading="saving" type="primary" @click="resetPassword">重置密码</ElButton>
-    </template>
-  </ElDialog>
+    <a-modal
+      v-model:open="passwordOpen"
+      :confirm-loading="saving"
+      ok-text="重置密码"
+      title="重置登录密码"
+      width="460px"
+      @ok="resetPassword"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="新密码" required>
+          <a-input-password
+            v-model:value="passwordForm.password"
+            :maxlength="128"
+            placeholder="至少 8 位"
+          />
+        </a-form-item>
+        <a-form-item label="确认密码" required>
+          <a-input-password v-model:value="passwordForm.confirm" :maxlength="128" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+  </div>
 </template>
 
 <style scoped>
-.iam-user-table-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.iam-assign-section {
+  margin-bottom: 16px;
 }
 
-.platform-toolbar {
+.iam-assign-section__heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
-.iam-cell-tag {
-  margin: 2px 4px 2px 0;
+.iam-assign-section__hint {
+  margin-left: 8px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
 }
 </style>
