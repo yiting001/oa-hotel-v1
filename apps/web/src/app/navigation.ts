@@ -8,6 +8,7 @@ import {
   House,
   OfficeBuilding,
   Share,
+  ShoppingCart,
   Stamp,
   Tickets,
 } from '@element-plus/icons-vue';
@@ -25,6 +26,7 @@ export type NavigationItemId =
   | 'start'
   | 'content'
   | 'contract'
+  | 'purchase'
   | 'seal'
   | 'supply'
   | 'iam'
@@ -86,6 +88,13 @@ const navigationGroups: readonly NavigationGroup[] = [
         label: '合同与支出',
         icon: Tickets,
         requiredPermissions: requiredBusinessModulePermissions('CONTRACT', 'VIEW'),
+      },
+      {
+        id: 'purchase',
+        path: '/purchase',
+        label: '采购审批',
+        icon: ShoppingCart,
+        requiredPermissions: requiredBusinessModulePermissions('PURCHASE', 'VIEW'),
       },
       {
         id: 'seal',

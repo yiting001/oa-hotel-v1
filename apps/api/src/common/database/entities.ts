@@ -26,6 +26,7 @@ import { MaterialItemEntity } from '../../modules/supply/infrastructure/material
 import { MaterialPurchaseEntity } from '../../modules/supply/infrastructure/material-purchase.entity';
 import { MaterialRequisitionEntity } from '../../modules/supply/infrastructure/material-requisition.entity';
 import { portalEntities } from '../../modules/portal/infrastructure/entities';
+import { PurchaseEntity } from '../../modules/purchase/infrastructure/purchase.entity';
 
 export const databaseEntities = [
   DepartmentEntity,
@@ -50,6 +51,7 @@ export const databaseEntities = [
   ContractEntity,
   ContractPaymentEntity,
   ContractRequestEntity,
+  PurchaseEntity,
   SealAssetEntity,
   SealBorrowEntity,
   SealUseEntity,

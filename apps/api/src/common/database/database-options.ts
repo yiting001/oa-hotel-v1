@@ -17,6 +17,7 @@ import { PersistentLoginAttemptLimiter1784600000000 } from './migrations/1784600
 import { RosterOptionalPasswordChange1784700000000 } from './migrations/1784700000000-RosterOptionalPasswordChange';
 import { ProcurementApprovalFoundation1784800000000 } from './migrations/1784800000000-ProcurementApprovalFoundation';
 import { ContractApprovalProcurementFields1784900000000 } from './migrations/1784900000000-ContractApprovalProcurementFields';
+import { PurchaseModule1785000000000 } from './migrations/1785000000000-PurchaseModule';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -52,6 +53,7 @@ export function createDatabaseOptions(
       RosterOptionalPasswordChange1784700000000,
       ProcurementApprovalFoundation1784800000000,
       ContractApprovalProcurementFields1784900000000,
+      PurchaseModule1785000000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

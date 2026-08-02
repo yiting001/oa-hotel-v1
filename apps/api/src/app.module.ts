@@ -9,6 +9,7 @@ import { FormDesignModule } from './common/form-design/form-design.module';
 import { ProcessDesignModule } from './common/process-design/process-design.module';
 import { ContractModule } from './modules/contract/contract.module';
 import { PortalModule } from './modules/portal/portal.module';
+import { PurchaseModule } from './modules/purchase/purchase.module';
 import { SealModule } from './modules/seal/seal.module';
 import { SupplyModule } from './modules/supply/supply.module';
 
@@ -22,6 +23,7 @@ import { SupplyModule } from './modules/supply/supply.module';
     WorkbenchModule,
     PortalModule,
     ContractModule,
+    PurchaseModule,
     SealModule,
     SupplyModule,
   ],
