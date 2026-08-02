@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AuthModule } from './common/auth/auth.module';
 import { createDatabaseOptions } from './common/database/database-options';
+import { RequestLogModule } from './common/request-log/request-log.module';
 import { WorkflowModule } from './common/workflow/workflow.module';
 import { WorkbenchModule } from './common/workbench/workbench.module';
 import { FormDesignModule } from './common/form-design/form-design.module';
@@ -18,6 +19,7 @@ import { SupplyModule } from './modules/supply/supply.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot(createDatabaseOptions()),
+    RequestLogModule,
     AuthModule,
     FormDesignModule,
     ProcessDesignModule,

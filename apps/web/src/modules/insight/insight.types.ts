@@ -22,6 +22,23 @@ export interface OperationLogRow {
   createdAt: string;
 }
 
+export interface RequestLogRow {
+  id: string;
+  traceId: string;
+  method: string;
+  path: string;
+  query: string | null;
+  statusCode: number;
+  durationMs: number;
+  actorId: string | null;
+  actorName: string | null;
+  requestBody: string | null;
+  responseBody: string | null;
+  errorMessage: string | null;
+  errorStack: string | null;
+  createdAt: string;
+}
+
 export interface StatisticsBucket {
   period: string;
   documentType: string;

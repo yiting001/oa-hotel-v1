@@ -6,9 +6,20 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
+import {
+  ERROR_MESSAGE_KEY,
+  ERROR_STACK_KEY,
+  TRACE_ID_KEY,
+} from '../request-log/request-log.middleware';
 import { DomainError } from './domain-error';
+
+interface TracedRequest extends Request {
+  [TRACE_ID_KEY]?: string;
+  [ERROR_MESSAGE_KEY]?: string;
+  [ERROR_STACK_KEY]?: string;
+}
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -16,7 +27,12 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
   catch(error: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
-    const traceId = randomUUID();
+    const request = host.switchToHttp().getRequest<TracedRequest>();
+    const traceId = request[TRACE_ID_KEY] ?? randomUUID();
+    request[ERROR_MESSAGE_KEY] = error instanceof Error ? error.message : String(error);
+    if (error instanceof Error && error.stack) {
+      request[ERROR_STACK_KEY] = error.stack;
+    }
 
     if (error instanceof DomainError) {
       response.status(HttpStatus.UNPROCESSABLE_ENTITY).json({

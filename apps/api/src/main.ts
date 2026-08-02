@@ -4,12 +4,15 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/errors/api-exception.filter';
+import { createRequestLogMiddleware } from './common/request-log/request-log.middleware';
+import { RequestLogService } from './common/request-log/request-log.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
   app.setGlobalPrefix('api/v1');
   configureCors(app);
+  app.use(createRequestLogMiddleware(app.get(RequestLogService)));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
