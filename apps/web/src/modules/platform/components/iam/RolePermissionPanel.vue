@@ -93,8 +93,8 @@ async function removeRole(role: RoleSummary): Promise<void> {
 
 const permOpen = ref(false);
 const permRoleId = ref<string | null>(null);
-const permKeyword = ref('');
-const selectedPermissionIds = ref<string[]>([]);
+const permTab = ref<'menus' | 'permissions'>('menus');
+const permCheckedKeys = ref<string[]>([]);
 const menuTree = ref<MenuTreeNode[]>([]);
 const roleMenuAssignments = ref<RoleMenuAssignment[]>([]);
 const menuCheckedKeys = ref<string[]>([]);
@@ -136,20 +136,43 @@ const allMenuIds = computed(() => {
   return ids;
 });
 
-const permissionGroups = computed(() => {
-  const query = permKeyword.value.trim().toLowerCase();
+const moduleLabels: Record<string, string> = {
+  PORTAL: '公司门户',
+  CONTENT: '内容管理',
+  CONTRACT: '合同与支出',
+  PURCHASE: '采购审批',
+  PETTY: '零星采买',
+  SEAL: '行政印章',
+  SUPPLY: '物资管理',
+  DOCUMENT: '单据中心',
+  WORKFLOW: '审批中心',
+  FINANCE: '财务审核',
+  FORM_DESIGN: '表单设计',
+  PROCESS_DESIGN: '流程设计',
+  IAM: '组织与权限',
+};
+
+const permissionTreeData = computed(() => {
   const grouped = new Map<string, Permission[]>();
   props.permissions
     .filter((permission) => permission.active)
-    .filter(
-      (permission) =>
-        !query || `${permission.name} ${permission.code}`.toLowerCase().includes(query),
-    )
     .forEach((permission) =>
       grouped.set(permission.module, [...(grouped.get(permission.module) ?? []), permission]),
     );
-  return [...grouped.entries()].map(([module, items]) => ({ module, items }));
+  return [...grouped.entries()].map(([module, items]) => ({
+    key: `module:${module}`,
+    title: moduleLabels[module] ?? module,
+    disabled: props.readonly || isSystemAdmin.value,
+    children: items.map((permission) => ({
+      key: permission.id,
+      title: permission.name,
+      disabled: permissionDisabled(permission.id),
+      children: [],
+    })),
+  }));
 });
+
+const permissionIdSet = computed(() => new Set(props.permissions.map((item) => item.id)));
 
 function leafMenuIds(menuIds: readonly string[]): string[] {
   const leaves: string[] = [];
@@ -183,22 +206,12 @@ function menuIdsWithAncestors(checked: readonly string[]): string[] {
 
 function openPermissions(role: RoleSummary): void {
   permRoleId.value = role.id;
-  permKeyword.value = '';
-  selectedPermissionIds.value = [...role.permissionIds];
+  permTab.value = 'menus';
+  permCheckedKeys.value = [...role.permissionIds];
   const assignment = roleMenuAssignments.value.find((entry) => entry.roleId === role.id);
   const menuIds = role.code === 'SYSTEM_ADMIN' ? allMenuIds.value : (assignment?.menuIds ?? []);
   menuCheckedKeys.value = leafMenuIds(menuIds);
   permOpen.value = true;
-}
-
-function toggleModule(items: Permission[]): void {
-  if (props.readonly) return;
-  const ids = items.map((item) => item.id);
-  const allSelected = ids.every((id) => selectedPermissionIds.value.includes(id));
-  selectedPermissionIds.value =
-    allSelected && !isSystemAdmin.value
-      ? selectedPermissionIds.value.filter((id) => !ids.includes(id))
-      : [...new Set([...selectedPermissionIds.value, ...ids])];
 }
 
 function permissionDisabled(permissionId: string): boolean {
@@ -213,7 +226,10 @@ async function savePermissions(): Promise<void> {
   if (!role || props.readonly) return;
   saving.value = true;
   try {
-    await iamApi.saveRolePermissions(role.id, selectedPermissionIds.value);
+    await iamApi.saveRolePermissions(
+      role.id,
+      permCheckedKeys.value.filter((key) => permissionIdSet.value.has(key)),
+    );
     if (!isSystemAdmin.value) {
       const updated = await iamApi.saveRoleMenus(
         role.id,
@@ -340,8 +356,8 @@ async function savePermissions(): Promise<void> {
     <a-modal
       v-model:open="permOpen"
       :confirm-loading="saving"
-      :title="`权限授权：${permRole?.name ?? ''}（${permRole?.code ?? ''}）`"
-      width="880px"
+      :title="`权限授权：${permRole?.name ?? ''}`"
+      width="560px"
       @ok="savePermissions"
     >
       <a-alert
@@ -351,48 +367,28 @@ async function savePermissions(): Promise<void> {
         style="margin-bottom: 12px"
         type="info"
       />
-      <a-input
-        v-model:value="permKeyword"
-        allow-clear
-        placeholder="搜索权限名称或编码"
-        style="margin-bottom: 12px; width: 280px"
-      />
-      <a-checkbox-group v-model:value="selectedPermissionIds" style="width: 100%">
-        <div v-for="group in permissionGroups" :key="group.module" class="perm-group">
-          <div class="perm-group__header">
-            <strong>{{ group.module }}</strong>
-            <span class="perm-group__count">{{ group.items.length }} 项权限</span>
-            <a-button v-if="!readonly" size="small" type="link" @click="toggleModule(group.items)">
-              全选 / 清空
-            </a-button>
-          </div>
-          <div class="perm-group__items">
-            <a-checkbox
-              v-for="permission in group.items"
-              :key="permission.id"
-              :disabled="permissionDisabled(permission.id)"
-              :value="permission.id"
-            >
-              {{ permission.name }}
-              <span class="perm-group__code">{{ permission.code }}</span>
-            </a-checkbox>
-          </div>
-        </div>
-      </a-checkbox-group>
-
-      <div class="perm-group">
-        <div class="perm-group__header">
-          <strong>菜单权限</strong>
-          <span class="perm-group__count">勾选该角色可见的导航菜单，多个角色取并集</span>
-        </div>
-        <a-tree
-          v-model:checked-keys="menuCheckedKeys"
-          checkable
-          default-expand-all
-          :selectable="false"
-          :tree-data="menuTreeData"
-        />
-      </div>
+      <a-tabs v-model:active-key="permTab">
+        <a-tab-pane key="menus" tab="菜单权限">
+          <p class="perm-tab-hint">勾选该角色可见的导航菜单，用户拥有多个角色时取并集</p>
+          <a-tree
+            v-model:checked-keys="menuCheckedKeys"
+            checkable
+            default-expand-all
+            :selectable="false"
+            :tree-data="menuTreeData"
+          />
+        </a-tab-pane>
+        <a-tab-pane key="permissions" tab="功能权限">
+          <p class="perm-tab-hint">按业务模块勾选该角色可执行的操作，勾选模块即全选</p>
+          <a-tree
+            v-model:checked-keys="permCheckedKeys"
+            checkable
+            default-expand-all
+            :selectable="false"
+            :tree-data="permissionTreeData"
+          />
+        </a-tab-pane>
+      </a-tabs>
     </a-modal>
   </div>
 </template>
@@ -403,31 +399,9 @@ async function savePermissions(): Promise<void> {
   font-size: 12px;
 }
 
-.perm-group {
-  margin-bottom: 16px;
-}
-
-.perm-group__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.perm-group__count {
+.perm-tab-hint {
+  margin: 0 0 8px;
   color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
-}
-
-.perm-group__items {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 6px 12px;
-}
-
-.perm-group__code {
-  margin-left: 4px;
-  color: rgba(0, 0, 0, 0.4);
   font-size: 12px;
 }
 </style>
