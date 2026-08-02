@@ -9,7 +9,8 @@ DEPLOY_DIR="$SITE_ROOT/oa-hotel-production"
 PACKAGE=/tmp/oa-hotel-production.tar.gz
 CONTAINER=oa-hotel-api
 API_PORT=${API_PORT:-52176}
-NODE_IMAGE=${NODE_IMAGE:-node:22-bookworm}
+# 服务器上已有 node:20-bookworm 镜像；国内拉取新镜像很慢，默认复用本地镜像
+NODE_IMAGE=${NODE_IMAGE:-node:20-bookworm}
 NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmmirror.com}
 
 : "${OA_DATABASE_URL:?OA_DATABASE_URL 必须设置}"
@@ -26,7 +27,10 @@ for f in "$DEPLOY_DIR"/api/*.sqlite*; do
 done
 
 # 站点根直接提供 web 静态文件，api 子目录放后端产物
-rm -rf "$DEPLOY_DIR.old"
+if [ -d "$DEPLOY_DIR.old" ]; then
+  chattr -i "$DEPLOY_DIR.old/.user.ini" 2>/dev/null || true
+  rm -rf "$DEPLOY_DIR.old" 2>/dev/null || true
+fi
 NEW_DIR="$DEPLOY_DIR.new"
 rm -rf "$NEW_DIR"
 mkdir -p "$NEW_DIR"
@@ -40,7 +44,13 @@ if [ -d "$DEPLOY_DIR" ] && [ -e "$DEPLOY_DIR/index.html" ]; then
   mv "$DEPLOY_DIR" "$DEPLOY_DIR.old"
 fi
 mv "$NEW_DIR" "$DEPLOY_DIR"
-rm -rf "$STAGING" "$DEPLOY_DIR.old"
+# 宝塔的 .user.ini 带不可变属性，需先解除并保留
+if [ -f "$DEPLOY_DIR.old/.user.ini" ]; then
+  chattr -i "$DEPLOY_DIR.old/.user.ini" 2>/dev/null || true
+  cp -a "$DEPLOY_DIR.old/.user.ini" "$DEPLOY_DIR/" 2>/dev/null || true
+fi
+rm -rf "$STAGING"
+rm -rf "$DEPLOY_DIR.old" 2>/dev/null || true
 chown -R www:www "$DEPLOY_DIR" 2>/dev/null || true
 
 docker run -d --name "$CONTAINER" \
