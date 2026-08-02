@@ -29,7 +29,6 @@ export type NavigationItemId =
   | 'portal'
   | 'workbench'
   | 'approval'
-  | 'start'
   | 'content'
   | 'contract'
   | 'purchase'
@@ -82,13 +81,6 @@ const navigationGroups: readonly NavigationGroup[] = [
         icon: Checked,
         requiredPermissions: ['WORKFLOW_APPROVE'],
       },
-      {
-        id: 'start',
-        path: '/start',
-        label: '发起申请',
-        icon: EditPen,
-        requiresProcessStarts: true,
-      },
     ],
   },
   {
@@ -130,6 +122,20 @@ const navigationGroups: readonly NavigationGroup[] = [
         icon: Box,
         requiredPermissions: requiredBusinessModulePermissions('SUPPLY', 'VIEW'),
       },
+      {
+        id: 'content',
+        path: '/portal/content-management',
+        label: '内容管理',
+        icon: DocumentCopy,
+        requiredPermissions: [portalContentManagePermission],
+      },
+      {
+        id: 'petty-materials',
+        path: '/system/petty-materials',
+        label: '零星采买物资库',
+        icon: Box,
+        requiredPermissions: ['IAM_MANAGE'],
+      },
     ],
   },
   {
@@ -144,13 +150,6 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: ['DOCUMENT_VIEW'],
       },
       {
-        id: 'insight-logs',
-        path: '/insight/logs',
-        label: '操作日志',
-        icon: DocumentCopy,
-        requiredPermissions: ['IAM_MANAGE'],
-      },
-      {
         id: 'insight-statistics',
         path: '/insight/statistics',
         label: '统计看板',
@@ -161,15 +160,8 @@ const navigationGroups: readonly NavigationGroup[] = [
   },
   {
     id: 'platform',
-    label: '平台管理',
+    label: '系统设置',
     items: [
-      {
-        id: 'content',
-        path: '/portal/content-management',
-        label: '内容管理',
-        icon: DocumentCopy,
-        requiredPermissions: [portalContentManagePermission],
-      },
       {
         id: 'iam',
         path: '/system/iam',
@@ -185,10 +177,10 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: ['IAM_MANAGE'],
       },
       {
-        id: 'petty-materials',
-        path: '/system/petty-materials',
-        label: '零星采买物资库',
-        icon: Box,
+        id: 'insight-logs',
+        path: '/insight/logs',
+        label: '操作日志',
+        icon: DocumentCopy,
         requiredPermissions: ['IAM_MANAGE'],
       },
       {
@@ -336,7 +328,7 @@ export function selectedNavigationPath(
 }
 
 export function mobilePrimaryNavigation(groups: readonly NavigationGroup[]): NavigationItem[] {
-  const primaryIds: string[] = ['portal', 'approval', 'start', 'workbench'];
+  const primaryIds: string[] = ['portal', 'approval', 'workbench'];
   const items = groups.flatMap((group) => group.items);
   return primaryIds
     .map((id) => items.find((item) => item.id === id))

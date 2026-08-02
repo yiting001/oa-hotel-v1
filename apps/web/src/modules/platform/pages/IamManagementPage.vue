@@ -46,7 +46,7 @@ async function refresh(): Promise<void> {
 <template>
   <div class="platform-page iam-page">
     <PlatformPageHeader
-      eyebrow="平台管理 / IAM"
+      eyebrow="系统设置 / IAM"
       title="组织与权限中心"
       description="统一维护多层级部门、多岗位任职、业务角色、功能权限和数据范围。"
     >

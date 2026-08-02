@@ -22,6 +22,7 @@ import { PettyModule1785100000000 } from './migrations/1785100000000-PettyModule
 import { RoleMenuVisibility1785200000000 } from './migrations/1785200000000-RoleMenuVisibility';
 import { MenuRbacV21785300000000 } from './migrations/1785300000000-MenuRbacV2';
 import { RequestLogs1785400000000 } from './migrations/1785400000000-RequestLogs';
+import { MenuReorganization1785500000000 } from './migrations/1785500000000-MenuReorganization';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -62,6 +63,7 @@ export function createDatabaseOptions(
       RoleMenuVisibility1785200000000,
       MenuRbacV21785300000000,
       RequestLogs1785400000000,
+      MenuReorganization1785500000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

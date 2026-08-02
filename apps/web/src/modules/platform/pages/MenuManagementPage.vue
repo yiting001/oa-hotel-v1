@@ -159,7 +159,7 @@ async function removeMenu(menu: MenuTreeNode): Promise<void> {
   <div class="platform-page menu-management-page">
     <PlatformPageHeader
       description="维护系统菜单树（目录/菜单、路由、权限标识、排序、显示状态）；角色的菜单授权在「组织与权限 → 角色权限」中配置。"
-      eyebrow="平台管理 / 菜单"
+      eyebrow="系统设置 / 菜单"
       title="菜单管理"
     >
       <template #actions>

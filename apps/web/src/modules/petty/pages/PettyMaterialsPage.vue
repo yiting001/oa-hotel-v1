@@ -214,7 +214,7 @@ onMounted(() => {
   <div class="petty-materials-page">
     <AppPageHeader
       description="零星采买物资基础数据库，支持批量导入维护"
-      eyebrow="系统管理"
+      eyebrow="业务中心"
       title="零星采买物资库"
     >
       <template #actions>

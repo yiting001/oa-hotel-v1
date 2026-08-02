@@ -153,7 +153,7 @@ onMounted(() => {
   <div class="insight-logs-page">
     <AppPageHeader
       description="业务单据操作留痕与 API 请求级日志（traceId、出参入参、耗时、错误栈），支持追溯与排查"
-      eyebrow="运营分析"
+      eyebrow="系统设置"
       title="操作日志"
     />
 

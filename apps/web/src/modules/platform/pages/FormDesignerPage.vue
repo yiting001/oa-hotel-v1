@@ -366,7 +366,7 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
 <template>
   <div class="platform-page form-page">
     <PlatformPageHeader
-      eyebrow="平台管理 / Form Builder"
+      eyebrow="系统设置 / Form Builder"
       title="A4 审批表单设计"
       description="以 210 × 297 mm 纸张为设计基准，统一配置录入字段、打印网格、附件清单和审批意见。"
     >

@@ -313,7 +313,7 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
 <template>
   <div class="platform-page process-page">
     <PlatformPageHeader
-      eyebrow="平台管理 / Workflow"
+      eyebrow="系统设置 / Workflow"
       title="审批流程设计"
       description="以版本化流程定义配置审批节点、流转关系和办理人规则，发布后供业务表单绑定使用。"
     >

@@ -21,7 +21,7 @@ describe('application navigation', () => {
     expect(ids).not.toContain('forms');
   });
 
-  it('shows all three business modules, designers and process starts to an administrator', () => {
+  it('shows all three business modules and designers to an administrator', () => {
     const permissions = [
       'PORTAL_VIEW',
       'CONTENT_VIEW',
@@ -43,20 +43,12 @@ describe('application navigation', () => {
     const ids = groups.flatMap((group) => group.items.map((item) => item.id));
 
     expect(ids).toEqual(
-      expect.arrayContaining([
-        'approval',
-        'start',
-        'contract',
-        'seal',
-        'supply',
-        'processes',
-        'forms',
-      ]),
+      expect.arrayContaining(['approval', 'contract', 'seal', 'supply', 'processes', 'forms']),
     );
+    expect(ids).not.toContain('start');
     expect(mobilePrimaryNavigation(groups).map((item) => item.id)).toEqual([
       'portal',
       'approval',
-      'start',
       'workbench',
     ]);
   });
