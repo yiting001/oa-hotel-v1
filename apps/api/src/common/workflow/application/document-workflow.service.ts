@@ -307,6 +307,22 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     return document;
   }
 
+  /** 校验用户是当前待审节点的固化办理人，返回单据（用于审批人改单等节点内操作）。 */
+  async getModeratableDocument(documentId: string, user: SessionUser): Promise<DocumentIndexEntity> {
+    const document = await this.getDocument(documentId);
+    const task = await this.tasks.findOne({
+      where: { documentId, status: 'PENDING' },
+      order: { createdAt: 'DESC' },
+    });
+    if (!task) {
+      throw new DomainError('WORKFLOW_NOT_IN_REVIEW', '单据不在审批流转中');
+    }
+    if (!(await this.candidates.existsBy({ taskId: task.id, userId: user.id }))) {
+      throw new ForbiddenException('当前用户不是该单据当前审批节点的办理人');
+    }
+    return document;
+  }
+
   async getViewableDocument(documentId: string, user: SessionUser): Promise<DocumentIndexEntity> {
     const document = await this.getDocument(documentId);
     assertBusinessModulePermission(user, document.module, 'VIEW');
