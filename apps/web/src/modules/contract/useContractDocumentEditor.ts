@@ -20,6 +20,7 @@ interface EditorOptions<TEntity extends DocumentEntity, TPayload extends object>
   createPath: string;
   itemPath: (id: string) => string;
   editRouteName: string;
+  listRouteName?: string;
   validate: () => Promise<void>;
   payload: () => TPayload;
   assign: (entity: TEntity) => void;
@@ -137,7 +138,7 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
   }
 
   function backToList(): void {
-    void router.push({ name: 'contract-list' });
+    void router.push({ name: options.listRouteName ?? 'contract-list' });
   }
 
   return {

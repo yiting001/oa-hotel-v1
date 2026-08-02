@@ -31,6 +31,7 @@ export function toDocumentSummary(document: DocumentIndexEntity): DocumentSummar
     applicantId: document.applicantId,
     departmentId: document.departmentId,
     status: document.status as DocumentSummary['status'],
+    documentNo: document.documentNo ?? null,
     revision: document.revision,
     currentStep: document.currentStep,
     workflowCode: document.workflowCode,

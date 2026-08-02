@@ -29,6 +29,10 @@ export class DocumentIndexEntity {
   @Column('text', { default: 'DRAFT' })
   status!: string;
 
+  /** 统一单据编号（前缀+发起日期+流水号），提交时生成。 */
+  @Column('text', { nullable: true })
+  documentNo!: string | null;
+
   @Column('integer', { default: 1 })
   revision!: number;
 

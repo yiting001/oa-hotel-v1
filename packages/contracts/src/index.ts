@@ -13,6 +13,8 @@ export const BUSINESS_MODULE_PERMISSIONS = {
   CONTRACT: { CREATE: 'CONTRACT_CREATE', VIEW: 'CONTRACT_VIEW' },
   SEAL: { CREATE: 'SEAL_CREATE', VIEW: 'SEAL_VIEW' },
   SUPPLY: { CREATE: 'SUPPLY_CREATE', VIEW: 'SUPPLY_VIEW' },
+  PURCHASE: { CREATE: 'PURCHASE_CREATE', VIEW: 'PURCHASE_VIEW' },
+  PETTY: { CREATE: 'PETTY_CREATE', VIEW: 'PETTY_VIEW' },
 } as const satisfies Record<BusinessModule, Record<BusinessPermissionAction, string>>;
 
 export const DOCUMENT_TYPE_MODULES: Record<DocumentType, BusinessModule> = {
@@ -23,7 +25,36 @@ export const DOCUMENT_TYPE_MODULES: Record<DocumentType, BusinessModule> = {
   SEAL_USE: 'SEAL',
   MATERIAL_PURCHASE: 'SUPPLY',
   MATERIAL_REQUISITION: 'SUPPLY',
+  PURCHASE_APPROVAL: 'PURCHASE',
+  PETTY_PROCUREMENT: 'PETTY',
 };
+
+/** 单据编号规则：前缀 + 发起日期(yyyyMMdd) + 3 位流水号，例如 HT20260727001。 */
+export const DOCUMENT_NUMBER_PREFIXES: Partial<Record<DocumentType, string>> = {
+  CONTRACT_APPROVAL: 'HT',
+  PURCHASE_APPROVAL: 'CG',
+  PETTY_PROCUREMENT: 'LX',
+};
+
+/** 采购审批体系的六类业务角色。 */
+export const PROCUREMENT_ROLE_LABELS = {
+  INITIATOR: '发起人',
+  ADMIN_APPROVER: '行政审批人',
+  BUSINESS_APPROVER: '商务审批人',
+  CATERING_APPROVER: '餐饮审批人',
+  EXEC_PRE_APPROVER: '高管预审批',
+  EXEC_APPROVER: '高管审批',
+} as const;
+
+export type ProcurementRoleCode = keyof typeof PROCUREMENT_ROLE_LABELS;
+
+export const PROCUREMENT_APPROVER_ROLES: readonly ProcurementRoleCode[] = [
+  'ADMIN_APPROVER',
+  'BUSINESS_APPROVER',
+  'CATERING_APPROVER',
+  'EXEC_PRE_APPROVER',
+  'EXEC_APPROVER',
+];
 
 export function requiredBusinessModulePermissions(
   module: BusinessModule,
@@ -116,6 +147,7 @@ export interface DocumentSummary {
   applicantId: string;
   departmentId: string;
   status: DocumentStatus;
+  documentNo: string | null;
   revision: number;
   currentStep: number | null;
   workflowCode: string;

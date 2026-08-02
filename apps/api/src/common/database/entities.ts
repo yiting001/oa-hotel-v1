@@ -9,6 +9,7 @@ import { WorkflowTaskEntity } from '../workflow/infrastructure/workflow-task.ent
 import { WorkflowTaskCandidateEntity } from '../workflow/infrastructure/workflow-task-candidate.entity';
 import { WorkflowBatchCommandEntity } from '../workflow/infrastructure/workflow-batch-command.entity';
 import { WorkflowCopyEntity } from '../workflow/infrastructure/workflow-copy.entity';
+import { DocumentNumberSequenceEntity } from '../workflow/infrastructure/document-number-sequence.entity';
 import { DocumentFollowEntity } from '../workbench/infrastructure/document-follow.entity';
 import { iamEntities } from '../iam/infrastructure/entities';
 import { FormDefinitionEntity } from '../form-design/infrastructure/form-definition.entity';
@@ -25,6 +26,11 @@ import { MaterialItemEntity } from '../../modules/supply/infrastructure/material
 import { MaterialPurchaseEntity } from '../../modules/supply/infrastructure/material-purchase.entity';
 import { MaterialRequisitionEntity } from '../../modules/supply/infrastructure/material-requisition.entity';
 import { portalEntities } from '../../modules/portal/infrastructure/entities';
+import { PurchaseEntity } from '../../modules/purchase/infrastructure/purchase.entity';
+import { PettyChangeLogEntity } from '../../modules/petty/infrastructure/petty-change-log.entity';
+import { PettyMaterialEntity } from '../../modules/petty/infrastructure/petty-material.entity';
+import { PettyProcurementItemEntity } from '../../modules/petty/infrastructure/petty-procurement-item.entity';
+import { PettyProcurementEntity } from '../../modules/petty/infrastructure/petty-procurement.entity';
 
 export const databaseEntities = [
   DepartmentEntity,
@@ -38,6 +44,7 @@ export const databaseEntities = [
   WorkflowTaskCandidateEntity,
   WorkflowBatchCommandEntity,
   WorkflowCopyEntity,
+  DocumentNumberSequenceEntity,
   DocumentFollowEntity,
   FormDefinitionEntity,
   FormVersionEntity,
@@ -48,6 +55,11 @@ export const databaseEntities = [
   ContractEntity,
   ContractPaymentEntity,
   ContractRequestEntity,
+  PurchaseEntity,
+  PettyMaterialEntity,
+  PettyProcurementEntity,
+  PettyProcurementItemEntity,
+  PettyChangeLogEntity,
   SealAssetEntity,
   SealBorrowEntity,
   SealUseEntity,

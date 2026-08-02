@@ -50,6 +50,18 @@ export const documentTypeMeta: Record<DocumentType, DocumentTypeMeta> = {
     createPath: '/supply/requisitions/new',
     apiPath: (id) => `/supplies/requisitions/${id}`,
   },
+  PURCHASE_APPROVAL: {
+    label: '采购审批',
+    moduleLabel: '采购审批',
+    createPath: '/purchase/requests/new',
+    apiPath: (id) => `/purchases/${id}`,
+  },
+  PETTY_PROCUREMENT: {
+    label: '零星采买',
+    moduleLabel: '零星采买',
+    createPath: '/petty/requests/new',
+    apiPath: (id) => `/petty/procurements/${id}`,
+  },
 };
 
 export const documentStatusMeta: Record<DocumentStatus, { label: string; color: string }> = {
@@ -86,6 +98,8 @@ export function documentEditPath(documentType: DocumentType, id: string): string
     SEAL_USE: `/seal/use/${id}/edit`,
     MATERIAL_PURCHASE: `/supply/purchases/${id}/edit`,
     MATERIAL_REQUISITION: `/supply/requisitions/${id}/edit`,
+    PURCHASE_APPROVAL: `/purchase/requests/${id}/edit`,
+    PETTY_PROCUREMENT: `/petty/requests/${id}/edit`,
   };
   return routes[documentType];
 }

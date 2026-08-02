@@ -53,7 +53,7 @@ describe('ProcessDesignSeeder', () => {
     await seeder.onApplicationBootstrap();
 
     const definitions = await repository.listDefinitions();
-    expect(definitions).toHaveLength(7);
+    expect(definitions).toHaveLength(BUSINESS_WORKFLOW_CATALOG.length);
     expect(definitions.every((definition) => definition.versions.length === 1)).toBe(true);
     expect(definitions.every((definition) => definition.versions[0]?.status === 'PUBLISHED')).toBe(
       true,

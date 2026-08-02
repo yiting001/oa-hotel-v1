@@ -32,6 +32,12 @@ const processStartDetails: Record<DocumentType, Pick<ProcessStartItem, 'descript
   MATERIAL_REQUISITION: {
     description: '从物资目录选择领用品项，审批通过后由仓库登记实际发放。',
   },
+  PURCHASE_APPROVAL: {
+    description: '登记采购名称、金额、乙方与期望到货时间，按角色链路逐级审批。',
+  },
+  PETTY_PROCUREMENT: {
+    description: '从物资数据库勾选商品并填写数量，系统自动计算合计金额。',
+  },
 };
 
 const documentOrder: DocumentType[] = [

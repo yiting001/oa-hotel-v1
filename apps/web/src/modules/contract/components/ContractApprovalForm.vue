@@ -29,7 +29,13 @@ const form = reactive<ContractApprovalPayload>({
   name: '',
   amountCents: 0,
   counterpartyFullName: '',
+  counterpartyContact: null,
+  counterpartyPhone: null,
+  paymentMethod: null,
+  validFrom: null,
+  validTo: null,
   contentReason: '',
+  remark: null,
   needsSeal: false,
   attachments: [],
 });
@@ -47,6 +53,12 @@ const rules: Record<keyof ContractApprovalPayload, Rule[]> = {
     { required: true, whitespace: true, message: '请输入对方单位全称' },
     { max: 300, message: '对方单位全称不能超过 300 个字' },
   ],
+  counterpartyContact: [{ max: 100, message: '乙方联系人不能超过 100 个字' }],
+  counterpartyPhone: [{ max: 50, message: '联系电话不能超过 50 个字' }],
+  paymentMethod: [{ max: 100, message: '付款方式不能超过 100 个字' }],
+  validFrom: [],
+  validTo: [],
+  remark: [{ max: 1000, message: '备注不能超过 1000 个字' }],
   contentReason: [
     { required: true, whitespace: true, message: '请输入合同内容及签约理由' },
     { max: 5000, message: '合同内容及理由不能超过 5000 个字' },
@@ -86,7 +98,13 @@ const editor = useContractDocumentEditor<ContractApprovalData, ContractApprovalP
       name: data.name,
       amountCents: data.amountCents,
       counterpartyFullName: data.counterpartyFullName,
+      counterpartyContact: data.counterpartyContact,
+      counterpartyPhone: data.counterpartyPhone,
+      paymentMethod: data.paymentMethod,
+      validFrom: data.validFrom,
+      validTo: data.validTo,
       contentReason: data.contentReason,
+      remark: data.remark,
       needsSeal: data.needsSeal,
       attachments: [...data.attachments],
     });
@@ -200,6 +218,33 @@ onMounted(() => {
                 placeholder="请按证照登记名称完整填写"
               />
             </a-form-item>
+            <a-form-item label="乙方联系人" name="counterpartyContact">
+              <a-input
+                v-model:value="form.counterpartyContact"
+                :maxlength="100"
+                placeholder="请输入乙方联系人姓名"
+              />
+            </a-form-item>
+            <a-form-item label="联系电话" name="counterpartyPhone">
+              <a-input
+                v-model:value="form.counterpartyPhone"
+                :maxlength="50"
+                placeholder="请输入乙方联系电话"
+              />
+            </a-form-item>
+            <a-form-item label="付款方式" name="paymentMethod">
+              <a-input
+                v-model:value="form.paymentMethod"
+                :maxlength="100"
+                placeholder="如：银行转账、分期付款"
+              />
+            </a-form-item>
+            <a-form-item label="合同有效期开始" name="validFrom">
+              <a-input v-model:value="form.validFrom" type="date" />
+            </a-form-item>
+            <a-form-item label="合同有效期结束" name="validTo">
+              <a-input v-model:value="form.validTo" type="date" />
+            </a-form-item>
             <a-form-item
               class="contract-form-field--full"
               label="合同/协议内容及理由"
@@ -211,6 +256,14 @@ onMounted(() => {
                 :maxlength="5000"
                 placeholder="请说明合同标的、主要权利义务、履行周期及签约理由"
                 show-count
+              />
+            </a-form-item>
+            <a-form-item class="contract-form-field--full" label="备注" name="remark">
+              <a-textarea
+                v-model:value="form.remark"
+                :auto-size="{ minRows: 3, maxRows: 6 }"
+                :maxlength="1000"
+                placeholder="可选，补充其他说明"
               />
             </a-form-item>
           </div>

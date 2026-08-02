@@ -13,6 +13,18 @@ export function businessTimeZone(environment = process.env): string {
   return timeZone;
 }
 
+/** Formats an instant as the hotel-local yyyyMMdd date key used by document numbers. */
+export function businessDateKey(instant: Date = new Date(), timeZone = businessTimeZone()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const values = new Map(parts.map((part) => [part.type, part.value]));
+  return `${values.get('year')}${values.get('month')}${values.get('day')}`;
+}
+
 /** Converts one hotel-local calendar date boundary into its UTC storage instant. */
 export function startOfBusinessDate(value: string, timeZone = businessTimeZone()): Date {
   return zonedLocalDateTimeToUtc(parseBusinessDate(value), timeZone);

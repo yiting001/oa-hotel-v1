@@ -42,11 +42,15 @@ const documentIcons: Record<DocumentType, Component> = {
   SEAL_USE: Stamp,
   MATERIAL_PURCHASE: Tickets,
   MATERIAL_REQUISITION: Box,
+  PURCHASE_APPROVAL: Tickets,
+  PETTY_PROCUREMENT: Box,
 };
 const groupIcons: Record<string, Component> = {
   合同支出: Tickets,
   行政印章: Stamp,
   物资管理: Box,
+  采购审批: Tickets,
+  零星采买: Box,
 };
 
 onMounted(() => void loadApprovalPaths());

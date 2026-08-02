@@ -23,6 +23,8 @@ import { documentEditPath, documentTypeMeta, type DocumentTypeMeta } from '../sh
 import { useSessionStore } from '../shared/session';
 import { useWorkflowStore } from '../shared/workflow';
 import { businessDocumentPrintPath } from '../modules/document-print/print-route';
+import PettyProcurementDetail from '../modules/petty/components/PettyProcurementDetail.vue';
+import type { PettyProcurementData } from '../modules/petty/petty.types';
 import DocumentFollowButton from '../modules/workbench/components/DocumentFollowButton.vue';
 import WorkflowCopyDialog from '../modules/workbench/components/WorkflowCopyDialog.vue';
 import { usePersonalWorkbenchStore } from '../modules/workbench/store/workbench';
@@ -43,9 +45,16 @@ const overview = ref<WorkflowOverview | null>(null);
 const copyDialogOpen = ref(false);
 
 const documentType = computed(() => route.params.documentType as DocumentType);
+const pettyData = computed(() =>
+  documentType.value === 'PETTY_PROCUREMENT' && envelope.value
+    ? (envelope.value.data as unknown as PettyProcurementData)
+    : null,
+);
 const meta = computed<DocumentTypeMeta | null>(() => documentTypeMeta[documentType.value] ?? null);
 const documentId = computed(() => String(route.params.id));
-const documentNumber = computed(() => String(envelope.value?.data.number ?? ''));
+const documentNumber = computed(() =>
+  String(envelope.value?.document.documentNo ?? envelope.value?.data.number ?? ''),
+);
 const editable = computed(() => {
   const document = envelope.value?.document;
   return (
@@ -146,7 +155,8 @@ async function refreshWorkbenchSummary(): Promise<void> {
     </template>
 
     <FormSection v-if="envelope" title="单据信息">
-      <DocumentDataView :data="envelope.data" />
+      <PettyProcurementDetail v-if="pettyData" :data="pettyData" @changed="load" />
+      <DocumentDataView v-else :data="envelope.data" />
     </FormSection>
 
     <template #aside>

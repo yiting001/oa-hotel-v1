@@ -2,7 +2,7 @@ export type DocumentStatus = 'DRAFT' | 'IN_REVIEW' | 'RETURNED' | 'APPROVED' | '
 
 export type DataScope = 'SELF' | 'DEPARTMENT' | 'DEPARTMENT_TREE' | 'ALL';
 
-export type BusinessModule = 'CONTRACT' | 'SEAL' | 'SUPPLY';
+export type BusinessModule = 'CONTRACT' | 'SEAL' | 'SUPPLY' | 'PURCHASE' | 'PETTY';
 
 export type DocumentType =
   | 'CONTRACT_REQUEST'
@@ -11,7 +11,9 @@ export type DocumentType =
   | 'SEAL_BORROW'
   | 'SEAL_USE'
   | 'MATERIAL_PURCHASE'
-  | 'MATERIAL_REQUISITION';
+  | 'MATERIAL_REQUISITION'
+  | 'PURCHASE_APPROVAL'
+  | 'PETTY_PROCUREMENT';
 
 export type BusinessPermissionAction = 'CREATE' | 'VIEW';
 

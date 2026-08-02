@@ -204,9 +204,7 @@ describe('RosterImportService', () => {
 
   it('rejects credentials that the login contract could never accept', async () => {
     const longName = '人'.repeat(credentialPolicy.usernameMaxLength + 1);
-    const preview = await service.preview([
-      person('花名册', 2, '前厅部', '接待员', longName),
-    ]);
+    const preview = await service.preview([person('花名册', 2, '前厅部', '接待员', longName)]);
 
     expect(preview.conflicts).toEqual([expect.objectContaining({ code: 'INPUT_INVALID' })]);
     await expect(

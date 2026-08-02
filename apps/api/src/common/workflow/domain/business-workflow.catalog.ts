@@ -8,16 +8,27 @@ export interface BusinessWorkflowDefinition {
   approvalRoles: readonly string[];
 }
 
-/** Single source of truth for the approval order of the seven implemented document types. */
+/** Single source of truth for the approval order of the implemented document types. */
 export const BUSINESS_WORKFLOW_CATALOG = [
   workflow('contract-request', 'CONTRACT_EXPENSE_REQUEST', 'CONTRACT_REQUEST', '合同/支出请示', [
     'DEPARTMENT_MANAGER',
     'FINANCE_REVIEWER',
   ]),
   workflow('contract-approval', 'CONTRACT_APPROVAL_PROCESS', 'CONTRACT_APPROVAL', '合同审批', [
-    'DEPARTMENT_MANAGER',
-    'FINANCE_REVIEWER',
-    'OFFICE_REVIEWER',
+    'ADMIN_APPROVER',
+    'BUSINESS_APPROVER',
+    'EXEC_PRE_APPROVER',
+    'EXEC_APPROVER',
+  ]),
+  workflow('purchase-approval', 'PURCHASE_APPROVAL_PROCESS', 'PURCHASE_APPROVAL', '采购审批', [
+    'BUSINESS_APPROVER',
+    'EXEC_PRE_APPROVER',
+    'EXEC_APPROVER',
+  ]),
+  workflow('petty-procurement', 'PETTY_PROCUREMENT_PROCESS', 'PETTY_PROCUREMENT', '零星采买', [
+    'CATERING_APPROVER',
+    'EXEC_PRE_APPROVER',
+    'EXEC_APPROVER',
   ]),
   workflow('contract-payment', 'CONTRACT_PAYMENT_PROCESS', 'CONTRACT_PAYMENT', '合同付款', [
     'DEPARTMENT_MANAGER',

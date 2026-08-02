@@ -26,8 +26,26 @@ export class ContractEntity {
   @Column('text')
   counterpartyFullName!: string;
 
+  @Column('text', { nullable: true })
+  counterpartyContact!: string | null;
+
+  @Column('text', { nullable: true })
+  counterpartyPhone!: string | null;
+
+  @Column('text', { nullable: true })
+  paymentMethod!: string | null;
+
+  @Column('text', { nullable: true })
+  validFrom!: string | null;
+
+  @Column('text', { nullable: true })
+  validTo!: string | null;
+
   @Column('text')
   contentReason!: string;
+
+  @Column('text', { nullable: true })
+  remark!: string | null;
 
   @Column('boolean', { default: false })
   needsSeal!: boolean;

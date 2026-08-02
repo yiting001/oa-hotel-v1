@@ -126,6 +126,7 @@ function isSealDocument(type: DocumentType): boolean {
         <strong>{{ model?.title ?? '单据打印' }}</strong>
         <span v-if="model">{{ model.number }}</span>
       </div>
+      <ElButton v-if="model" @click="printDocument">导出PDF</ElButton>
       <ElButton v-if="model" :icon="Printer" type="primary" @click="printDocument">打印</ElButton>
     </header>
 

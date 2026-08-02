@@ -147,10 +147,18 @@ function buildLegacyModel(
             ['合同/协议对方单位全称', 'counterpartyFullName', 2],
             ['金额', 'amountCents'],
             ['需要用印', 'needsSeal'],
+            ['乙方联系人', 'counterpartyContact'],
+            ['联系电话', 'counterpartyPhone'],
+            ['付款方式', 'paymentMethod'],
+            ['合同有效期开始', 'validFrom'],
+            ['合同有效期结束', 'validTo'],
           ],
           references,
         ),
-        contentBlocks: [block('合同/协议内容及理由', display(data, 'contentReason'), 'large')],
+        contentBlocks: [
+          block('合同/协议内容及理由', display(data, 'contentReason'), 'large'),
+          block('备注', display(data, 'remark'), 'normal'),
+        ],
       };
     case 'CONTRACT_PAYMENT':
       return {
@@ -213,6 +221,40 @@ function buildLegacyModel(
           ['实发数量', 'issuedQuantity', '18mm'],
         ]),
       };
+    case 'PURCHASE_APPROVAL':
+      return {
+        ...base,
+        title: '采购审批单',
+        fields: fields(
+          data,
+          [
+            ['采购名称', 'name', 2],
+            ['采购金额', 'amountCents'],
+            ['乙方单位', 'counterpartyName'],
+            ['乙方联系人', 'counterpartyContact'],
+            ['联系电话', 'counterpartyPhone'],
+            ['付款方式', 'paymentMethod'],
+            ['期望到货时间', 'expectedDeliveryDate'],
+          ],
+          references,
+        ),
+        contentBlocks: [block('备注', display(data, 'remark'), 'normal')],
+      };
+    case 'PETTY_PROCUREMENT':
+      return {
+        ...base,
+        title: '零星采买申请单',
+        fields: fields(data, [['合计金额', 'totalAmountCents']], references),
+        contentBlocks: [block('申请备注', display(data, 'remark'), 'normal')],
+        table: buildTable(data, '采买明细', [
+          ['序号', '$index', '8mm'],
+          ['物资名称', 'name', '28mm'],
+          ['品牌', 'brand', '20mm'],
+          ['单价', 'unitPriceCents', '20mm'],
+          ['采购数量', 'quantity', '18mm'],
+          ['小计', 'subtotalCents', '22mm'],
+        ]),
+      };
   }
 }
 
@@ -221,7 +263,7 @@ function createBaseModel(envelope: DocumentPrintEnvelope): BusinessDocumentPrint
     documentType: envelope.document.documentType,
     title: '',
     numberLabel: '单据编号',
-    number: stringValue(envelope.data.number),
+    number: envelope.document.documentNo ?? stringValue(envelope.data.number),
     fields: [],
     contentBlocks: [],
     table: null,

@@ -97,11 +97,7 @@ describe('WorkflowCandidateService', () => {
     iam.filterCandidateUsersByPermissions.mockResolvedValue([proxy]);
 
     await expect(
-      service.resolve(
-        { type: 'APPLICANT_DEPARTMENT_MANAGER' },
-        'dept-business',
-        applicant.id,
-      ),
+      service.resolve({ type: 'APPLICANT_DEPARTMENT_MANAGER' }, 'dept-business', applicant.id),
     ).resolves.toEqual({ resolvedCount: 1, candidates: [proxy] });
     expect(iam.filterCandidateUsersByPermissions).toHaveBeenCalledWith(
       [proxy],

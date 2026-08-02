@@ -8,6 +8,7 @@ import {
   House,
   OfficeBuilding,
   Share,
+  ShoppingCart,
   Stamp,
   Tickets,
 } from '@element-plus/icons-vue';
@@ -25,10 +26,17 @@ export type NavigationItemId =
   | 'start'
   | 'content'
   | 'contract'
+  | 'purchase'
+  | 'petty'
+  | 'petty-materials'
+  | 'insight-documents'
+  | 'insight-logs'
+  | 'insight-statistics'
   | 'seal'
   | 'supply'
   | 'iam'
   | 'processes'
+  | 'approval-chains'
   | 'forms';
 
 export interface NavigationItem {
@@ -87,6 +95,20 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: requiredBusinessModulePermissions('CONTRACT', 'VIEW'),
       },
       {
+        id: 'purchase',
+        path: '/purchase',
+        label: '采购审批',
+        icon: ShoppingCart,
+        requiredPermissions: requiredBusinessModulePermissions('PURCHASE', 'VIEW'),
+      },
+      {
+        id: 'petty',
+        path: '/petty',
+        label: '零星采买',
+        icon: ShoppingCart,
+        requiredPermissions: requiredBusinessModulePermissions('PETTY', 'VIEW'),
+      },
+      {
         id: 'seal',
         path: '/seal',
         label: '行政印章',
@@ -99,6 +121,33 @@ const navigationGroups: readonly NavigationGroup[] = [
         label: '物资管理',
         icon: Box,
         requiredPermissions: requiredBusinessModulePermissions('SUPPLY', 'VIEW'),
+      },
+    ],
+  },
+  {
+    id: 'insight',
+    label: '运营分析',
+    items: [
+      {
+        id: 'insight-documents',
+        path: '/insight/documents',
+        label: '单据检索',
+        icon: Tickets,
+        requiredPermissions: ['DOCUMENT_VIEW'],
+      },
+      {
+        id: 'insight-logs',
+        path: '/insight/logs',
+        label: '操作日志',
+        icon: DocumentCopy,
+        requiredPermissions: ['IAM_MANAGE'],
+      },
+      {
+        id: 'insight-statistics',
+        path: '/insight/statistics',
+        label: '统计看板',
+        icon: DataBoard,
+        requiredPermissions: ['IAM_MANAGE'],
       },
     ],
   },
@@ -121,10 +170,24 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: ['IAM_VIEW'],
       },
       {
+        id: 'petty-materials',
+        path: '/system/petty-materials',
+        label: '零星采买物资库',
+        icon: Box,
+        requiredPermissions: ['IAM_MANAGE'],
+      },
+      {
         id: 'processes',
         path: '/system/processes',
         label: '审批流程设计',
         icon: Share,
+        requiredPermissions: ['PROCESS_DESIGN_VIEW'],
+      },
+      {
+        id: 'approval-chains',
+        path: '/system/approval-chains',
+        label: '审批链路配置',
+        icon: Checked,
         requiredPermissions: ['PROCESS_DESIGN_VIEW'],
       },
       {

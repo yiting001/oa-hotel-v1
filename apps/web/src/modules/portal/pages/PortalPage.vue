@@ -60,6 +60,8 @@ const quickStartIcons: Record<DocumentType, Component> = {
   SEAL_USE: Box,
   MATERIAL_PURCHASE: ShoppingCart,
   MATERIAL_REQUISITION: Box,
+  PURCHASE_APPROVAL: ShoppingCart,
+  PETTY_PROCUREMENT: Box,
 };
 
 onMounted(refresh);
