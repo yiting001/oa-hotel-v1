@@ -72,10 +72,10 @@ export const iamApi = {
     return apiRequest<MenuTreeNode[]>(endpoint.menus);
   },
   createMenu(input: MenuInput): Promise<MenuNode> {
-    return apiRequest<MenuNode>(endpoint.menus, { method: 'POST', body: input });
+    return apiRequest<MenuNode>(endpoint.menus, { method: 'POST', body: { ...input } });
   },
   updateMenu(id: string, input: MenuInput): Promise<MenuNode> {
-    return apiRequest<MenuNode>(endpoint.menu(id), { method: 'PATCH', body: input });
+    return apiRequest<MenuNode>(endpoint.menu(id), { method: 'PATCH', body: { ...input } });
   },
   deleteMenu(id: string): Promise<void> {
     return apiRequest<void>(endpoint.menu(id), { method: 'DELETE' });
