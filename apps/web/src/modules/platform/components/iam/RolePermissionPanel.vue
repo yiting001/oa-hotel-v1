@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Edit, Plus, Search } from '@element-plus/icons-vue';
+import type { MenuTreeNode, RoleMenuAssignment } from '@oa/contracts';
 import {
   ElButton,
   ElCheckbox,
@@ -12,8 +13,9 @@ import {
   ElMessage,
   ElSwitch,
   ElTag,
+  ElTree,
 } from 'element-plus';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { iamApi } from '../../api/iam-api';
 import type { Permission, RoleSummary } from '../../types/iam';
 import { platformErrorMessage } from '../../utils/error';
@@ -36,6 +38,62 @@ const roleForm = reactive({ code: '', name: '', description: '', active: true })
 const selectedRole = computed(
   () => props.roles.find((role) => role.id === selectedRoleId.value) ?? null,
 );
+const isSystemAdmin = computed(() => selectedRole.value?.code === 'SYSTEM_ADMIN');
+
+/* ---------- 菜单授权（与功能权限一起保存） ---------- */
+
+type MenuTreeRef = InstanceType<typeof ElTree>;
+const menuTree = ref<MenuTreeNode[]>([]);
+const roleMenuAssignments = ref<RoleMenuAssignment[]>([]);
+const menuTreeRef = ref<MenuTreeRef>();
+
+onMounted(async () => {
+  try {
+    [menuTree.value, roleMenuAssignments.value] = await Promise.all([
+      iamApi.menuTree(),
+      iamApi.listRoleMenuAssignments(),
+    ]);
+    syncMenuTreeChecks();
+  } catch (cause) {
+    ElMessage.error(platformErrorMessage(cause, '菜单授权数据加载失败'));
+  }
+});
+
+const allMenuIds = computed(() => {
+  const ids: string[] = [];
+  const walk = (nodes: readonly MenuTreeNode[]): void => {
+    for (const node of nodes) {
+      ids.push(node.id);
+      walk(node.children);
+    }
+  };
+  walk(menuTree.value);
+  return ids;
+});
+
+function syncMenuTreeChecks(): void {
+  void nextTick(() => {
+    const tree = menuTreeRef.value;
+    if (!tree) return;
+    const assignment = roleMenuAssignments.value.find(
+      (entry) => entry.roleId === selectedRoleId.value,
+    );
+    const menuIds = isSystemAdmin.value ? allMenuIds.value : (assignment?.menuIds ?? []);
+    // 只回显叶子勾选，目录由子节点联动为全选/半选
+    const leafIds = new Set<string>();
+    const walk = (nodes: readonly MenuTreeNode[]): void => {
+      for (const node of nodes) {
+        if (node.children.length === 0) {
+          if (menuIds.includes(node.id)) leafIds.add(node.id);
+        } else {
+          walk(node.children);
+        }
+      }
+    };
+    walk(menuTree.value);
+    tree.setCheckedKeys([...leafIds]);
+  });
+}
 const permissionGroups = computed(() => {
   const query = keyword.value.trim().toLowerCase();
   const grouped = new Map<string, Permission[]>();
@@ -61,7 +119,10 @@ watch(
   },
   { immediate: true },
 );
-watch(selectedRoleId, hydratePermissions);
+watch(selectedRoleId, () => {
+  hydratePermissions();
+  syncMenuTreeChecks();
+});
 
 function hydratePermissions(): void {
   selectedPermissionIds.value = [...(selectedRole.value?.permissionIds ?? [])];
@@ -103,7 +164,18 @@ async function savePermissions(): Promise<void> {
   saving.value = true;
   try {
     await iamApi.saveRolePermissions(selectedRole.value.id, selectedPermissionIds.value);
-    ElMessage.success('角色权限已保存');
+    const tree = menuTreeRef.value;
+    if (tree && !isSystemAdmin.value) {
+      const menuIds = [
+        ...(tree.getCheckedKeys() as string[]),
+        ...(tree.getHalfCheckedKeys() as string[]),
+      ];
+      const updated = await iamApi.saveRoleMenus(selectedRole.value.id, menuIds);
+      roleMenuAssignments.value = roleMenuAssignments.value.map((entry) =>
+        entry.roleId === updated.roleId ? updated : entry,
+      );
+    }
+    ElMessage.success('角色权限与菜单授权已保存');
     emit('refresh');
   } catch (cause) {
     ElMessage.error(platformErrorMessage(cause, '角色权限保存失败'));
@@ -184,7 +256,7 @@ async function saveRole(): Promise<void> {
             <ElIcon><Edit /></ElIcon>编辑角色
           </ElButton>
           <ElButton v-if="!readonly" :loading="saving" type="primary" @click="savePermissions">
-            保存权限
+            保存授权
           </ElButton>
         </div>
       </div>
@@ -219,6 +291,34 @@ async function saveRole(): Promise<void> {
           </div>
         </section>
       </ElCheckboxGroup>
+      <section class="role-menu-section">
+        <header class="role-menu-section__header">
+          <div>
+            <strong>菜单权限</strong>
+            <small>勾选该角色可见的导航菜单；用户拥有多个角色时菜单取并集</small>
+          </div>
+          <ElTag v-if="isSystemAdmin" size="small" type="info">系统管理员始终拥有全部菜单</ElTag>
+        </header>
+        <ElTree
+          ref="menuTreeRef"
+          :data="menuTree"
+          default-expand-all
+          node-key="id"
+          :props="{
+            label: 'name',
+            children: 'children',
+            disabled: () => readonly || isSystemAdmin,
+          }"
+          show-checkbox
+        >
+          <template #default="{ data }">
+            <span class="role-menu-node">
+              {{ data.name }}
+              <ElTag v-if="data.type === 'DIR'" size="small" type="info">目录</ElTag>
+            </span>
+          </template>
+        </ElTree>
+      </section>
     </section>
   </div>
 
@@ -259,3 +359,30 @@ async function saveRole(): Promise<void> {
     </template>
   </ElDialog>
 </template>
+
+<style scoped>
+.role-menu-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  padding-top: 12px;
+}
+
+.role-menu-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.role-menu-section__header small {
+  display: block;
+  color: var(--el-text-color-secondary);
+}
+
+.role-menu-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+</style>
