@@ -5,6 +5,7 @@ import {
   forcedPasswordChangeRedirect,
 } from '../modules/account/account-security.policy';
 import { accountRoutes } from '../modules/account/routes';
+import { pettyRoutes } from '../modules/petty/routes';
 import { portalRoutes } from '../modules/portal/routes';
 import { platformRoutes } from '../modules/platform/routes';
 import { purchaseRoutes } from '../modules/purchase/routes';
@@ -63,6 +64,7 @@ export const router = createRouter({
     ...workbenchRoutes,
     ...contractRoutes,
     ...purchaseRoutes,
+    ...pettyRoutes,
     ...sealRoutes,
     ...supplyRoutes,
     ...registeredPlatformRoutes,

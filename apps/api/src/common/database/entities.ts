@@ -27,6 +27,10 @@ import { MaterialPurchaseEntity } from '../../modules/supply/infrastructure/mate
 import { MaterialRequisitionEntity } from '../../modules/supply/infrastructure/material-requisition.entity';
 import { portalEntities } from '../../modules/portal/infrastructure/entities';
 import { PurchaseEntity } from '../../modules/purchase/infrastructure/purchase.entity';
+import { PettyChangeLogEntity } from '../../modules/petty/infrastructure/petty-change-log.entity';
+import { PettyMaterialEntity } from '../../modules/petty/infrastructure/petty-material.entity';
+import { PettyProcurementItemEntity } from '../../modules/petty/infrastructure/petty-procurement-item.entity';
+import { PettyProcurementEntity } from '../../modules/petty/infrastructure/petty-procurement.entity';
 
 export const databaseEntities = [
   DepartmentEntity,
@@ -52,6 +56,10 @@ export const databaseEntities = [
   ContractPaymentEntity,
   ContractRequestEntity,
   PurchaseEntity,
+  PettyMaterialEntity,
+  PettyProcurementEntity,
+  PettyProcurementItemEntity,
+  PettyChangeLogEntity,
   SealAssetEntity,
   SealBorrowEntity,
   SealUseEntity,

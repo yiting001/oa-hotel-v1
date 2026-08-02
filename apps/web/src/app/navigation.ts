@@ -27,6 +27,8 @@ export type NavigationItemId =
   | 'content'
   | 'contract'
   | 'purchase'
+  | 'petty'
+  | 'petty-materials'
   | 'seal'
   | 'supply'
   | 'iam'
@@ -97,6 +99,13 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: requiredBusinessModulePermissions('PURCHASE', 'VIEW'),
       },
       {
+        id: 'petty',
+        path: '/petty',
+        label: '零星采买',
+        icon: ShoppingCart,
+        requiredPermissions: requiredBusinessModulePermissions('PETTY', 'VIEW'),
+      },
+      {
         id: 'seal',
         path: '/seal',
         label: '行政印章',
@@ -129,6 +138,13 @@ const navigationGroups: readonly NavigationGroup[] = [
         label: '组织与权限',
         icon: OfficeBuilding,
         requiredPermissions: ['IAM_VIEW'],
+      },
+      {
+        id: 'petty-materials',
+        path: '/system/petty-materials',
+        label: '零星采买物资库',
+        icon: Box,
+        requiredPermissions: ['IAM_MANAGE'],
       },
       {
         id: 'processes',

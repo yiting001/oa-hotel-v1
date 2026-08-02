@@ -42,9 +42,9 @@ describe('RosterOptionalPasswordChange1784700000000', () => {
   });
 
   it('requires restoring the pre-migration backup for rollback', async () => {
-    await expect(
-      new RosterOptionalPasswordChange1784700000000().down(),
-    ).rejects.toThrowError('恢复迁移前的 SQLite 备份');
+    await expect(new RosterOptionalPasswordChange1784700000000().down()).rejects.toThrowError(
+      '恢复迁移前的 SQLite 备份',
+    );
   });
 
   async function insertUser(

@@ -60,7 +60,7 @@ export const documentTypeMeta: Record<DocumentType, DocumentTypeMeta> = {
     label: '零星采买',
     moduleLabel: '零星采买',
     createPath: '/petty/requests/new',
-    apiPath: (id) => `/petty-procurements/${id}`,
+    apiPath: (id) => `/petty/procurements/${id}`,
   },
 };
 

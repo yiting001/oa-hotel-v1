@@ -308,7 +308,10 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
   }
 
   /** 校验用户是当前待审节点的固化办理人，返回单据（用于审批人改单等节点内操作）。 */
-  async getModeratableDocument(documentId: string, user: SessionUser): Promise<DocumentIndexEntity> {
+  async getModeratableDocument(
+    documentId: string,
+    user: SessionUser,
+  ): Promise<DocumentIndexEntity> {
     const document = await this.getDocument(documentId);
     const task = await this.tasks.findOne({
       where: { documentId, status: 'PENDING' },

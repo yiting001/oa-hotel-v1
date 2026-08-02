@@ -18,6 +18,7 @@ import { RosterOptionalPasswordChange1784700000000 } from './migrations/17847000
 import { ProcurementApprovalFoundation1784800000000 } from './migrations/1784800000000-ProcurementApprovalFoundation';
 import { ContractApprovalProcurementFields1784900000000 } from './migrations/1784900000000-ContractApprovalProcurementFields';
 import { PurchaseModule1785000000000 } from './migrations/1785000000000-PurchaseModule';
+import { PettyModule1785100000000 } from './migrations/1785100000000-PettyModule';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -54,6 +55,7 @@ export function createDatabaseOptions(
       ProcurementApprovalFoundation1784800000000,
       ContractApprovalProcurementFields1784900000000,
       PurchaseModule1785000000000,
+      PettyModule1785100000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,
