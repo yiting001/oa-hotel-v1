@@ -11,7 +11,7 @@ export const defaultPackageDir = join(repoRoot, 'dist/oa-hotel-production');
 export const manifestFileName = 'release-manifest.json';
 export const nativeDependencyNames = Object.freeze(['argon2', 'better-sqlite3']);
 const nativeDependencies = new Set(nativeDependencyNames);
-const runtimeDependencyNames = Object.freeze(['argon2', 'better-sqlite3', 'swagger-ui-dist']);
+const runtimeDependencyNames = Object.freeze(['argon2', 'better-sqlite3', 'pg', 'swagger-ui-dist']);
 
 export function resolvePackageDir(argument) {
   const output = resolve(repoRoot, argument ?? defaultPackageDir);

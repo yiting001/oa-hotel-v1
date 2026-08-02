@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../../common/database/column-types';
 import type { PortalReadReceipt } from '../domain/portal.types';
 
 @Entity('portal_read_receipts')
@@ -10,6 +11,6 @@ export class PortalReadReceiptEntity implements PortalReadReceipt {
   @PrimaryColumn('text')
   userId!: string;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   readAt!: Date;
 }

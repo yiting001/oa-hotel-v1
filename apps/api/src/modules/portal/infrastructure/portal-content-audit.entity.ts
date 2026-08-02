@@ -1,4 +1,5 @@
 import type { PortalContentAuditAction } from '@oa/contracts';
+import { DATETIME_COLUMN_TYPE } from '../../../common/database/column-types';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import type { PortalContentAudit } from '../domain/portal.types';
 
@@ -27,7 +28,7 @@ export class PortalContentAuditEntity implements PortalContentAudit {
   revision!: number;
 
   @Index()
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   occurredAt!: Date;
 
   @Column('simple-json')

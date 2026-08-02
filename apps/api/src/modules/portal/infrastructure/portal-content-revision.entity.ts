@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn, Unique } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../../common/database/column-types';
 import type { PortalContentRevision, PortalContentRevisionSnapshot } from '../domain/portal.types';
 
 @Entity('portal_content_revisions')
@@ -17,6 +18,6 @@ export class PortalContentRevisionEntity implements PortalContentRevision {
   @Column('simple-json')
   snapshot!: PortalContentRevisionSnapshot;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   createdAt!: Date;
 }
