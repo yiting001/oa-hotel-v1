@@ -66,9 +66,7 @@ try {
       const columnList = columns.map((column) => `"${column}"`).join(', ');
       for (const row of rows) {
         const values = columns.map((column) =>
-          booleanColumns.has(column) && row[column] !== null
-            ? Boolean(row[column])
-            : row[column],
+          booleanColumns.has(column) && row[column] !== null ? Boolean(row[column]) : row[column],
         );
         const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
         await queryRunner.query(
