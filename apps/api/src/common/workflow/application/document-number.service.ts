@@ -14,10 +14,11 @@ export class DocumentNumberService {
   async generate(manager: EntityManager, prefix: string, now = new Date()): Promise<string> {
     const dateKey = businessDateKey(now);
     const repository = manager.getRepository(DocumentNumberSequenceEntity);
+    const placeholders = manager.connection.options.type === 'postgres' ? ['$1', '$2'] : ['?', '?'];
     await manager.query(
       `INSERT INTO "document_number_sequences" ("prefix", "dateKey", "nextSerial")
-        VALUES (?, ?, 2)
-        ON CONFLICT ("prefix", "dateKey") DO UPDATE SET "nextSerial" = "nextSerial" + 1`,
+        VALUES (${placeholders[0]}, ${placeholders[1]}, 2)
+        ON CONFLICT ("prefix", "dateKey") DO UPDATE SET "nextSerial" = "document_number_sequences"."nextSerial" + 1`,
       [prefix, dateKey],
     );
     const sequence = await repository.findOneByOrFail({ prefix, dateKey });

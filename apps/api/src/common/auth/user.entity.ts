@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../database/column-types';
 
 @Entity('users')
 export class UserEntity {
@@ -27,7 +28,7 @@ export class UserEntity {
   @Column('boolean', { default: false })
   passwordChangeRequired?: boolean;
 
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   passwordChangedAt?: Date | null;
 
   @Column('integer', { default: 0 })

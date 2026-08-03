@@ -20,7 +20,7 @@ const packageFile = join(apiDirectory, 'package.json');
 const environmentExample = join(apiDirectory, '.env.production.example');
 const npmRegistry = process.env.OA_NPM_REGISTRY?.trim() || 'https://registry.npmjs.org/';
 
-const runtimeDependencyNames = ['argon2', 'better-sqlite3', 'swagger-ui-dist'];
+const runtimeDependencyNames = ['argon2', 'better-sqlite3', 'pg', 'swagger-ui-dist'];
 const optionalNestPackages = [
   '@nestjs/microservices',
   '@nestjs/microservices/*',

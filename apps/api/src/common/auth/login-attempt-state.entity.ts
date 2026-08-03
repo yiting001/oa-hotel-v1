@@ -1,4 +1,5 @@
 import { Check, Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../database/column-types';
 
 @Entity('login_attempt_states')
 @Index('IDX_login_attempt_expires_at', ['expiresAt'])
@@ -13,9 +14,9 @@ export class LoginAttemptStateEntity {
   @Column('integer')
   attempts!: number;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   expiresAt!: Date;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   updatedAt!: Date;
 }

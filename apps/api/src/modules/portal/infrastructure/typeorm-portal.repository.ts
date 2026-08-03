@@ -197,24 +197,28 @@ export class TypeOrmPortalRepository implements PortalRepository {
       .andWhere('content.publishedAt <= :at', { at: query.at })
       .andWhere('(content.offlineAt IS NULL OR content.offlineAt > :at)', { at: query.at });
 
+    const audienceIdsTable =
+      this.contents.manager.connection.options.type === 'postgres'
+        ? 'json_array_elements_text(content."audienceIds"::json) target(value)'
+        : 'json_each(content.audienceIds) target';
     const audienceConditions = [
       "content.audienceType = 'ALL'",
       `(content.audienceType = 'USER' AND EXISTS (
-        SELECT 1 FROM json_each(content.audienceIds) target
+        SELECT 1 FROM ${audienceIdsTable}
         WHERE target.value = :audienceUserId
       ))`,
     ];
     const parameters: Record<string, unknown> = { audienceUserId: query.audience.userId };
     if (query.audience.roleCodes.length > 0) {
       audienceConditions.push(`(content.audienceType = 'ROLE' AND EXISTS (
-        SELECT 1 FROM json_each(content.audienceIds) target
+        SELECT 1 FROM ${audienceIdsTable}
         WHERE target.value IN (:...audienceRoleCodes)
       ))`);
       parameters.audienceRoleCodes = query.audience.roleCodes;
     }
     if (query.audience.departmentIds.length > 0) {
       audienceConditions.push(`(content.audienceType = 'DEPARTMENT' AND EXISTS (
-        SELECT 1 FROM json_each(content.audienceIds) target
+        SELECT 1 FROM ${audienceIdsTable}
         WHERE target.value IN (:...audienceDepartmentIds)
       ))`);
       parameters.audienceDepartmentIds = query.audience.departmentIds;

@@ -2,6 +2,9 @@ import type Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { BetterSqlite3ConnectionOptions } from 'typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions';
+import type { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
+import { PostgresInitialSchema1785800000000 } from './migrations-postgres/1785800000000-PostgresInitialSchema';
+import { PostgresInitialSeed1785800000001 } from './migrations-postgres/1785800000001-PostgresInitialSeed';
 import { InitialSchema1783764567016 } from './migrations/1783764567016-InitialSchema';
 import { WorkflowEnterpriseFoundation1783944000200 } from './migrations/1783944000200-WorkflowEnterpriseFoundation';
 import { IamOrganizationAccess1784000000000 } from './migrations/1784000000000-IamOrganizationAccess';
@@ -31,9 +34,20 @@ interface DatabaseOptionOverrides {
   readonly?: boolean;
 }
 
-export function createDatabaseOptions(
-  overrides: DatabaseOptionOverrides = {},
-): BetterSqlite3ConnectionOptions {
+export type OaDatabaseOptions = BetterSqlite3ConnectionOptions | PostgresConnectionOptions;
+
+export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): OaDatabaseOptions {
+  const databaseUrl = process.env.OA_DATABASE_URL;
+  if (databaseUrl && /^postgres(ql)?:\/\//.test(databaseUrl)) {
+    return {
+      type: 'postgres',
+      url: databaseUrl,
+      entities: databaseEntities,
+      migrations: [PostgresInitialSchema1785800000000, PostgresInitialSeed1785800000001],
+      migrationsRun: overrides.migrationsRun ?? true,
+      synchronize: false,
+    };
+  }
   const configured = process.env.OA_DATABASE_PATH ?? 'data/oa.sqlite';
   const database = configured === ':memory:' ? configured : resolve(process.cwd(), configured);
   if (database !== ':memory:' && !overrides.readonly) {

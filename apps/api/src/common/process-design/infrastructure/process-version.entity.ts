@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 import type { ProcessVersion, ProcessVersionStatus } from '../domain/process-design.types';
 
 @Entity('process_versions')
@@ -30,7 +31,7 @@ export class ProcessVersionEntity implements ProcessVersion {
   @Column('text')
   updatedBy!: string;
 
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   publishedAt!: Date | null;
 
   @CreateDateColumn()

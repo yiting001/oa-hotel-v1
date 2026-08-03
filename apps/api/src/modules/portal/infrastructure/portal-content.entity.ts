@@ -1,4 +1,5 @@
 import type { PortalAudienceType, PortalContentCategory, PortalContentStatus } from '@oa/contracts';
+import { DATETIME_COLUMN_TYPE } from '../../../common/database/column-types';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import type { PortalContent } from '../domain/portal.types';
 
@@ -59,18 +60,18 @@ export class PortalContentEntity implements PortalContent {
   currentRevision!: number;
 
   @Index()
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   publishedAt!: Date | null;
 
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   offlineAt!: Date | null;
 
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   withdrawnAt!: Date | null;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   createdAt!: Date;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   updatedAt!: Date;
 }
