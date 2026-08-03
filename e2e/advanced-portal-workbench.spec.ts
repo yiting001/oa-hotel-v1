@@ -163,7 +163,7 @@ test.describe('advanced portal and workbench capabilities', () => {
     expect(secondTaskId).toBeTruthy();
 
     await loginThroughUi(page, 'office');
-    await page.goto('/workbench?tab=pending');
+    await page.goto('/approval');
     await expect(pendingTaskOpen(page, testInfo.project.name, firstTaskId!)).toBeVisible();
     await expect(pendingTaskOpen(page, testInfo.project.name, secondTaskId!)).toBeVisible();
     await expectNoPageOverflow(page);
@@ -248,7 +248,7 @@ test.describe('advanced portal and workbench capabilities', () => {
     await expectNoPageOverflow(page);
 
     await loginThroughUi(page, 'office');
-    await page.goto('/workbench?tab=pending');
+    await page.goto('/approval');
     await selectPendingTask(page, testInfo.project.name, firstTaskId!, firstDocument!.title);
     await selectPendingTask(page, testInfo.project.name, secondTaskId!, secondDocument!.title);
     await expect(page.getByText('已选择 2 条本页待办')).toBeVisible();

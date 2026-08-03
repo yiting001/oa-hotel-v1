@@ -13,4 +13,10 @@ export const workbenchRoutes: RouteRecordRaw[] = [
     component: () => import('./pages/PersonalWorkbenchPage.vue'),
     meta: { title: '个人工作台' },
   },
+  {
+    path: '/approval',
+    name: 'approval-center',
+    component: () => import('./pages/PersonalWorkbenchPage.vue'),
+    meta: { title: '审批中心', requiredPermission: 'WORKFLOW_APPROVE' },
+  },
 ];

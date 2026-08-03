@@ -11,6 +11,8 @@ import type {
   RoleInput,
   RoleUpdateInput,
   UserAssignmentsInput,
+  UserCreateInput,
+  UserUpdateInput,
 } from '../types/iam';
 
 const endpoint = {
@@ -23,6 +25,8 @@ const endpoint = {
   role: (id: string) => `/iam/roles/${id}`,
   rolePermissions: (id: string) => `/iam/roles/${id}/permissions`,
   users: '/iam/users',
+  user: (id: string) => `/iam/users/${id}`,
+  userPassword: (id: string) => `/iam/users/${id}/password`,
   menus: '/iam/menus',
   menu: (id: string) => `/iam/menus/${id}`,
   menuRoles: '/iam/menus/roles',
@@ -50,6 +54,12 @@ export const iamApi = {
   updatePosition(id: string, input: Partial<PositionInput>): Promise<Position> {
     return apiRequest<Position>(endpoint.position(id), { method: 'PATCH', body: input });
   },
+  deleteDepartment(id: string): Promise<void> {
+    return apiRequest<void>(endpoint.department(id), { method: 'DELETE' });
+  },
+  deletePosition(id: string): Promise<void> {
+    return apiRequest<void>(endpoint.position(id), { method: 'DELETE' });
+  },
   listPermissions(): Promise<Permission[]> {
     return apiRequest<Permission[]>(endpoint.permissions);
   },
@@ -61,6 +71,9 @@ export const iamApi = {
   },
   updateRole(id: string, input: RoleUpdateInput): Promise<RoleSummary> {
     return apiRequest<RoleSummary>(endpoint.role(id), { method: 'PATCH', body: input });
+  },
+  deleteRole(id: string): Promise<void> {
+    return apiRequest<void>(endpoint.role(id), { method: 'DELETE' });
   },
   saveRolePermissions(roleId: string, permissionIds: string[]): Promise<RoleSummary> {
     return apiRequest<RoleSummary>(endpoint.rolePermissions(roleId), {
@@ -91,6 +104,15 @@ export const iamApi = {
   },
   listUsers(): Promise<IamUser[]> {
     return apiRequest<IamUser[]>(endpoint.users);
+  },
+  createUser(input: UserCreateInput): Promise<IamUser> {
+    return apiRequest<IamUser>(endpoint.users, { method: 'POST', body: input });
+  },
+  updateUser(id: string, input: UserUpdateInput): Promise<IamUser> {
+    return apiRequest<IamUser>(endpoint.user(id), { method: 'PATCH', body: input });
+  },
+  resetUserPassword(id: string, password: string): Promise<void> {
+    return apiRequest<void>(endpoint.userPassword(id), { method: 'PUT', body: { password } });
   },
   saveUserAssignments(userId: string, input: UserAssignmentsInput): Promise<IamUser> {
     return apiRequest<IamUser>(endpoint.userAssignments(userId), { method: 'PUT', body: input });

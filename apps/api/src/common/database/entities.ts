@@ -12,6 +12,7 @@ import { WorkflowCopyEntity } from '../workflow/infrastructure/workflow-copy.ent
 import { DocumentNumberSequenceEntity } from '../workflow/infrastructure/document-number-sequence.entity';
 import { DocumentFollowEntity } from '../workbench/infrastructure/document-follow.entity';
 import { iamEntities } from '../iam/infrastructure/entities';
+import { RequestLogEntity } from '../request-log/request-log.entity';
 import { FormDefinitionEntity } from '../form-design/infrastructure/form-definition.entity';
 import { FormVersionEntity } from '../form-design/infrastructure/form-version.entity';
 import { ProcessDefinitionEntity } from '../process-design/infrastructure/process-definition.entity';
@@ -51,6 +52,7 @@ export const databaseEntities = [
   ProcessDefinitionEntity,
   ProcessVersionEntity,
   ...iamEntities,
+  RequestLogEntity,
   ...portalEntities,
   ContractEntity,
   ContractPaymentEntity,

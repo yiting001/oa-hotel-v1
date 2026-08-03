@@ -98,6 +98,19 @@ export interface PositionInput extends Record<string, unknown> {
   active?: boolean;
 }
 
+export interface UserCreateInput extends Record<string, unknown> {
+  username: string;
+  displayName: string;
+  password: string;
+  memberships: UserAssignmentsInput['memberships'];
+  roles: UserAssignmentsInput['roles'];
+}
+
+export interface UserUpdateInput extends Record<string, unknown> {
+  displayName?: string;
+  active?: boolean;
+}
+
 export interface UserAssignmentsInput extends Record<string, unknown> {
   memberships: Array<{
     departmentId: string;

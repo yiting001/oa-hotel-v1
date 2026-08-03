@@ -29,7 +29,6 @@ export type NavigationItemId =
   | 'portal'
   | 'workbench'
   | 'approval'
-  | 'start'
   | 'content'
   | 'contract'
   | 'purchase'
@@ -43,7 +42,6 @@ export type NavigationItemId =
   | 'iam'
   | 'menus'
   | 'processes'
-  | 'approval-chains'
   | 'forms';
 
 export interface NavigationItem {
@@ -77,17 +75,10 @@ const navigationGroups: readonly NavigationGroup[] = [
       { id: 'workbench', path: '/workbench', label: '个人工作台', icon: DataBoard },
       {
         id: 'approval',
-        path: '/workbench?tab=pending',
+        path: '/approval',
         label: '审批中心',
         icon: Checked,
         requiredPermissions: ['WORKFLOW_APPROVE'],
-      },
-      {
-        id: 'start',
-        path: '/start',
-        label: '发起申请',
-        icon: EditPen,
-        requiresProcessStarts: true,
       },
     ],
   },
@@ -130,6 +121,20 @@ const navigationGroups: readonly NavigationGroup[] = [
         icon: Box,
         requiredPermissions: requiredBusinessModulePermissions('SUPPLY', 'VIEW'),
       },
+      {
+        id: 'content',
+        path: '/portal/content-management',
+        label: '内容管理',
+        icon: DocumentCopy,
+        requiredPermissions: [portalContentManagePermission],
+      },
+      {
+        id: 'petty-materials',
+        path: '/system/petty-materials',
+        label: '零星采买物资库',
+        icon: Box,
+        requiredPermissions: ['IAM_MANAGE'],
+      },
     ],
   },
   {
@@ -144,13 +149,6 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: ['DOCUMENT_VIEW'],
       },
       {
-        id: 'insight-logs',
-        path: '/insight/logs',
-        label: '操作日志',
-        icon: DocumentCopy,
-        requiredPermissions: ['IAM_MANAGE'],
-      },
-      {
         id: 'insight-statistics',
         path: '/insight/statistics',
         label: '统计看板',
@@ -161,15 +159,8 @@ const navigationGroups: readonly NavigationGroup[] = [
   },
   {
     id: 'platform',
-    label: '平台管理',
+    label: '系统设置',
     items: [
-      {
-        id: 'content',
-        path: '/portal/content-management',
-        label: '内容管理',
-        icon: DocumentCopy,
-        requiredPermissions: [portalContentManagePermission],
-      },
       {
         id: 'iam',
         path: '/system/iam',
@@ -185,10 +176,10 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: ['IAM_MANAGE'],
       },
       {
-        id: 'petty-materials',
-        path: '/system/petty-materials',
-        label: '零星采买物资库',
-        icon: Box,
+        id: 'insight-logs',
+        path: '/insight/logs',
+        label: '操作日志',
+        icon: DocumentCopy,
         requiredPermissions: ['IAM_MANAGE'],
       },
       {
@@ -196,13 +187,6 @@ const navigationGroups: readonly NavigationGroup[] = [
         path: '/system/processes',
         label: '审批流程设计',
         icon: Share,
-        requiredPermissions: ['PROCESS_DESIGN_VIEW'],
-      },
-      {
-        id: 'approval-chains',
-        path: '/system/approval-chains',
-        label: '审批链路配置',
-        icon: Checked,
         requiredPermissions: ['PROCESS_DESIGN_VIEW'],
       },
       {
@@ -313,16 +297,8 @@ export function navigationGroupsFromMenuTree(
 export function selectedNavigationPath(
   groups: readonly NavigationGroup[],
   routePath: string,
-  workbenchTab: unknown,
 ): string {
   const items = groups.flatMap((group) => group.items);
-  if (
-    routePath === '/workbench' &&
-    workbenchTab === 'pending' &&
-    items.some((item) => item.id === 'approval')
-  ) {
-    return '/workbench?tab=pending';
-  }
   const candidates = items
     .filter((item) => {
       if (item.path.includes('?')) return false;
@@ -336,7 +312,7 @@ export function selectedNavigationPath(
 }
 
 export function mobilePrimaryNavigation(groups: readonly NavigationGroup[]): NavigationItem[] {
-  const primaryIds: string[] = ['portal', 'approval', 'start', 'workbench'];
+  const primaryIds: string[] = ['portal', 'approval', 'workbench'];
   const items = groups.flatMap((group) => group.items);
   return primaryIds
     .map((id) => items.find((item) => item.id === id))

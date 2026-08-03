@@ -21,6 +21,8 @@ import type {
   RoleUpdateInput,
   UserAccessSummary,
   UserAssignmentsWriteInput,
+  UserCreateInput,
+  UserUpdateInput,
 } from './iam.models';
 import { IamMenuService } from './iam-menu.service';
 import { IamOrganizationService } from './iam-organization.service';
@@ -88,6 +90,14 @@ export class IamService implements OnApplicationBootstrap {
     return this.organization.updatePosition(id, input);
   }
 
+  deleteDepartment(id: string): Promise<void> {
+    return this.organization.deleteDepartment(id);
+  }
+
+  deletePosition(id: string): Promise<void> {
+    return this.organization.deletePosition(id);
+  }
+
   async listRoles(): Promise<RoleSummary[]> {
     await this.legacyBootstrap.ensureInitialized();
     return this.access.listRoles();
@@ -103,6 +113,10 @@ export class IamService implements OnApplicationBootstrap {
     return this.roleManagement.update(roleId, input);
   }
 
+  deleteRole(roleId: string): Promise<void> {
+    return this.roleManagement.delete(roleId);
+  }
+
   listPermissions(): Promise<PermissionEntity[]> {
     return this.access.listPermissions();
   }
@@ -110,6 +124,19 @@ export class IamService implements OnApplicationBootstrap {
   async listUsers(): Promise<UserAccessSummary[]> {
     await this.legacyBootstrap.ensureInitialized();
     return this.access.listUsers();
+  }
+
+  async createUser(input: UserCreateInput): Promise<UserAccessSummary> {
+    await this.legacyBootstrap.ensureInitialized();
+    return this.access.createUser(input);
+  }
+
+  updateUser(userId: string, input: UserUpdateInput): Promise<UserAccessSummary> {
+    return this.access.updateUser(userId, input);
+  }
+
+  resetUserPassword(userId: string, password: string): Promise<void> {
+    return this.access.resetUserPassword(userId, password);
   }
 
   updateRolePermissions(roleId: string, permissionIds: string[]): Promise<RoleSummary> {

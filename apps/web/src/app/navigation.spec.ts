@@ -21,7 +21,7 @@ describe('application navigation', () => {
     expect(ids).not.toContain('forms');
   });
 
-  it('shows all three business modules, designers and process starts to an administrator', () => {
+  it('shows all three business modules and designers to an administrator', () => {
     const permissions = [
       'PORTAL_VIEW',
       'CONTENT_VIEW',
@@ -43,20 +43,12 @@ describe('application navigation', () => {
     const ids = groups.flatMap((group) => group.items.map((item) => item.id));
 
     expect(ids).toEqual(
-      expect.arrayContaining([
-        'approval',
-        'start',
-        'contract',
-        'seal',
-        'supply',
-        'processes',
-        'forms',
-      ]),
+      expect.arrayContaining(['approval', 'contract', 'seal', 'supply', 'processes', 'forms']),
     );
+    expect(ids).not.toContain('start');
     expect(mobilePrimaryNavigation(groups).map((item) => item.id)).toEqual([
       'portal',
       'approval',
-      'start',
       'workbench',
     ]);
   });
@@ -85,10 +77,10 @@ describe('application navigation', () => {
     expect(ids).not.toContain('supply');
   });
 
-  it('selects the dedicated approval entry for the pending workbench tab', () => {
+  it('selects the dedicated approval entry for the approval center route', () => {
     const groups = visibleNavigationGroups(['WORKFLOW_APPROVE'], 0);
 
-    expect(selectedNavigationPath(groups, '/workbench', 'pending')).toBe('/workbench?tab=pending');
-    expect(selectedNavigationPath(groups, '/workbench', 'completed')).toBe('/workbench');
+    expect(selectedNavigationPath(groups, '/approval')).toBe('/approval');
+    expect(selectedNavigationPath(groups, '/workbench')).toBe('/workbench');
   });
 });

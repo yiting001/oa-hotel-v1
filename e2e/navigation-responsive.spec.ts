@@ -34,7 +34,7 @@ test.describe('enterprise navigation and responsive process entry', () => {
       await expect(navigation.getByText(label, { exact: true })).toBeVisible();
     }
 
-    await page.goto('/workbench?tab=pending');
+    await page.goto('/approval');
     await expect(page.getByRole('heading', { name: '待我审批', exact: true })).toBeVisible();
     await expect(page.locator('.enterprise-header__title').getByText('审批中心')).toBeVisible();
 

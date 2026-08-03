@@ -8,7 +8,6 @@ export const platformRouteNames = {
   iam: 'platform-iam',
   menus: 'platform-menus',
   processes: 'platform-processes',
-  approvalChains: 'platform-approval-chains',
   forms: 'platform-forms',
 } as const;
 
@@ -33,9 +32,7 @@ export const platformRoutes: RouteRecordRaw[] = [
   },
   {
     path: '/system/approval-chains',
-    name: platformRouteNames.approvalChains,
-    component: () => import('./pages/ApprovalChainPage.vue'),
-    meta: { title: '审批链路配置', requiredPermission: 'PROCESS_DESIGN_VIEW' },
+    redirect: '/system/processes',
   },
   {
     path: '/system/forms',

@@ -17,11 +17,14 @@ import { IamService } from '../application/iam.service';
 import { IAM_PERMISSION } from '../domain/iam-permission';
 import {
   CreateRoleDto,
+  CreateUserDto,
   MenuWriteDto,
+  ResetUserPasswordDto,
   UpdateRoleDto,
   UpdateRoleMenusDto,
   UpdateRolePermissionsDto,
   UpdateUserAssignmentsDto,
+  UpdateUserDto,
 } from './access.dto';
 import {
   CreateDepartmentDto,
@@ -66,6 +69,12 @@ export class IamController {
     return this.iamService.updateDepartment(id, dto);
   }
 
+  @Delete('departments/:id')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  deleteDepartment(@Param('id') id: string) {
+    return this.iamService.deleteDepartment(id);
+  }
+
   @Get('positions')
   @RequirePermissions(IAM_PERMISSION.VIEW)
   listPositions(@Query('departmentId') departmentId?: string) {
@@ -82,6 +91,12 @@ export class IamController {
   @RequirePermissions(IAM_PERMISSION.MANAGE)
   updatePosition(@Param('id') id: string, @Body() dto: UpdatePositionDto) {
     return this.iamService.updatePosition(id, dto);
+  }
+
+  @Delete('positions/:id')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  deletePosition(@Param('id') id: string) {
+    return this.iamService.deletePosition(id);
   }
 
   @Get('roles')
@@ -102,6 +117,12 @@ export class IamController {
     return this.iamService.updateRole(roleId, dto);
   }
 
+  @Delete('roles/:roleId')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  deleteRole(@Param('roleId') roleId: string) {
+    return this.iamService.deleteRole(roleId);
+  }
+
   @Get('permissions')
   @RequirePermissions(IAM_PERMISSION.VIEW)
   listPermissions() {
@@ -112,6 +133,24 @@ export class IamController {
   @RequirePermissions(IAM_PERMISSION.VIEW)
   listUsers() {
     return this.iamService.listUsers();
+  }
+
+  @Post('users')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  createUser(@Body() dto: CreateUserDto) {
+    return this.iamService.createUser(dto);
+  }
+
+  @Patch('users/:userId')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  updateUser(@Param('userId') userId: string, @Body() dto: UpdateUserDto) {
+    return this.iamService.updateUser(userId, dto);
+  }
+
+  @Put('users/:userId/password')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  resetUserPassword(@Param('userId') userId: string, @Body() dto: ResetUserPasswordDto) {
+    return this.iamService.resetUserPassword(userId, dto.password);
   }
 
   @Get('menus')

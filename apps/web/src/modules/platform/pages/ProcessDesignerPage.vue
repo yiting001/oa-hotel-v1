@@ -19,6 +19,8 @@ import {
   ElMessage,
   ElMessageBox,
   ElSegmented,
+  ElTabPane,
+  ElTabs,
   ElTag,
 } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
@@ -27,6 +29,7 @@ import { processApi } from '../api/designer-api';
 import { iamApi } from '../api/iam-api';
 import DefinitionNavigator from '../components/DefinitionNavigator.vue';
 import PlatformPageHeader from '../components/PlatformPageHeader.vue';
+import ApprovalChainPanel from '../components/process/ApprovalChainPanel.vue';
 import ProcessCanvas from '../components/process/ProcessCanvas.vue';
 import ProcessNodeInspector from '../components/process/ProcessNodeInspector.vue';
 import type {
@@ -46,6 +49,7 @@ import {
 } from '../utils/process';
 
 const session = useSessionStore();
+const activeTab = ref('chains');
 const definitions = ref<ProcessDefinition[]>([]);
 const roles = ref<RoleSummary[]>([]);
 const users = ref<IamUser[]>([]);
@@ -313,11 +317,11 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
 <template>
   <div class="platform-page process-page">
     <PlatformPageHeader
-      eyebrow="平台管理 / Workflow"
+      eyebrow="系统设置 / Workflow"
       title="审批流程设计"
-      description="以版本化流程定义配置审批节点、流转关系和办理人规则，发布后供业务表单绑定使用。"
+      description="链路快捷配置直接编排角色审批顺序；流程画布以版本化流程定义配置节点、流转关系和办理人规则。"
     >
-      <template #actions>
+      <template v-if="activeTab === 'design'" #actions>
         <ElTag
           v-if="activeVersion"
           :type="activeVersion.status === 'PUBLISHED' ? 'success' : 'warning'"
@@ -341,78 +345,85 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
       type="info"
     />
 
-    <div class="process-mobile-view-switch no-print">
-      <ElSegmented
-        v-model="mobileView"
-        aria-label="切换流程设计区域"
-        :options="mobileViewOptions"
-      />
-    </div>
-
-    <div class="process-designer-shell">
-      <DefinitionNavigator
-        class="process-mobile-panel"
-        :class="{ 'is-mobile-active': mobileView === 'library' }"
-        :definitions="definitions"
-        :loading="loading"
-        noun="流程"
-        :readonly="!canManage"
-        :selected-definition-id="selectedDefinitionId"
-        :selected-version-id="selectedVersionId"
-        @copy-version="copyVersion"
-        @create="createDialogOpen = true"
-        @select-definition="selectDefinition"
-        @select-version="selectVersion"
-      />
-      <main
-        class="process-workspace process-mobile-panel"
-        :class="{ 'is-mobile-active': mobileView === 'canvas' }"
-      >
-        <div class="designer-toolbar no-print">
-          <div>
-            <strong>{{ activeDefinition?.name ?? '请选择流程' }}</strong>
-            <small>{{ activeDefinition?.code ?? '未选择定义' }}</small>
-          </div>
-          <ElButtonGroup>
-            <ElButton :disabled="readonly" title="添加开始节点" @click="addNode('START')"
-              ><ElIcon><VideoPlay /></ElIcon>开始</ElButton
-            >
-            <ElButton :disabled="readonly" title="添加审批节点" @click="addNode('USER_TASK')"
-              ><ElIcon><UserFilled /></ElIcon>审批</ElButton
-            >
-            <ElButton :disabled="readonly" title="添加结束节点" @click="addNode('END')"
-              ><ElIcon><CircleCloseFilled /></ElIcon>结束</ElButton
-            >
-          </ElButtonGroup>
-          <ElButton
-            :disabled="readonly || (!selectedNodeId && !selectedEdgeId)"
-            type="danger"
-            plain
-            @click="deleteSelection"
-            ><ElIcon><Delete /></ElIcon>删除选中</ElButton
-          >
+    <ElTabs v-model="activeTab" class="platform-tabs">
+      <ElTabPane label="链路快捷配置" name="chains">
+        <ApprovalChainPanel v-if="activeTab === 'chains'" />
+      </ElTabPane>
+      <ElTabPane label="流程画布" name="design">
+        <div class="process-mobile-view-switch no-print">
+          <ElSegmented
+            v-model="mobileView"
+            aria-label="切换流程设计区域"
+            :options="mobileViewOptions"
+          />
         </div>
-        <ProcessCanvas
-          :design="design"
-          :readonly="readonly"
-          :selected-edge-id="selectedEdgeId"
-          :selected-node-id="selectedNodeId"
-          @select-edge="selectedEdgeId = $event"
-          @select-node="selectedNodeId = $event"
-          @update="updateDesign"
-        />
-      </main>
-      <ProcessNodeInspector
-        class="process-mobile-panel"
-        :class="{ 'is-mobile-active': mobileView === 'inspector' }"
-        :node="selectedNode"
-        :readonly="readonly"
-        :roles="roles"
-        :selected-edge="selectedEdge"
-        :users="users"
-        @update="updateNode"
-      />
-    </div>
+
+        <div class="process-designer-shell">
+          <DefinitionNavigator
+            class="process-mobile-panel"
+            :class="{ 'is-mobile-active': mobileView === 'library' }"
+            :definitions="definitions"
+            :loading="loading"
+            noun="流程"
+            :readonly="!canManage"
+            :selected-definition-id="selectedDefinitionId"
+            :selected-version-id="selectedVersionId"
+            @copy-version="copyVersion"
+            @create="createDialogOpen = true"
+            @select-definition="selectDefinition"
+            @select-version="selectVersion"
+          />
+          <main
+            class="process-workspace process-mobile-panel"
+            :class="{ 'is-mobile-active': mobileView === 'canvas' }"
+          >
+            <div class="designer-toolbar no-print">
+              <div>
+                <strong>{{ activeDefinition?.name ?? '请选择流程' }}</strong>
+                <small>{{ activeDefinition?.code ?? '未选择定义' }}</small>
+              </div>
+              <ElButtonGroup>
+                <ElButton :disabled="readonly" title="添加开始节点" @click="addNode('START')"
+                  ><ElIcon><VideoPlay /></ElIcon>开始</ElButton
+                >
+                <ElButton :disabled="readonly" title="添加审批节点" @click="addNode('USER_TASK')"
+                  ><ElIcon><UserFilled /></ElIcon>审批</ElButton
+                >
+                <ElButton :disabled="readonly" title="添加结束节点" @click="addNode('END')"
+                  ><ElIcon><CircleCloseFilled /></ElIcon>结束</ElButton
+                >
+              </ElButtonGroup>
+              <ElButton
+                :disabled="readonly || (!selectedNodeId && !selectedEdgeId)"
+                type="danger"
+                plain
+                @click="deleteSelection"
+                ><ElIcon><Delete /></ElIcon>删除选中</ElButton
+              >
+            </div>
+            <ProcessCanvas
+              :design="design"
+              :readonly="readonly"
+              :selected-edge-id="selectedEdgeId"
+              :selected-node-id="selectedNodeId"
+              @select-edge="selectedEdgeId = $event"
+              @select-node="selectedNodeId = $event"
+              @update="updateDesign"
+            />
+          </main>
+          <ProcessNodeInspector
+            class="process-mobile-panel"
+            :class="{ 'is-mobile-active': mobileView === 'inspector' }"
+            :node="selectedNode"
+            :readonly="readonly"
+            :roles="roles"
+            :selected-edge="selectedEdge"
+            :users="users"
+            @update="updateNode"
+          />
+        </div>
+      </ElTabPane>
+    </ElTabs>
 
     <ElDialog v-model="createDialogOpen" title="新建流程定义" width="520px">
       <ElForm label-position="top">

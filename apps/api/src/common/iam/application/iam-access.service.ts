@@ -1,7 +1,15 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { hash } from 'argon2';
 import { randomUUID } from 'node:crypto';
 import { DataSource, type EntityManager, In, Repository } from 'typeorm';
+import { credentialPolicy } from '../../auth/credential-policy';
 import { DepartmentEntity } from '../../auth/department.entity';
 import { UserEntity } from '../../auth/user.entity';
 import { DomainError } from '../../errors/domain-error';
@@ -20,6 +28,8 @@ import type {
   RoleSummary,
   UserAccessSummary,
   UserAssignmentsWriteInput,
+  UserCreateInput,
+  UserUpdateInput,
 } from './iam.models';
 import { mapRoleSummaries, mapUserSummaries } from './iam-read-model';
 import { collectDepartmentDescendants } from './organization-tree';
@@ -72,6 +82,96 @@ export class IamAccessService {
       this.userRoles.find(),
     ]);
     return mapUserSummaries({ users, departments, positions, memberships, roles, userRoles });
+  }
+
+  async createUser(input: UserCreateInput): Promise<UserAccessSummary> {
+    const username = input.username.trim();
+    const displayName = input.displayName.trim();
+    if (!username) throw new BadRequestException('登录账号不能为空');
+    if (!displayName) throw new BadRequestException('用户姓名不能为空');
+    this.assertPasswordPolicy(input.password);
+    if (await this.users.exist({ where: { username } })) {
+      throw new ConflictException('登录账号已存在');
+    }
+    this.assertMembershipShape(input.memberships);
+    await this.assertMembershipReferences(input.memberships);
+    await this.assertRoleReferences(input.roles);
+
+    const userId = randomUUID();
+    const primaryDepartmentId =
+      input.memberships.find((membership) => membership.isPrimary ?? false)?.departmentId ??
+      input.memberships[0]?.departmentId;
+    if (!primaryDepartmentId) throw new BadRequestException('用户至少需要一个部门任职');
+    const passwordHash = await hash(input.password);
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.getRepository(UserEntity).insert({
+        id: userId,
+        username,
+        displayName,
+        passwordHash,
+        departmentId: primaryDepartmentId,
+        roleCodes: [],
+        active: true,
+        passwordChangeRequired: true,
+        passwordChangedAt: null,
+        credentialVersion: 0,
+      });
+      await manager.getRepository(MembershipEntity).insert(
+        input.memberships.map((membership) => ({
+          id: randomUUID(),
+          userId,
+          departmentId: membership.departmentId,
+          positionId: membership.positionId ?? null,
+          isPrimary: membership.isPrimary ?? false,
+          isDepartmentHead: membership.isDepartmentHead ?? false,
+          active: membership.active ?? true,
+        })),
+      );
+      if (input.roles.length > 0) {
+        await manager.getRepository(UserRoleEntity).insert(
+          input.roles.map((assignment) => ({
+            id: randomUUID(),
+            userId,
+            roleId: assignment.roleId,
+            dataScope: assignment.dataScope,
+            scopeDepartmentId: assignment.scopeDepartmentId ?? null,
+          })),
+        );
+      }
+    });
+    return this.getUser(userId);
+  }
+
+  async updateUser(userId: string, input: UserUpdateInput): Promise<UserAccessSummary> {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('用户不存在');
+    if (input.displayName !== undefined) {
+      const displayName = input.displayName.trim();
+      if (!displayName) throw new BadRequestException('用户姓名不能为空');
+      user.displayName = displayName;
+    }
+    if (input.active !== undefined) {
+      if (user.active && !input.active) await this.assertNotLastActiveSystemAdmin(userId);
+      user.active = input.active;
+    }
+    await this.users.save(user);
+    return this.getUser(userId);
+  }
+
+  async resetUserPassword(userId: string, password: string): Promise<void> {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('用户不存在');
+    this.assertPasswordPolicy(password);
+    await this.users.update(
+      { id: userId },
+      {
+        passwordHash: await hash(password),
+        passwordChangeRequired: true,
+        passwordChangedAt: new Date(),
+        credentialVersion: (user.credentialVersion ?? 0) + 1,
+      },
+    );
   }
 
   async replaceUserAssignments(
@@ -281,6 +381,38 @@ export class IamAccessService {
   private async assertUserExists(userId: string): Promise<void> {
     if (!(await this.users.exist({ where: { id: userId } }))) {
       throw new NotFoundException('用户不存在');
+    }
+  }
+
+  private assertPasswordPolicy(password: string): void {
+    if (!/\S/u.test(password)) throw new BadRequestException('密码不能全部为空白字符');
+    if (
+      password.length < credentialPolicy.newPasswordMinLength ||
+      password.length > credentialPolicy.newPasswordMaxLength
+    ) {
+      throw new BadRequestException(
+        `密码长度必须在 ${credentialPolicy.newPasswordMinLength} 至 ${credentialPolicy.newPasswordMaxLength} 位之间`,
+      );
+    }
+  }
+
+  private async assertNotLastActiveSystemAdmin(userId: string): Promise<void> {
+    const systemRole = await this.roles.findOneBy({ code: 'SYSTEM_ADMIN', active: true });
+    if (!systemRole) return;
+    const hasSystemRole = await this.userRoles.exist({
+      where: { userId, roleId: systemRole.id },
+    });
+    if (!hasSystemRole) return;
+    const assignments = await this.userRoles.findBy({ roleId: systemRole.id });
+    const otherUserIds = [
+      ...new Set(assignments.map((item) => item.userId).filter((id) => id !== userId)),
+    ];
+    const activeAdministratorCount =
+      otherUserIds.length === 0
+        ? 0
+        : await this.users.countBy({ id: In(otherUserIds), active: true });
+    if (activeAdministratorCount === 0) {
+      throw new DomainError('LAST_SYSTEM_ADMIN_REQUIRED', '不能停用最后一个启用的系统管理员用户');
     }
   }
 

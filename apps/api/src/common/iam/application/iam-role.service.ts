@@ -4,8 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { DataSource, In, Repository } from 'typeorm';
 import { DomainError } from '../../errors/domain-error';
 import { PermissionEntity } from '../infrastructure/permission.entity';
+import { RoleMenuEntity } from '../infrastructure/role-menu.entity';
 import { RolePermissionEntity } from '../infrastructure/role-permission.entity';
 import { RoleEntity } from '../infrastructure/role.entity';
+import { UserRoleEntity } from '../infrastructure/user-role.entity';
 import { mapRoleSummaries } from './iam-read-model';
 import type { RoleCreateInput, RoleSummary, RoleUpdateInput } from './iam.models';
 
@@ -21,6 +23,8 @@ export class IamRoleService {
     private readonly permissions: Repository<PermissionEntity>,
     @InjectRepository(RolePermissionEntity)
     private readonly rolePermissions: Repository<RolePermissionEntity>,
+    @InjectRepository(UserRoleEntity)
+    private readonly userRoles: Repository<UserRoleEntity>,
     @Inject(DataSource)
     private readonly dataSource: DataSource,
   ) {}
@@ -67,6 +71,21 @@ export class IamRoleService {
     }
     if (input.active !== undefined) role.active = input.active;
     return this.toSummary(await this.roles.save(role));
+  }
+
+  async delete(roleId: string): Promise<void> {
+    const role = await this.findRole(roleId);
+    if (role.code === SYSTEM_ADMIN_CODE) {
+      throw new DomainError('SYSTEM_ADMIN_ROLE_PROTECTED', '系统管理员角色不能删除');
+    }
+    if (await this.userRoles.exist({ where: { roleId } })) {
+      throw new DomainError('IAM_ROLE_IN_USE', '角色已授权给用户，请先移除相关用户授权');
+    }
+    await this.dataSource.transaction(async (manager) => {
+      await manager.getRepository(RolePermissionEntity).delete({ roleId });
+      await manager.getRepository(RoleMenuEntity).delete({ roleId });
+      await manager.getRepository(RoleEntity).delete({ id: roleId });
+    });
   }
 
   async replacePermissions(roleId: string, permissionIds: string[]): Promise<RoleSummary> {

@@ -7,6 +7,7 @@ export const INSIGHT_ROUTE_NAMES = {
 export const INSIGHT_API = {
   documents: '/insight/documents',
   operationLogs: '/insight/operation-logs',
+  requestLogs: '/insight/request-logs',
   statistics: '/insight/statistics',
 } as const;
 
