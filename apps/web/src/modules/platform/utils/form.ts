@@ -7,6 +7,7 @@ import type {
 } from '../types/designer';
 import { appConfig } from '../../../shared/app-config';
 import { cloneJsonModel } from './json-model';
+import { randomId } from '../../../shared/random-id';
 
 const defaultFormSubtitle = `${appConfig.companyName}${appConfig.productName}审批表`;
 
@@ -121,7 +122,7 @@ export function createFormField(
   overrides: Partial<FormFieldModel> = {},
 ): FormFieldModel {
   const catalog = fieldCatalog.find((item) => item.type === type);
-  const id = crypto.randomUUID();
+  const id = randomId();
   const tableColumns: FormTableColumn[] = [
     createTableColumn('itemName', '项目'),
     createTableColumn('quantity', '数量'),
@@ -185,7 +186,7 @@ export function serializeFormSchema(schema: FormSchema): Record<string, unknown>
 }
 
 export function createTableColumn(key = '', label = '新列'): FormTableColumn {
-  return { id: crypto.randomUUID(), key: key || `column_${Date.now()}`, label, width: 120 };
+  return { id: randomId(), key: key || `column_${Date.now()}`, label, width: 120 };
 }
 
 export function cloneFormSchema(schema: FormSchema): FormSchema {
@@ -231,7 +232,7 @@ function normalizeField(value: Record<string, unknown>, index: number): FormFiel
     : undefined;
   const columns = Array.isArray(value.columns)
     ? value.columns.filter(isRecord).map((column, columnIndex) => ({
-        id: typeof column.id === 'string' ? column.id : crypto.randomUUID(),
+        id: typeof column.id === 'string' ? column.id : randomId(),
         key:
           typeof column.key === 'string' && column.key ? column.key : `column_${columnIndex + 1}`,
         label: typeof column.label === 'string' ? column.label : `第 ${columnIndex + 1} 列`,
@@ -239,7 +240,7 @@ function normalizeField(value: Record<string, unknown>, index: number): FormFiel
       }))
     : undefined;
   return {
-    id: typeof value.id === 'string' ? value.id : crypto.randomUUID(),
+    id: typeof value.id === 'string' ? value.id : randomId(),
     key,
     label: typeof value.label === 'string' ? value.label : key,
     type,

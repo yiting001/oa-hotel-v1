@@ -10,9 +10,10 @@ import type {
   PurchaseRequestRecord,
   RequisitionLineForm,
 } from '../types';
+import { randomId } from '../../../shared/random-id';
 
 function lineKey(): string {
-  return crypto.randomUUID();
+  return randomId();
 }
 
 export function createPurchaseLine(): PurchaseLineForm {

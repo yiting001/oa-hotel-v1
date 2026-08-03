@@ -2,6 +2,7 @@
 import { VueFlow, type Connection, type Edge, type Node, useVueFlow } from '@vue-flow/core';
 import { computed, nextTick, watch } from 'vue';
 import type { ProcessDesign, ProcessNodeModel } from '../../types/designer';
+import { randomId } from '../../../../shared/random-id';
 import ProcessFlowNode from './ProcessFlowNode.vue';
 
 const props = defineProps<{
@@ -15,7 +16,7 @@ const emit = defineEmits<{
   selectNode: [id: string | null];
   selectEdge: [id: string | null];
 }>();
-const flowId = crypto.randomUUID();
+const flowId = randomId();
 const flow = useVueFlow(flowId);
 
 const flowNodes = computed<Node[]>(() =>
@@ -71,7 +72,7 @@ function connect(connection: Connection): void {
     ...props.design,
     edges: [
       ...props.design.edges,
-      { id: crypto.randomUUID(), source: connection.source, target: connection.target },
+      { id: randomId(), source: connection.source, target: connection.target },
     ],
   });
 }

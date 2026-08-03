@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { computed, reactive, ref } from 'vue';
+import { randomId } from '../../../../shared/random-id';
 import { iamApi } from '../../api/iam-api';
 import type {
   DataScope,
@@ -152,7 +153,7 @@ function userRoleNames(user: IamUser): string[] {
 function openAssign(user: IamUser): void {
   assignUserId.value = user.id;
   memberships.value = user.memberships.map((item) => ({
-    key: item.id || crypto.randomUUID(),
+    key: item.id || randomId(),
     departmentId: item.departmentId,
     positionId: item.positionId,
     isPrimary: item.isPrimary,
@@ -160,7 +161,7 @@ function openAssign(user: IamUser): void {
     active: item.active,
   }));
   roleAssignments.value = user.roles.map((item) => ({
-    key: item.assignmentId || crypto.randomUUID(),
+    key: item.assignmentId || randomId(),
     roleId: item.roleId,
     dataScope: item.dataScope,
     scopeDepartmentId: item.scopeDepartmentId,
@@ -170,7 +171,7 @@ function openAssign(user: IamUser): void {
 
 function addMembership(): void {
   memberships.value.push({
-    key: crypto.randomUUID(),
+    key: randomId(),
     departmentId: '',
     positionId: null,
     isPrimary: memberships.value.length === 0,
@@ -181,7 +182,7 @@ function addMembership(): void {
 
 function addRole(): void {
   roleAssignments.value.push({
-    key: crypto.randomUUID(),
+    key: randomId(),
     roleId: '',
     dataScope: 'SELF',
     scopeDepartmentId: null,

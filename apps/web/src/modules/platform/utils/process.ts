@@ -1,5 +1,6 @@
 import type { AssigneeRule, ProcessDesign, ProcessNodeModel } from '../types/designer';
 import { cloneJsonModel } from './json-model';
+import { randomId } from '../../../shared/random-id';
 
 export function createDefaultProcessDesign(): ProcessDesign {
   const start = createProcessNode('START', 80, 180);
@@ -9,8 +10,8 @@ export function createDefaultProcessDesign(): ProcessDesign {
     schemaVersion: 1,
     nodes: [start, task, end],
     edges: [
-      { id: crypto.randomUUID(), source: start.id, target: task.id },
-      { id: crypto.randomUUID(), source: task.id, target: end.id },
+      { id: randomId(), source: start.id, target: task.id },
+      { id: randomId(), source: task.id, target: end.id },
     ],
     settings: { rejectStrategy: 'RETURN_TO_APPLICANT' },
   };
@@ -23,7 +24,7 @@ export function createProcessNode(
 ): ProcessNodeModel {
   const names = { START: '发起', USER_TASK: '部门负责人审批', END: '结束' } as const;
   return {
-    id: crypto.randomUUID(),
+    id: randomId(),
     type,
     name: names[type],
     position: { x, y },
