@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, Unique } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 
 @Entity('workflow_copies')
 @Unique('UQ_workflow_copy_recipient', ['documentId', 'recipientId'])
@@ -23,7 +24,7 @@ export class WorkflowCopyEntity {
   @Column('text')
   recipientName!: string;
 
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   readAt!: Date | null;
 
   @CreateDateColumn()

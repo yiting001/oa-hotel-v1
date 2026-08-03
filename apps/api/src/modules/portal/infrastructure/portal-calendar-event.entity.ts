@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../../common/database/column-types';
 import type { PortalEvent } from '../domain/portal.types';
 
 @Entity('portal_calendar_events')
@@ -10,10 +11,10 @@ export class PortalCalendarEventEntity implements PortalEvent {
   title!: string;
 
   @Index()
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   startAt!: Date;
 
-  @Column('datetime')
+  @Column(DATETIME_COLUMN_TYPE)
   endAt!: Date;
 
   @Column('boolean', { default: false })

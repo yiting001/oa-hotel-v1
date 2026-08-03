@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 import type { FormVersion, FormVersionStatus } from '../domain/form-design.types';
 
 @Entity('form_versions')
@@ -33,7 +34,7 @@ export class FormVersionEntity implements FormVersion {
   @Column('text')
   updatedBy!: string;
 
-  @Column('datetime', { nullable: true })
+  @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   publishedAt!: Date | null;
 
   @CreateDateColumn()
