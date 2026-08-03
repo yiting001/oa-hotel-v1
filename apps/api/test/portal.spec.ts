@@ -172,7 +172,7 @@ describe('公司门户 HTTP 集成', () => {
 
   it('loads calendar events for a requested month window and enforces its limits', async () => {
     const response = await request(server)
-      .get('/api/v1/portal/calendar?from=2026-09-01&to=2026-10-12')
+      .get(`/api/v1/portal/calendar?from=${futureWindowFrom()}&to=${futureWindowTo()}`)
       .auth(token('applicant'), { type: 'bearer' })
       .expect(200);
     const calendar = response.body as PortalCalendarResponse;
@@ -358,15 +358,38 @@ describe('公司门户 HTTP 集成', () => {
     );
     await events.save({
       id: 'portal-calendar-future',
-      title: '九月经营复盘会',
-      startAt: new Date('2026-09-15T02:00:00.000Z'),
-      endAt: new Date('2026-09-15T04:00:00.000Z'),
+      title: '远期经营复盘会',
+      startAt: futureEventStart(),
+      endAt: new Date(futureEventStart().getTime() + 2 * 60 * 60 * 1000),
       allDay: false,
       location: '第一会议室',
       kind: 'MEETING',
       displayOrder: 1,
       active: true,
     });
+  }
+
+  function futureEventStart(): Date {
+    const start = new Date();
+    start.setUTCDate(start.getUTCDate() + 60);
+    start.setUTCHours(2, 0, 0, 0);
+    return start;
+  }
+
+  function isoDate(date: Date): string {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function futureWindowFrom(): string {
+    const from = futureEventStart();
+    from.setUTCDate(from.getUTCDate() - 5);
+    return isoDate(from);
+  }
+
+  function futureWindowTo(): string {
+    const to = futureEventStart();
+    to.setUTCDate(to.getUTCDate() + 5);
+    return isoDate(to);
   }
 
   async function visibleContentIds(username: string): Promise<string[]> {
