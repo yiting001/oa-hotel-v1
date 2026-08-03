@@ -1,4 +1,5 @@
 import type { SessionUser } from '@oa/contracts';
+import { randomId } from './random-id';
 
 const tokenKey = 'oa-token';
 export const unauthorizedEventName = 'oa:unauthorized';
@@ -123,7 +124,7 @@ export async function changePassword(
 }
 
 export function requestId(): string {
-  return crypto.randomUUID();
+  return randomId();
 }
 
 interface ErrorPayload {

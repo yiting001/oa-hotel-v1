@@ -176,9 +176,9 @@ export class TypeOrmWorkbenchRepository implements WorkbenchRepository {
   ): SelectQueryBuilder<DocumentIndexEntity> {
     if (query.keyword) {
       builder.andWhere(
-        `(instr(lower(document.title), lower(:keyword)) > 0
-          OR instr(lower(COALESCE(applicant.displayName, '')), lower(:keyword)) > 0
-          OR instr(lower(COALESCE(department.name, '')), lower(:keyword)) > 0)`,
+        `(lower(document.title) LIKE '%' || lower(:keyword) || '%'
+          OR lower(COALESCE(applicant.displayName, '')) LIKE '%' || lower(:keyword) || '%'
+          OR lower(COALESCE(department.name, '')) LIKE '%' || lower(:keyword) || '%')`,
         { keyword: query.keyword },
       );
     }
@@ -259,14 +259,14 @@ export class TypeOrmWorkbenchRepository implements WorkbenchRepository {
       'document.applicantId = :visibilityUserId',
       `EXISTS (
         SELECT 1 FROM workflow_tasks visibility_completed
-        WHERE visibility_completed.documentId = document.id
-          AND visibility_completed.completedBy = :visibilityUserId
+        WHERE visibility_completed."documentId" = document.id
+          AND visibility_completed."completedBy" = :visibilityUserId
       )`,
       `EXISTS (
         SELECT 1 FROM workflow_task_candidates visibility_candidate
-        INNER JOIN workflow_tasks visibility_task ON visibility_task.id = visibility_candidate.taskId
-        WHERE visibility_candidate.userId = :visibilityUserId
-          AND visibility_task.documentId = document.id
+        INNER JOIN workflow_tasks visibility_task ON visibility_task.id = visibility_candidate."taskId"
+        WHERE visibility_candidate."userId" = :visibilityUserId
+          AND visibility_task."documentId" = document.id
           AND visibility_task.status = 'PENDING'
       )`,
     ];

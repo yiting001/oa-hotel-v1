@@ -24,6 +24,7 @@ import {
   ElTag,
 } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
+import { randomId } from '../../../shared/random-id';
 import { useSessionStore } from '../../../shared/session';
 import { processApi } from '../api/designer-api';
 import { iamApi } from '../api/iam-api';
@@ -189,9 +190,9 @@ function insertBeforeEnd(next: ProcessDesign, node: ProcessNodeModel): void {
   const incoming = next.edges.find((edge) => edge.target === end.id);
   if (incoming) {
     next.edges = next.edges.filter((edge) => edge.id !== incoming.id);
-    next.edges.push({ id: crypto.randomUUID(), source: incoming.source, target: node.id });
+    next.edges.push({ id: randomId(), source: incoming.source, target: node.id });
   }
-  next.edges.push({ id: crypto.randomUUID(), source: node.id, target: end.id });
+  next.edges.push({ id: randomId(), source: node.id, target: end.id });
 }
 
 function deleteSelection(): void {
