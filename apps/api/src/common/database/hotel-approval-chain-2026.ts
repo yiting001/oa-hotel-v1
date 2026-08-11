@@ -32,6 +32,24 @@ function placeholders(dialect: Dialect, count: number): string[] {
   );
 }
 
+/** Adds the 财务主管副总 role used between finance review and the general manager. */
+export async function ensureFinanceExecRole(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+  await queryRunner.query(
+    `${insertVerb} "iam_roles" ("id", "code", "name", "description", "active")
+      VALUES ('role-finance-exec', 'FINANCE_EXEC', '财务主管副总', NULL, true) ${conflictClause}`,
+  );
+  await queryRunner.query(
+    `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
+      SELECT 'role-finance-exec', "permissionId" FROM "iam_role_permissions"
+        WHERE "roleId" = 'role-exec-pre-approver' ${conflictClause}`,
+  );
+}
+
 /**
  * Re-publishes the seal / purchase / petty approval chains from the current
  * business workflow catalog and aligns executive role display names.

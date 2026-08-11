@@ -24,6 +24,7 @@ export const BUSINESS_WORKFLOW_CATALOG = [
     'EXEC_PRE_APPROVER',
     'PROCUREMENT',
     'FINANCE_REVIEWER',
+    'FINANCE_EXEC',
     'EXEC_APPROVER',
   ]),
   workflow('petty-procurement', 'PETTY_PROCUREMENT_PROCESS', 'PETTY_PROCUREMENT', '零星采买', [
