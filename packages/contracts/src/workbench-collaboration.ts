@@ -14,8 +14,8 @@ export const WORKFLOW_ROLE_LABELS: Readonly<Record<string, string>> = {
   ADMIN_APPROVER: '行政审批人',
   BUSINESS_APPROVER: '商务审批人',
   CATERING_APPROVER: '餐饮审批人',
-  EXEC_PRE_APPROVER: '高管预审批',
-  EXEC_APPROVER: '高管审批',
+  EXEC_PRE_APPROVER: '分管副总',
+  EXEC_APPROVER: '总经理',
 };
 
 export const WORKBENCH_BOXES = [

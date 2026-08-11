@@ -21,28 +21,29 @@ export const BUSINESS_WORKFLOW_CATALOG = [
     'EXEC_APPROVER',
   ]),
   workflow('purchase-approval', 'PURCHASE_APPROVAL_PROCESS', 'PURCHASE_APPROVAL', '采购审批', [
-    'BUSINESS_APPROVER',
     'EXEC_PRE_APPROVER',
+    'PROCUREMENT',
+    'FINANCE_REVIEWER',
     'EXEC_APPROVER',
   ]),
   workflow('petty-procurement', 'PETTY_PROCUREMENT_PROCESS', 'PETTY_PROCUREMENT', '零星采买', [
     'CATERING_APPROVER',
-    'EXEC_PRE_APPROVER',
-    'EXEC_APPROVER',
+    'PROCUREMENT',
+    'FINANCE_REVIEWER',
   ]),
   workflow('contract-payment', 'CONTRACT_PAYMENT_PROCESS', 'CONTRACT_PAYMENT', '合同付款', [
     'DEPARTMENT_MANAGER',
     'FINANCE_REVIEWER',
   ]),
   workflow('seal-borrow', 'SEAL_BORROW_PROCESS', 'SEAL_BORROW', '印章证照外借', [
-    'DEPARTMENT_MANAGER',
     'OFFICE_REVIEWER',
-    'SEAL_MANAGER',
+    'EXEC_PRE_APPROVER',
+    'EXEC_APPROVER',
   ]),
   workflow('seal-use', 'SEAL_USE_PROCESS', 'SEAL_USE', '印章证照使用', [
-    'DEPARTMENT_MANAGER',
     'OFFICE_REVIEWER',
-    'SEAL_MANAGER',
+    'EXEC_PRE_APPROVER',
+    'EXEC_APPROVER',
   ]),
   workflow('material-purchase', 'MATERIAL_PURCHASE_PROCESS', 'MATERIAL_PURCHASE', '物资申购', [
     'DEPARTMENT_MANAGER',

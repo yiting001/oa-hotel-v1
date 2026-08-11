@@ -28,6 +28,8 @@ import { RequestLogs1785400000000 } from './migrations/1785400000000-RequestLogs
 import { MenuReorganization1785500000000 } from './migrations/1785500000000-MenuReorganization';
 import { MergeApprovalChainMenu1785600000000 } from './migrations/1785600000000-MergeApprovalChainMenu';
 import { ApprovalCenterPath1785700000000 } from './migrations/1785700000000-ApprovalCenterPath';
+import { HotelApprovalChainAdjustment1785900000000 } from './migrations/1785900000000-HotelApprovalChainAdjustment';
+import { PostgresHotelApprovalChainAdjustment1785900000001 } from './migrations-postgres/1785900000001-PostgresHotelApprovalChainAdjustment';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -43,7 +45,11 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
       type: 'postgres',
       url: databaseUrl,
       entities: databaseEntities,
-      migrations: [PostgresInitialSchema1785800000000, PostgresInitialSeed1785800000001],
+      migrations: [
+        PostgresInitialSchema1785800000000,
+        PostgresInitialSeed1785800000001,
+        PostgresHotelApprovalChainAdjustment1785900000001,
+      ],
       migrationsRun: overrides.migrationsRun ?? true,
       synchronize: false,
     };
@@ -82,6 +88,7 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
       MenuReorganization1785500000000,
       MergeApprovalChainMenu1785600000000,
       ApprovalCenterPath1785700000000,
+      HotelApprovalChainAdjustment1785900000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

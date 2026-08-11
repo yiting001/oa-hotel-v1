@@ -299,7 +299,7 @@ describe('首批业务模块集成流程', () => {
       attachments: [],
     });
     await submit('applicant', borrow.data.id);
-    for (const role of ['manager', 'office', 'office']) {
+    for (const role of ['office', 'execpre', 'exec']) {
       const task = await firstTask(role);
       await approve(role, task.id);
     }

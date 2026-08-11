@@ -148,7 +148,7 @@ export const DEMO_SCENARIOS = [
     key: 'seal-use-office-todo',
     kind: 'SEAL_USE',
     title: '印章证照使用：[演示] 暑期招聘材料盖章',
-    target: { status: 'IN_REVIEW', currentStep: 1 },
+    target: { status: 'IN_REVIEW', currentStep: 0 },
     payload: {
       useDate: '2026-07-15',
       purpose: '[演示] 暑期招聘材料盖章',
