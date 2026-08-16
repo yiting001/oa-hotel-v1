@@ -135,6 +135,10 @@ export class IamService implements OnApplicationBootstrap {
     return this.access.updateUser(userId, input);
   }
 
+  deleteUser(userId: string, actorUserId: string): Promise<void> {
+    return this.access.deleteUser(userId, actorUserId);
+  }
+
   resetUserPassword(userId: string, password: string): Promise<void> {
     return this.access.resetUserPassword(userId, password);
   }

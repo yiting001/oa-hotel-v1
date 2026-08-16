@@ -324,6 +324,44 @@ describe('IamService', () => {
     ).resolves.toEqual([selfCandidate]);
   });
 
+  it('删除账号会清理任职和授权，并保护当前登录用户与最后一个系统管理员', async () => {
+    const users = moduleRef.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
+    const memberships = moduleRef.get<Repository<MembershipEntity>>(
+      getRepositoryToken(MembershipEntity),
+    );
+    const userRoles = moduleRef.get<Repository<UserRoleEntity>>(getRepositoryToken(UserRoleEntity));
+    await users.insert(testUser('user-to-delete', '待删除用户', 'dept-a'));
+    await service.updateUserAssignments('user-to-delete', {
+      memberships: [{ departmentId: 'dept-a', isPrimary: true }],
+      roles: [{ roleId: 'role-editor', dataScope: DataScope.SELF }],
+    });
+
+    await expect(service.deleteUser('user-to-delete', 'user-to-delete')).rejects.toMatchObject({
+      code: 'CANNOT_DELETE_CURRENT_USER',
+    });
+
+    await service.deleteUser('user-to-delete', 'user-admin');
+    expect(await users.findOneBy({ id: 'user-to-delete' })).toBeNull();
+    expect(await memberships.countBy({ userId: 'user-to-delete' })).toBe(0);
+    expect(await userRoles.countBy({ userId: 'user-to-delete' })).toBe(0);
+
+    await expect(service.deleteUser('user-missing', 'user-admin')).rejects.toMatchObject({
+      status: 404,
+    });
+
+    await service.updateUserAssignments('user-admin', {
+      memberships: [{ departmentId: 'dept-root', isPrimary: true }],
+      roles: [{ roleId: 'role-system-admin', dataScope: DataScope.ALL }],
+    });
+    await service.updateUserAssignments('user-admin-second', {
+      memberships: [{ departmentId: 'dept-root', isPrimary: true }],
+      roles: [],
+    });
+    await expect(service.deleteUser('user-admin', 'user-multi')).rejects.toMatchObject({
+      code: 'LAST_SYSTEM_ADMIN_REQUIRED',
+    });
+  });
+
   it('首次迁移后清空全部角色也不再回放旧角色字段', async () => {
     const users = moduleRef.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
     const userRoles = moduleRef.get<Repository<UserRoleEntity>>(getRepositoryToken(UserRoleEntity));

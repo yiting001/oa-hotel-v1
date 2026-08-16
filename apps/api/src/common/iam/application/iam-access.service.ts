@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { hash } from 'argon2';
 import { randomUUID } from 'node:crypto';
-import { DataSource, type EntityManager, In, Repository } from 'typeorm';
+import { DataSource, type EntityManager, In, QueryFailedError, Repository } from 'typeorm';
 import { credentialPolicy } from '../../auth/credential-policy';
 import { DepartmentEntity } from '../../auth/department.entity';
 import { UserEntity } from '../../auth/user.entity';
@@ -157,6 +157,30 @@ export class IamAccessService {
     }
     await this.users.save(user);
     return this.getUser(userId);
+  }
+
+  async deleteUser(userId: string, actorUserId: string): Promise<void> {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('用户不存在');
+    if (userId === actorUserId) {
+      throw new DomainError('CANNOT_DELETE_CURRENT_USER', '不能删除当前登录的账号');
+    }
+    if (user.active) await this.assertNotLastActiveSystemAdmin(userId);
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        await manager.getRepository(MembershipEntity).delete({ userId });
+        await manager.getRepository(UserRoleEntity).delete({ userId });
+        await manager.getRepository(UserEntity).delete({ id: userId });
+      });
+    } catch (cause) {
+      if (cause instanceof QueryFailedError && /foreign key/i.test(cause.message)) {
+        throw new DomainError(
+          'USER_HAS_BUSINESS_DATA',
+          '该账号存在关联业务数据，无法删除，请改为停用',
+        );
+      }
+      throw cause;
+    }
   }
 
   async resetUserPassword(userId: string, password: string): Promise<void> {
