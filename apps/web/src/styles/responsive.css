@@ -53,10 +53,6 @@
     display: none;
   }
 
-  .desktop-header-action {
-    display: none !important;
-  }
-
   .enterprise-content__inner {
     padding: 14px 12px calc(84px + env(safe-area-inset-bottom));
   }

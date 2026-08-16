@@ -3,7 +3,6 @@ import {
   ArrowLeftBold,
   ArrowRightBold,
   Close,
-  EditPen,
   Lock,
   Menu,
   SwitchButton,
@@ -186,15 +185,6 @@ function handleUnauthorized(): void {
             <strong>{{ pageTitle }}</strong>
           </div>
           <div class="enterprise-header__spacer" />
-          <el-button
-            v-if="quickStarts.length && !passwordChangeRequired"
-            class="enterprise-header__start desktop-header-action"
-            :icon="EditPen"
-            type="primary"
-            @click="navigate('/start')"
-          >
-            发起申请
-          </el-button>
           <el-dropdown placement="bottom-end" trigger="click" @command="handleUserCommand">
             <button class="user-menu-trigger" type="button">
               <el-avatar :icon="User" :size="32" />

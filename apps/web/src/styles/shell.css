@@ -244,10 +244,6 @@
   flex: 1;
 }
 
-.enterprise-header__start {
-  min-width: 108px;
-}
-
 .user-menu-trigger {
   display: flex;
   min-height: 42px;
