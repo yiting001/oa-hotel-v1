@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { Box, DocumentAdd, Refresh, ShoppingCart, Tickets } from '@element-plus/icons-vue';
-import type { DocumentType, PortalContentSummary, PortalSection } from '@oa/contracts';
+import { Refresh } from '@element-plus/icons-vue';
+import type { PortalContentSummary, PortalSection } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
-import { computed, onMounted, ref, type Component, type CSSProperties } from 'vue';
+import { computed, onMounted, ref, type CSSProperties } from 'vue';
 import { useRouter } from 'vue-router';
 import { businessHour, formatBusinessLongDate } from '../../../shared/business-time';
 import { appConfig, brandAssets } from '../../../shared/app-config';
 import { useSessionStore } from '../../../shared/session';
-import { availableProcessStarts } from '../../../shared/process-start';
 import { usePersonalWorkbenchStore } from '../../workbench/store/workbench';
 import PortalCalendarPanel from '../components/PortalCalendarPanel.vue';
 import PortalContentDrawer from '../components/PortalContentDrawer.vue';
@@ -33,7 +32,6 @@ const portalBannerStyle = {
   '--portal-banner-image': `url("${brandAssets.portalBanner}")`,
 } as CSSProperties;
 
-const quickStarts = computed(() => availableProcessStarts(session.user?.permissionCodes ?? []));
 const sections = computed(() =>
   [...(portal.home?.sections ?? [])].sort((a, b) => a.displayOrder - b.displayOrder),
 );
@@ -52,18 +50,6 @@ const greeting = computed(() => {
   const hour = businessHour();
   return hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
 });
-const quickStartIcons: Record<DocumentType, Component> = {
-  CONTRACT_REQUEST: DocumentAdd,
-  CONTRACT_APPROVAL: Tickets,
-  CONTRACT_PAYMENT: Tickets,
-  SEAL_BORROW: Box,
-  SEAL_USE: Box,
-  MATERIAL_PURCHASE: ShoppingCart,
-  MATERIAL_REQUISITION: Box,
-  PURCHASE_APPROVAL: ShoppingCart,
-  PETTY_PROCUREMENT: Box,
-};
-
 onMounted(refresh);
 
 async function refresh(): Promise<void> {
@@ -133,30 +119,6 @@ function openLink(url: string): void {
             <span>我发起的</span><strong>{{ workbench.count('MINE') }}</strong
             ><small>跟踪办理进度</small>
           </button>
-        </div>
-        <div class="portal-quick-starts">
-          <header class="portal-section-heading">
-            <strong>快捷发起</strong><span>按当前权限展示</span>
-          </header>
-          <div>
-            <button
-              v-for="item in quickStarts"
-              :key="item.documentType"
-              type="button"
-              @click="router.push(item.path)"
-            >
-              <el-icon><component :is="quickStartIcons[item.documentType]" /></el-icon>
-              <span
-                ><strong>{{ item.label }}</strong
-                ><small>{{ item.moduleLabel }}</small></span
-              >
-            </button>
-            <el-empty
-              v-if="quickStarts.length === 0"
-              description="暂无可发起流程"
-              :image-size="48"
-            />
-          </div>
         </div>
       </section>
 

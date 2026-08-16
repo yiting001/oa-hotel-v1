@@ -67,10 +67,6 @@
     border-bottom: 0;
   }
 
-  .portal-quick-starts > div {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .portal-featured-news {
     grid-template-columns: 1fr;
   }
