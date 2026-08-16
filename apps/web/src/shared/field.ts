@@ -44,7 +44,7 @@ export const fieldLabels: Record<string, string> = {
   plannedReturnDate: '计划归还日期',
   companionIds: '陪同人',
   destination: '前往地点',
-  sealAssetIds: '印章证照',
+  sealAssetNames: '印章证照',
   purpose: '用途',
   executionStatus: '执行状态',
   actualRecipient: '实际领用人',

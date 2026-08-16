@@ -8,9 +8,6 @@ export interface SealRepository {
   countAssets(): Promise<number>;
   saveAssets(assets: SealAssetEntity[]): Promise<SealAssetEntity[]>;
   listAssets(): Promise<SealAssetEntity[]>;
-  findAssets(ids: string[]): Promise<SealAssetEntity[]>;
-  checkoutAssets(ids: string[], borrowRequestId: string): Promise<void>;
-  returnAssets(ids: string[]): Promise<void>;
   saveBorrow(entity: SealBorrowEntity): Promise<SealBorrowEntity>;
   findBorrow(id: string): Promise<SealBorrowEntity | null>;
   saveUse(entity: SealUseEntity): Promise<SealUseEntity>;

@@ -27,7 +27,6 @@ export function resolveDocumentPrintValue(
     return referenceName(references.users, data[key]);
   }
   if (key === 'companionIds') return referenceNames(references.users, data[key]);
-  if (key === 'sealAssetIds') return referenceNames(references.sealAssets, data[key]);
   return displayDocumentValue(data, key);
 }
 

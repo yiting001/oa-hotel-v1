@@ -113,7 +113,7 @@ const columns = [
   { title: '岗位', key: 'positions', width: 150 },
   { title: '角色', key: 'roles' },
   { title: '状态', key: 'status', width: 90, align: 'center' as const },
-  ...(props.readonly ? [] : [{ title: '操作', key: 'actions', width: 300 }]),
+  ...(props.readonly ? [] : [{ title: '操作', key: 'actions', width: 360 }]),
 ];
 
 function filterByLabel(input: string, option: { label?: string }): boolean {
@@ -394,6 +394,20 @@ async function toggleActive(user: IamUser): Promise<void> {
   }
 }
 
+async function deleteUser(user: IamUser): Promise<void> {
+  if (props.readonly) return;
+  saving.value = true;
+  try {
+    await iamApi.deleteUser(user.id);
+    message.success('账号已删除');
+    emit('refresh');
+  } catch (cause) {
+    message.error(platformErrorMessage(cause, '账号删除失败'));
+  } finally {
+    saving.value = false;
+  }
+}
+
 function openPassword(user: IamUser): void {
   if (props.readonly) return;
   passwordUserId.value = user.id;
@@ -516,6 +530,17 @@ async function resetPassword(): Promise<void> {
             >
               <a-button danger size="small" type="link">
                 {{ (record as IamUser).active ? '停用' : '启用' }}
+              </a-button>
+            </a-popconfirm>
+            <a-popconfirm
+              title="确定删除该账号吗？删除后不可恢复。"
+              ok-text="删除"
+              :ok-button-props="{ danger: true }"
+              @confirm="deleteUser(record as IamUser)"
+            >
+              <a-button danger size="small" type="link">
+                <template #icon><DeleteOutlined /></template>
+                删除
               </a-button>
             </a-popconfirm>
           </a-space>

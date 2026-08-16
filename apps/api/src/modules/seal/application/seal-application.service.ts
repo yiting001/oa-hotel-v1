@@ -60,7 +60,6 @@ export class SealApplicationService implements OnApplicationBootstrap {
 
   async saveBorrow(dto: SealBorrowDto, user: SessionUser, id?: string) {
     validateBorrowPeriod(dto.useDate, dto.plannedReturnDate);
-    await this.ensureAssets(dto.sealAssetIds);
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findBorrow(id);
@@ -98,7 +97,6 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async saveUse(dto: SealUseDto, user: SessionUser, id?: string) {
-    await this.ensureAssets(dto.sealAssetIds);
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findUse(id);
@@ -142,7 +140,6 @@ export class SealApplicationService implements OnApplicationBootstrap {
     request.executionStatus = 'CHECKED_OUT';
     request.actualRecipient = dto.actualRecipient;
     request.checkedOutAt = dto.checkedOutAt;
-    await this.repository.checkoutAssets(request.sealAssetIds, request.id);
     return this.withIndex(await this.repository.saveBorrow(request));
   }
 
@@ -155,7 +152,6 @@ export class SealApplicationService implements OnApplicationBootstrap {
     request.returnedAt = dto.returnedAt;
     request.returnCondition = dto.returnCondition;
     request.exceptionNote = dto.exceptionNote;
-    await this.repository.returnAssets(request.sealAssetIds);
     return this.withIndex(await this.repository.saveBorrow(request));
   }
 
@@ -220,13 +216,6 @@ export class SealApplicationService implements OnApplicationBootstrap {
     );
     if (!canExecute) {
       throw new DomainError('SEAL_DATA_SCOPE_DENIED', '当前用户不能登记该用印业务');
-    }
-  }
-
-  private async ensureAssets(ids: string[]): Promise<void> {
-    const assets = await this.repository.findAssets(ids);
-    if (assets.length !== new Set(ids).size) {
-      throw new DomainError('SEAL_ASSET_NOT_FOUND', '选择的印章证照不存在');
     }
   }
 

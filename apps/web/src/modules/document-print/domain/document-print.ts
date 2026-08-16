@@ -31,7 +31,6 @@ export interface NamedReference {
 export interface DocumentPrintReferences {
   users: NamedReference[];
   departments: NamedReference[];
-  sealAssets: NamedReference[];
 }
 
 export interface PrintField {
@@ -391,7 +390,7 @@ function sealBorrowFields(
       ['前往地点', 'destination'],
     ]),
     field('陪同人', referenceNames(references.users, data.companionIds), 2),
-    field('外借印章/证照', referenceNames(references.sealAssets, data.sealAssetIds), 2),
+    field('外借印章/证照', stringArray(data.sealAssetNames).join('、') || '-', 2),
     ...fields(
       data,
       [
@@ -417,7 +416,7 @@ function sealUseFields(
       ['使用日期', 'useDate'],
       ['用途', 'purpose', 2],
     ]),
-    field('使用印章/证照', referenceNames(references.sealAssets, data.sealAssetIds), 2),
+    field('使用印章/证照', stringArray(data.sealAssetNames).join('、') || '-', 2),
     ...fields(
       data,
       [

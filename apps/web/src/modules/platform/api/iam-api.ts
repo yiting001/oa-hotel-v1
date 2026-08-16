@@ -111,6 +111,9 @@ export const iamApi = {
   updateUser(id: string, input: UserUpdateInput): Promise<IamUser> {
     return apiRequest<IamUser>(endpoint.user(id), { method: 'PATCH', body: input });
   },
+  deleteUser(id: string): Promise<void> {
+    return apiRequest<void>(endpoint.user(id), { method: 'DELETE' });
+  },
   resetUserPassword(id: string, password: string): Promise<void> {
     return apiRequest<void>(endpoint.userPassword(id), { method: 'PUT', body: { password } });
   },

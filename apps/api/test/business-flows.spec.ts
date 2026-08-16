@@ -283,7 +283,7 @@ describe('首批业务模块集成流程', () => {
         plannedReturnDate: '2026-07-11',
         companionIds: [],
         destination: '银行',
-        sealAssetIds: ['seal-company'],
+        sealAssetNames: ['公司公章'],
         content: '办理资料',
         attachments: [],
       })
@@ -294,10 +294,11 @@ describe('首批业务模块集成流程', () => {
       plannedReturnDate: '2026-07-13',
       companionIds: ['user-office'],
       destination: '银行',
-      sealAssetIds: ['seal-company'],
+      sealAssetNames: ['公司公章'],
       content: '办理合同资料',
       attachments: [],
     });
+    expect(borrow.data).toMatchObject({ sealAssetNames: ['公司公章'] });
     await submit('applicant', borrow.data.id);
     for (const role of ['office', 'execpre', 'exec']) {
       const task = await firstTask(role);

@@ -147,6 +147,12 @@ export class IamController {
     return this.iamService.updateUser(userId, dto);
   }
 
+  @Delete('users/:userId')
+  @RequirePermissions(IAM_PERMISSION.MANAGE)
+  deleteUser(@Param('userId') userId: string, @CurrentUser() user: SessionUser) {
+    return this.iamService.deleteUser(userId, user.id);
+  }
+
   @Put('users/:userId/password')
   @RequirePermissions(IAM_PERMISSION.MANAGE)
   resetUserPassword(@Param('userId') userId: string, @Body() dto: ResetUserPasswordDto) {
