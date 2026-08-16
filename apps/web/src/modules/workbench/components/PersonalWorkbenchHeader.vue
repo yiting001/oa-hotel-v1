@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { DocumentAdd, Refresh } from '@element-plus/icons-vue';
-import type { ProcessStartItem } from '../../../shared/process-start';
+import { Refresh } from '@element-plus/icons-vue';
 import WorkbenchMetrics from './WorkbenchMetrics.vue';
 
 interface MetricItem {
@@ -15,13 +14,11 @@ defineProps<{
   eyebrow: string;
   items: MetricItem[];
   loading: boolean;
-  quickStarts: ProcessStartItem[];
   title: string;
 }>();
 const emit = defineEmits<{
   refresh: [];
   select: [key: string];
-  start: [path: string];
 }>();
 </script>
 
@@ -33,9 +30,6 @@ const emit = defineEmits<{
       <p>{{ description }}</p>
     </div>
     <div>
-      <el-button v-if="quickStarts.length" type="primary" @click="emit('start', '/start')">
-        <el-icon><DocumentAdd /></el-icon>发起申请
-      </el-button>
       <el-button :icon="Refresh" :loading="loading" @click="emit('refresh')">刷新</el-button>
     </div>
   </header>

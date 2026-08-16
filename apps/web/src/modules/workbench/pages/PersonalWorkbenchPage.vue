@@ -6,7 +6,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute, useRouter } from 'vue-router';
 import { useDirectoryStore } from '../../../shared/directory';
 import { documentDetailPath } from '../../../shared/document';
-import { availableProcessStarts } from '../../../shared/process-start';
 import { useSessionStore } from '../../../shared/session';
 import PortalContentDrawer from '../../portal/components/PortalContentDrawer.vue';
 import { usePortalStore } from '../../portal/store/portal';
@@ -90,7 +89,6 @@ const mobileFilterDrawerOpen = ref(false);
 const workbenchSurface = ref<HTMLElement | null>(null);
 let filterTimer: number | undefined;
 
-const quickStarts = computed(() => availableProcessStarts(session.user?.permissionCodes ?? []));
 const currentBox = computed(() => boxByWorkbenchTab[activeTab.value] ?? null);
 const currentReadingStatus = computed(() => readingStatusByWorkbenchTab[activeTab.value] ?? null);
 const currentListPagination = computed(() => {
@@ -390,11 +388,9 @@ async function scrollActiveTabIntoView(): Promise<void> {
         directory.loading ||
         (canReadContent && portal.readingLoading)
       "
-      :quick-starts="quickStarts"
       :title="headerContent.title"
       @refresh="refresh"
       @select="selectMetric"
-      @start="router.push($event)"
     />
 
     <section ref="workbenchSurface" class="workbench-surface">
