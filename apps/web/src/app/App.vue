@@ -9,10 +9,10 @@ import {
   User,
 } from '@element-plus/icons-vue';
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import { unauthorizedEventName } from '../shared/api';
-import { antDesignTheme, appConfig, companyMark } from '../shared/app-config';
+import { antDesignDarkTheme, antDesignTheme, appConfig, companyMark } from '../shared/app-config';
 import { useDirectoryStore } from '../shared/directory';
 import { availableProcessStarts } from '../shared/process-start';
 import { useSessionStore } from '../shared/session';
@@ -43,6 +43,13 @@ onMounted(() => window.addEventListener(unauthorizedEventName, handleUnauthorize
 onBeforeUnmount(() => window.removeEventListener(unauthorizedEventName, handleUnauthorized));
 
 const publicRoute = computed(() => route.meta.publicRoute === true);
+const activeTheme = computed(() => (publicRoute.value ? antDesignTheme : antDesignDarkTheme));
+
+watchEffect(() => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', !publicRoute.value);
+  }
+});
 const pageTitle = computed(() =>
   route.path === '/workbench' && route.query.tab === 'pending'
     ? '审批中心'
@@ -101,7 +108,7 @@ function handleUnauthorized(): void {
 </script>
 
 <template>
-  <a-config-provider :locale="zhCN" :theme="antDesignTheme">
+  <a-config-provider :locale="zhCN" :theme="activeTheme">
     <RouterView v-if="publicRoute" />
 
     <el-container v-else class="enterprise-shell">

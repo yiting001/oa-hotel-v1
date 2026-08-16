@@ -317,12 +317,12 @@ function numberValue(value: unknown): number | null {
 }
 
 .line-editor-toolbar > span {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .purchase-table-wrap {
-  border: 1px solid #d8dee9;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   overflow-x: auto;
 }
@@ -335,8 +335,8 @@ function numberValue(value: unknown): number | null {
 }
 
 th {
-  background: #f5f7fa;
-  color: #334155;
+  background: var(--color-fill-subtle);
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
   padding: 11px 8px;
@@ -344,7 +344,7 @@ th {
 }
 
 td {
-  border-top: 1px solid #e5e9f0;
+  border-top: 1px solid var(--color-border);
   padding: 10px 8px;
   vertical-align: top;
 }
@@ -380,13 +380,13 @@ th:nth-child(8) {
 
 .sequence-cell,
 .action-cell {
-  color: #64748b;
+  color: var(--color-text-secondary);
   text-align: center;
 }
 
 .required-mark,
 .mobile-field-grid b {
-  color: #cf1322;
+  color: var(--color-danger);
   font-weight: 400;
   margin-left: 2px;
 }
@@ -396,7 +396,7 @@ th:nth-child(8) {
 }
 
 .field-error {
-  color: #cf1322;
+  color: var(--color-danger);
   display: block;
   font-size: 12px;
   line-height: 1.35;
@@ -418,14 +418,14 @@ th:nth-child(8) {
   }
 
   .line-card {
-    border: 1px solid #d8dee9;
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
     padding: 14px;
   }
 
   .line-card header {
     align-items: center;
-    border-bottom: 1px solid #edf0f4;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     margin-bottom: 14px;
@@ -443,7 +443,7 @@ th:nth-child(8) {
   }
 
   .mobile-field-grid label > span {
-    color: #475569;
+    color: var(--color-text);
     display: block;
     font-size: 13px;
     margin-bottom: 6px;

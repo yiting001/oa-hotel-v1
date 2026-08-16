@@ -273,12 +273,12 @@ function numberValue(value: unknown): number | null {
 }
 
 .line-editor-toolbar > span {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .requisition-table-wrap {
-  border: 1px solid #d8dee9;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   overflow-x: auto;
 }
@@ -291,8 +291,8 @@ function numberValue(value: unknown): number | null {
 }
 
 th {
-  background: #f5f7fa;
-  color: #334155;
+  background: var(--color-fill-subtle);
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
   padding: 11px 8px;
@@ -301,14 +301,14 @@ th {
 
 th > span,
 .mobile-field b {
-  color: #cf1322;
+  color: var(--color-danger);
   font-weight: 400;
   margin-left: 2px;
 }
 
 td {
-  border-top: 1px solid #e5e9f0;
-  color: #334155;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
   padding: 10px 8px;
   vertical-align: top;
 }
@@ -347,12 +347,12 @@ th:nth-child(9) {
 
 .sequence-cell,
 .action-cell {
-  color: #64748b;
+  color: var(--color-text-secondary);
   text-align: center;
 }
 
 .stock-cell {
-  color: #0f766e;
+  color: var(--color-success);
   font-weight: 600;
 }
 
@@ -361,7 +361,7 @@ th:nth-child(9) {
 }
 
 .field-error {
-  color: #cf1322;
+  color: var(--color-danger);
   display: block;
   font-size: 12px;
   line-height: 1.35;
@@ -383,14 +383,14 @@ th:nth-child(9) {
   }
 
   .line-card {
-    border: 1px solid #d8dee9;
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
     padding: 14px;
   }
 
   .line-card header {
     align-items: center;
-    border-bottom: 1px solid #edf0f4;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     margin-bottom: 14px;
@@ -398,14 +398,14 @@ th:nth-child(9) {
   }
 
   .mobile-field > span {
-    color: #475569;
+    color: var(--color-text);
     display: block;
     font-size: 13px;
     margin-bottom: 6px;
   }
 
   .material-snapshot {
-    background: #f7f9fc;
+    background: var(--color-fill-subtle);
     display: grid;
     gap: 10px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -418,12 +418,12 @@ th:nth-child(9) {
   }
 
   dt {
-    color: #64748b;
+    color: var(--color-text-secondary);
     font-size: 12px;
   }
 
   dd {
-    color: #1e293b;
+    color: var(--color-text);
     margin: 2px 0 0;
   }
 

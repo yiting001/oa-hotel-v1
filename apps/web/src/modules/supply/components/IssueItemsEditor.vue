@@ -162,7 +162,7 @@ function numberValue(value: unknown): number | null {
 
 <style scoped>
 .issue-table-wrap {
-  border: 1px solid #d8dee9;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   overflow-x: auto;
 }
@@ -175,8 +175,8 @@ function numberValue(value: unknown): number | null {
 }
 
 th {
-  background: #f5f7fa;
-  color: #334155;
+  background: var(--color-fill-subtle);
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
   padding: 11px 8px;
@@ -185,14 +185,14 @@ th {
 
 th > span,
 .issue-input-grid b {
-  color: #cf1322;
+  color: var(--color-danger);
   font-weight: 400;
   margin-left: 2px;
 }
 
 td {
-  border-top: 1px solid #e5e9f0;
-  color: #334155;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
   padding: 10px 8px;
   vertical-align: top;
 }
@@ -225,7 +225,7 @@ th:nth-child(9) {
 }
 
 .stock-cell {
-  color: #0f766e;
+  color: var(--color-success);
   font-weight: 600;
 }
 
@@ -234,7 +234,7 @@ th:nth-child(9) {
 }
 
 .field-error {
-  color: #cf1322;
+  color: var(--color-danger);
   display: block;
   font-size: 12px;
   line-height: 1.35;
@@ -256,14 +256,14 @@ th:nth-child(9) {
   }
 
   .issue-card {
-    border: 1px solid #d8dee9;
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
     padding: 14px;
   }
 
   .issue-card header {
     align-items: flex-start;
-    border-bottom: 1px solid #edf0f4;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     gap: 12px;
     justify-content: space-between;
@@ -276,7 +276,7 @@ th:nth-child(9) {
   }
 
   .issue-card header span {
-    color: #64748b;
+    color: var(--color-text-secondary);
     font-size: 12px;
   }
 
@@ -292,7 +292,7 @@ th:nth-child(9) {
   }
 
   dt {
-    color: #64748b;
+    color: var(--color-text-secondary);
     font-size: 12px;
   }
 
@@ -307,7 +307,7 @@ th:nth-child(9) {
   }
 
   .issue-input-grid label > span {
-    color: #475569;
+    color: var(--color-text);
     display: block;
     font-size: 13px;
     margin-bottom: 6px;

@@ -368,7 +368,7 @@ onMounted(() => {
   max-height: 260px;
   overflow: auto;
   padding: 8px 12px;
-  background: #f6f8fa;
+  background: var(--color-fill-subtle);
   border-radius: 6px;
   font-size: 12px;
   white-space: pre-wrap;
@@ -376,7 +376,7 @@ onMounted(() => {
 }
 
 .request-detail-json--error {
-  background: #fff1f0;
-  color: #cf1322;
+  background: rgba(229, 106, 106, 0.14);
+  color: var(--color-danger);
 }
 </style>

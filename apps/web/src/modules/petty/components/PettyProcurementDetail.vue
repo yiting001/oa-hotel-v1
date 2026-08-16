@@ -168,7 +168,7 @@ function removeItem(item: PettyItem): void {
 }
 
 .petty-detail__log-meta {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 </style>

@@ -389,7 +389,7 @@ function resetDocumentFilters(): void {
   }
 
   .inventory-card {
-    border: 1px solid #d8dee9;
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
     cursor: pointer;
     padding: 14px;
@@ -405,7 +405,7 @@ function resetDocumentFilters(): void {
 
   .inventory-card header span,
   .inventory-card p {
-    color: #64748b;
+    color: var(--color-text-secondary);
     font-size: 13px;
   }
 

@@ -16,7 +16,7 @@
 .iam-role-list {
   min-width: 0;
   padding: 18px;
-  background: #f8fafc;
+  background: var(--color-surface-2);
   border-right: 1px solid var(--platform-border);
 }
 
@@ -109,13 +109,13 @@
 
 .iam-user-list__items > button:hover,
 .iam-role-list > button:hover {
-  background: #edf3f7;
+  background: var(--color-fill-hover);
 }
 
 .iam-user-list__items > button.is-active,
 .iam-role-list > button.is-active {
   background: var(--platform-primary-soft);
-  border-color: #b9d2e8;
+  border-color: var(--platform-border-strong);
 }
 
 .iam-user-list__items > button > span:nth-child(2),
@@ -140,7 +140,7 @@
   justify-content: center;
   flex: 0 0 34px;
   color: #fff;
-  background: #426b8e;
+  background: var(--color-primary);
   border-radius: 50%;
   font-weight: 700;
 }
@@ -175,7 +175,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: #f6f8fa;
+  background: var(--color-fill-subtle);
   border-bottom: 1px solid var(--platform-border);
 }
 

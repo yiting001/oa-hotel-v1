@@ -395,13 +395,13 @@ async function savePermissions(): Promise<void> {
 
 <style scoped>
 .iam-role-panel__hint {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .perm-tab-hint {
   margin: 0 0 8px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 </style>

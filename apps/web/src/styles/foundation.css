@@ -4,15 +4,25 @@
   --color-sidebar: #20282d;
   --color-sidebar-active: #0f615b;
   --color-surface: #ffffff;
+  --color-surface-2: #f7f9fa;
+  --color-surface-3: #f3f5f7;
   --color-canvas: #f3f6f8;
   --color-border: #d9e0e7;
   --color-border-strong: #c3ced8;
   --color-text: #182230;
   --color-text-secondary: #5b6877;
+  --color-text-tertiary: #7c8793;
+  --color-fill-hover: #eef2f4;
+  --color-fill-subtle: #f5f7f9;
+  --color-surface-translucent: rgba(255, 255, 255, 0.96);
   --color-success: #27864d;
   --color-warning: #b46a13;
   --color-danger: #c23a3a;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --shadow-panel: 0 4px 16px rgba(29, 44, 63, 0.06);
+  --focus-ring: rgba(13, 112, 105, 0.28);
   --el-color-primary: var(--color-primary);
   --el-color-primary-rgb: 13, 112, 105;
   --el-color-primary-dark-2: #0a5a54;
@@ -33,6 +43,66 @@
     sans-serif;
   font-synthesis: none;
   letter-spacing: 0;
+}
+
+html.dark {
+  --color-primary: #5e6ad2;
+  --color-primary-strong: #828fff;
+  --color-sidebar: #0f1011;
+  --color-sidebar-active: #5e6ad2;
+  --color-surface: #0f1011;
+  --color-surface-2: #141516;
+  --color-surface-3: #18191a;
+  --color-canvas: #010102;
+  --color-border: #23252a;
+  --color-border-strong: #34343a;
+  --color-text: #f7f8f8;
+  --color-text-secondary: #8a8f98;
+  --color-text-tertiary: #62666d;
+  --color-fill-hover: #18191a;
+  --color-fill-subtle: #141516;
+  --color-surface-translucent: rgba(1, 1, 2, 0.88);
+  --color-success: #27a644;
+  --color-warning: #d9a23d;
+  --color-danger: #e56a6a;
+  --shadow-panel: none;
+  --focus-ring: rgba(94, 105, 209, 0.5);
+  --el-color-primary: #5e6ad2;
+  --el-color-primary-rgb: 94, 106, 210;
+  --el-color-primary-dark-2: #828fff;
+  --el-color-primary-light-3: #4a54a8;
+  --el-color-primary-light-5: #3a4183;
+  --el-color-primary-light-7: #292e5e;
+  --el-color-primary-light-8: #21254b;
+  --el-color-primary-light-9: #191c39;
+  --el-bg-color-page: #010102;
+  --el-bg-color: #0f1011;
+  --el-bg-color-overlay: #141516;
+  --el-text-color-primary: #f7f8f8;
+  --el-text-color-regular: #d0d6e0;
+  --el-text-color-secondary: #8a8f98;
+  --el-border-color: #34343a;
+  --el-border-color-light: #23252a;
+  --el-border-color-lighter: #23252a;
+  --el-border-radius-base: 8px;
+  --el-fill-color-light: #18191a;
+  --el-fill-color-lighter: #141516;
+  --el-fill-color-blank: #0f1011;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  color-scheme: dark;
+}
+
+html.dark h1,
+html.dark h2 {
+  letter-spacing: -0.6px;
+  font-weight: 600;
+}
+
+html.dark h3,
+html.dark h4 {
+  letter-spacing: -0.3px;
+  font-weight: 600;
 }
 
 * {
@@ -61,6 +131,6 @@ select {
 button:focus-visible,
 a:focus-visible,
 [role='button']:focus-visible {
-  outline: 3px solid rgba(13, 112, 105, 0.28);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }

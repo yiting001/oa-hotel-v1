@@ -32,18 +32,18 @@ class ApprovalNodeModel extends RectNodeModel {
     const style = super.getNodeStyle();
     const status = this.properties.status as NodeStatus | undefined;
     if (status === 'done') {
-      style.fill = '#f0f9eb';
-      style.stroke = '#67c23a';
+      style.fill = '#16241a';
+      style.stroke = '#27a644';
     } else if (status === 'current') {
-      style.fill = '#ecf5ff';
-      style.stroke = '#409eff';
+      style.fill = '#1b1e3a';
+      style.stroke = '#5e6ad2';
       style.strokeWidth = 2;
     } else if (status === 'returned') {
-      style.fill = '#fef0f0';
-      style.stroke = '#f56c6c';
+      style.fill = '#2a1a1a';
+      style.stroke = '#e56a6a';
     } else {
-      style.fill = '#f4f4f5';
-      style.stroke = '#c0c4cc';
+      style.fill = '#18191a';
+      style.stroke = '#34343a';
     }
     if (this.properties.actionable) {
       style.strokeDasharray = '0';
@@ -55,6 +55,7 @@ class ApprovalNodeModel extends RectNodeModel {
   override getTextStyle() {
     const style = super.getTextStyle();
     style.fontSize = 13;
+    style.color = '#f7f8f8';
     return style;
   }
 }
@@ -136,7 +137,7 @@ onMounted(() => {
     container: container.value,
     isSilentMode: true,
     grid: false,
-    background: { backgroundColor: '#fbfcfe' },
+    background: { backgroundColor: '#141516' },
   });
   lf.register({ type: 'approval-node', view: RectNode, model: ApprovalNodeModel });
   lf.on('node:click', ({ data }) => {
@@ -176,8 +177,8 @@ onBeforeUnmount(() => {
 .workflow-flow-graph__canvas {
   width: 100%;
   height: 150px;
-  border: 1px solid var(--el-border-color-lighter, #e4e7ed);
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -187,7 +188,7 @@ onBeforeUnmount(() => {
   gap: 6px 18px;
   margin-top: 8px;
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-secondary);
 }
 
 .workflow-flow-graph__legend span {
@@ -204,17 +205,17 @@ onBeforeUnmount(() => {
 }
 
 .dot--done {
-  background: #f0f9eb;
-  border: 1px solid #67c23a;
+  background: #16241a;
+  border: 1px solid #27a644;
 }
 
 .dot--current {
-  background: #ecf5ff;
-  border: 1px solid #409eff;
+  background: #1b1e3a;
+  border: 1px solid #5e6ad2;
 }
 
 .dot--pending {
-  background: #f4f4f5;
-  border: 1px solid #c0c4cc;
+  background: #18191a;
+  border: 1px solid #34343a;
 }
 </style>

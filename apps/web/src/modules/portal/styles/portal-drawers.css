@@ -76,8 +76,8 @@
 .portal-content-detail__summary {
   margin: 0 0 20px;
   padding: 12px 14px;
-  color: #465464;
-  background: #f2f5f7;
+  color: var(--color-text-secondary);
+  background: var(--color-fill-subtle);
   border-left: 3px solid var(--color-primary);
   line-height: 1.7;
 }

@@ -267,8 +267,8 @@ function errorMessage(error: unknown): string {
 }
 
 .totals-strip {
-  background: #f6f8fb;
-  border-left: 3px solid #1677ff;
+  background: var(--color-fill-subtle);
+  border-left: 3px solid var(--color-primary);
   display: grid;
   gap: 20px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -281,18 +281,18 @@ function errorMessage(error: unknown): string {
 }
 
 .totals-strip span {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .totals-strip strong {
-  color: #0f172a;
+  color: var(--color-text);
   font-size: 20px;
 }
 
 .supply-document :deep(.form-section) {
-  background: #fff;
-  border-bottom: 1px solid #e5e9f0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   padding: 22px 0;
 }
 

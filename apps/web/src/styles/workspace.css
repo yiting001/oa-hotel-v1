@@ -13,33 +13,30 @@
   padding: 16px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
 }
 
 .metric-item__icon {
   padding: 10px;
   font-size: 22px;
-  background: #eef2f5;
-  border-radius: 6px;
+  background: var(--color-fill-hover);
+  border-radius: var(--radius-md);
 }
 
 .metric-item__icon--warning {
   color: var(--color-warning);
-  background: #fff5e8;
 }
 
 .metric-item__icon--info {
   color: var(--color-primary);
-  background: #e9f4fb;
 }
 
 .metric-item__icon--success {
   color: var(--color-success);
-  background: #eaf7ef;
 }
 
 .metric-item__icon--neutral {
-  color: #5e6874;
+  color: var(--color-text-secondary);
 }
 
 .metric-item div {
@@ -61,7 +58,7 @@
   padding: 18px 20px 8px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
 }
 
@@ -113,7 +110,7 @@
   padding: 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
 }
 
@@ -131,7 +128,7 @@
 
 .document-card small,
 .task-card small {
-  color: #7c8793;
+  color: var(--color-text-tertiary);
 }
 
 .approval-drawer__header {

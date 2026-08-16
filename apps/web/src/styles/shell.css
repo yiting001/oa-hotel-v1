@@ -162,7 +162,7 @@
 }
 
 .app-navigation-popup .el-menu {
-  background: #1f2733;
+  background: var(--color-sidebar);
 }
 
 .app-navigation-popup .el-menu-item {
@@ -215,7 +215,7 @@
   align-items: center;
   gap: 12px;
   padding: 0 24px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--color-surface-translucent);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(12px);
 }
@@ -258,7 +258,7 @@
 }
 
 .user-menu-trigger:hover {
-  background: #eef2f4;
+  background: var(--color-fill-hover);
 }
 
 .user-menu-trigger__copy {

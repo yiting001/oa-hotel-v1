@@ -271,8 +271,8 @@ function errorMessage(error: unknown): string {
 }
 
 .supply-document :deep(.form-section) {
-  background: #fff;
-  border-bottom: 1px solid #e5e9f0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   padding: 22px 0;
 }
 

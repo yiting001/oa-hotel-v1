@@ -331,7 +331,7 @@ onMounted(loadData);
 .seal-asset-identity span,
 .seal-asset-row small,
 .seal-asset-row > span {
-  color: #667085;
+  color: var(--color-text-secondary);
 }
 
 .seal-assets--mobile {
@@ -339,7 +339,7 @@ onMounted(loadData);
 }
 
 .seal-asset-row {
-  border-bottom: 1px solid #eaecf0;
+  border-bottom: 1px solid var(--color-border);
   display: grid;
   gap: 6px;
   padding: 14px 0;

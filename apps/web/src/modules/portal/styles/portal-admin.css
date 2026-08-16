@@ -29,9 +29,9 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 16px;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
 }
 
 .portal-admin-metrics > div {
@@ -63,17 +63,17 @@
   gap: 10px;
   margin-bottom: 12px;
   padding: 14px;
-  background: #f7f9fb;
+  background: var(--color-surface-2);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
 }
 
 .portal-admin-table-surface {
   min-height: 320px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
 }
 
 .portal-admin-content-cell {
@@ -151,8 +151,8 @@
 .portal-rich-editor {
   width: 100%;
   overflow: hidden;
-  border: 1px solid #d7dde5;
-  border-radius: 4px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
 }
 
 .portal-rich-editor:focus-within {
@@ -165,8 +165,8 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 7px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #dfe4ea;
+  background: var(--color-fill-subtle);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .portal-rich-editor__toolbar .el-button + .el-button {
@@ -194,7 +194,7 @@
 }
 
 .portal-rich-editor__surface:empty::before {
-  color: #9ca5af;
+  color: var(--color-text-tertiary);
   content: '请输入正文';
   pointer-events: none;
 }
@@ -228,8 +228,8 @@
 
 .portal-audit-timeline article {
   padding: 12px 14px;
-  background: #f7f9fb;
-  border-left: 3px solid #7795a9;
+  background: var(--color-fill-subtle);
+  border-left: 3px solid var(--color-border-strong);
   border-radius: 4px;
 }
 
@@ -248,7 +248,7 @@
 .portal-audit-timeline small {
   display: block;
   margin-top: 5px;
-  color: #69757f;
+  color: var(--color-text-tertiary);
 }
 
 @media (max-width: 900px) {

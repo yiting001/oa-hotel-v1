@@ -7,9 +7,9 @@
   grid-template-columns: 235px minmax(820px, 1fr) 300px;
   grid-template-rows: 360px minmax(520px, 1fr);
   overflow: hidden;
-  background: #fff;
+  background: var(--platform-surface);
   border: 1px solid var(--platform-border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
 }
 
 .form-designer-mobile-tabs {
@@ -28,7 +28,7 @@
   grid-area: palette;
   padding: 16px 12px;
   overflow: auto;
-  background: #f8fafc;
+  background: var(--color-surface-2);
   border-right: 1px solid var(--platform-border);
 }
 
@@ -48,17 +48,17 @@
   align-items: flex-start;
   gap: 8px;
   padding: 10px 8px;
-  color: #263547;
-  background: #fff;
-  border: 1px solid #cfdae4;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
   border-radius: 5px;
   cursor: grab;
   text-align: left;
 }
 
 .form-palette__items button:hover:not(:disabled) {
-  background: #edf5fb;
-  border-color: #83afd1;
+  background: var(--color-fill-hover);
+  border-color: var(--color-primary);
 }
 
 .form-palette__items button:disabled {
@@ -93,8 +93,8 @@
 .form-palette__note {
   margin-top: 14px;
   padding: 11px;
-  background: #eef5f1;
-  border-left: 3px solid #27864d;
+  background: var(--color-fill-subtle);
+  border-left: 3px solid var(--color-success);
   border-radius: 3px;
 }
 
@@ -104,7 +104,7 @@
 
 .form-palette__note p {
   margin: 4px 0 0;
-  color: #50645a;
+  color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -112,7 +112,7 @@
 .form-canvas-workspace {
   min-width: 0;
   grid-area: canvas;
-  background: #e9eef2;
+  background: var(--color-canvas);
 }
 
 .a4-zoom-controls {
@@ -130,8 +130,8 @@
 .a4-zoom-controls > span {
   min-width: 52px;
   padding: 5px 9px;
-  color: #576778;
-  background: #f3f5f7;
+  color: var(--color-text-secondary);
+  background: var(--color-fill-subtle);
   border: 1px solid var(--platform-border);
   border-radius: 4px;
   font-size: 12px;
@@ -231,7 +231,7 @@
 .a4-grid__field.is-selected {
   position: relative;
   z-index: 1;
-  outline: 2px solid #1769aa;
+  outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
 
@@ -321,7 +321,7 @@
   grid-area: inspector;
   padding: 0 16px 20px;
   overflow: auto;
-  background: #fff;
+  background: var(--platform-surface);
   border-left: 1px solid var(--platform-border);
 }
 
@@ -330,7 +330,7 @@
   z-index: 2;
   top: 0;
   padding-top: 8px;
-  background: #fff;
+  background: var(--platform-surface);
 }
 
 .form-inspector__actions {
@@ -383,7 +383,7 @@
   .form-designer-mobile-tabs {
     display: block;
     padding: 10px;
-    background: #fff;
+    background: var(--platform-surface);
     border-bottom: 1px solid var(--platform-border);
   }
 

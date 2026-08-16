@@ -832,7 +832,7 @@ async function resetPassword(): Promise<void> {
 
 .iam-assign-section__hint {
   margin-left: 8px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 </style>

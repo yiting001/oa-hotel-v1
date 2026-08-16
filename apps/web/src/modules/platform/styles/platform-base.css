@@ -1,12 +1,12 @@
 .platform-page {
-  --platform-border: #d8e0e8;
-  --platform-border-strong: #bcc8d4;
-  --platform-muted: #647183;
-  --platform-primary: #1769aa;
-  --platform-primary-soft: #eaf3fb;
-  --platform-surface: #fff;
+  --platform-border: var(--color-border);
+  --platform-border-strong: var(--color-border-strong);
+  --platform-muted: var(--color-text-secondary);
+  --platform-primary: var(--color-primary);
+  --platform-primary-soft: var(--color-fill-hover);
+  --platform-surface: var(--color-surface);
   min-width: 0;
-  color: #1a2533;
+  color: var(--color-text);
   letter-spacing: 0;
 }
 
@@ -75,7 +75,7 @@
 }
 
 .platform-context-strip strong {
-  color: #1a2533;
+  color: var(--color-text);
   font-size: 20px;
 }
 
@@ -87,14 +87,14 @@
 .platform-tabs > .el-tabs__header {
   margin-bottom: 0;
   padding: 0 18px;
-  background: #fff;
+  background: var(--platform-surface);
   border: 1px solid var(--platform-border);
   border-bottom: 0;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .platform-tabs > .el-tabs__content {
-  background: #fff;
+  background: var(--platform-surface);
   border: 1px solid var(--platform-border);
 }
 
@@ -163,7 +163,7 @@
   align-items: center;
   gap: 12px;
   padding: 9px 14px;
-  background: #fff;
+  background: var(--platform-surface);
   border-bottom: 1px solid var(--platform-border);
 }
 
@@ -183,7 +183,7 @@
   display: flex;
   min-height: 0;
   flex-direction: column;
-  background: #fff;
+  background: var(--platform-surface);
   border: 1px solid var(--platform-border);
 }
 
@@ -229,8 +229,8 @@
 }
 
 .definition-nav__item.is-active {
-  background: #f6f9fc;
-  border-color: #bfd3e5;
+  background: var(--color-fill-hover);
+  border-color: var(--platform-border-strong);
 }
 
 .definition-nav__definition,
@@ -262,8 +262,8 @@
 .definition-nav__version {
   min-height: 34px;
   padding: 3px 4px 3px 8px;
-  color: #526173;
-  border-left: 2px solid #d6e0e8;
+  color: var(--color-text-secondary);
+  border-left: 2px solid var(--platform-border);
 }
 
 .definition-nav__version.is-active {

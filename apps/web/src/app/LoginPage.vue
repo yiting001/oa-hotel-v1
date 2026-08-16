@@ -6,11 +6,17 @@ import { useRoute, useRouter } from 'vue-router';
 import { destinationAfterLogin } from '../modules/account/account-security.policy';
 import { useSessionStore } from '../shared/session';
 import { appConfig, brandAssets, companyMark } from '../shared/app-config';
+import { loadRememberedLogin, saveRememberedLogin } from '../shared/remember-login';
 
 const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
-const form = reactive({ username: '', password: '' });
+const remembered = loadRememberedLogin();
+const form = reactive({
+  username: remembered.username,
+  password: '',
+  remember: remembered.remember,
+});
 const loginBackgroundStyle = {
   '--login-background-image': `url("${brandAssets.loginBackground}")`,
 } as CSSProperties;
@@ -18,6 +24,7 @@ const loginBackgroundStyle = {
 async function submit(): Promise<void> {
   try {
     await session.signIn(form.username.trim(), form.password);
+    saveRememberedLogin(form.remember, form.username.trim());
     const redirect = destinationAfterLogin(
       session.user?.passwordChangeRequired === true,
       route.query.redirect,
@@ -67,6 +74,9 @@ async function submit(): Promise<void> {
           >
             <template #prefix><LockOutlined /></template>
           </a-input-password>
+        </a-form-item>
+        <a-form-item name="remember" class="login-remember">
+          <a-checkbox v-model:checked="form.remember">记住登录</a-checkbox>
         </a-form-item>
         <a-button :loading="session.loading" block html-type="submit" size="large" type="primary">
           登录

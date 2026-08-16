@@ -23,7 +23,7 @@
   min-width: 0;
   height: 30px;
   place-items: center;
-  color: #a0a8b1;
+  color: var(--color-text-tertiary);
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -45,7 +45,7 @@
   bottom: 3px;
   width: 4px;
   height: 4px;
-  background: #d13c3c;
+  background: var(--color-danger);
   border-radius: 50%;
 }
 
