@@ -20,7 +20,6 @@ import { useWorkflowStore } from '../../shared/workflow';
 import SealApplicantSection from './SealApplicantSection.vue';
 import SealAttachmentsField from './SealAttachmentsField.vue';
 import { getSealUse, saveSealUse, submitSealDocument } from './seal.api';
-import { getAssetStatusMeta, sealAssetTypeLabels } from './seal.constants';
 import type { SealUseInput, SealUseRecord } from './seal.types';
 import { useSealResources } from './useSealResources';
 
@@ -42,7 +41,7 @@ const errorMessage = ref('');
 const form = reactive<SealUseInput>({
   useDate: '',
   purpose: '',
-  sealAssetIds: [],
+  sealAssetNames: [],
   content: '',
   attachments: [],
 });
@@ -74,16 +73,6 @@ const departmentName = computed(
       : session.user?.departmentName) ?? '-',
 );
 const applicationDate = computed(() => record.value?.applicationDate ?? todayIso());
-const assetOptions = computed(() =>
-  resources.assets.value.map((asset) => {
-    const status = getAssetStatusMeta(asset.status);
-    return {
-      value: asset.id,
-      label: `${asset.name} · ${sealAssetTypeLabels[asset.type] ?? asset.type} · ${status.label}`,
-      disabled: asset.status !== 'AVAILABLE',
-    };
-  }),
-);
 
 const rules: Record<keyof SealUseInput, Rule[]> = {
   useDate: [{ required: true, message: '请选择使用日期' }],
@@ -91,15 +80,12 @@ const rules: Record<keyof SealUseInput, Rule[]> = {
     { required: true, whitespace: true, message: '请输入用途' },
     { max: 1000, message: '用途不能超过 1000 个字符' },
   ],
-  sealAssetIds: [
-    { required: true, type: 'array', min: 1, message: '请至少选择一项印章或证照' },
+  sealAssetNames: [
+    { required: true, type: 'array', min: 1, message: '请至少填写一项印章或证照名称' },
     {
       validator: async () => {
-        const unavailable = resources.assets.value.filter(
-          (asset) => form.sealAssetIds.includes(asset.id) && asset.status !== 'AVAILABLE',
-        );
-        if (unavailable.length > 0) {
-          throw new Error(`所选资产当前不可用：${unavailable.map((item) => item.name).join('、')}`);
+        if (form.sealAssetNames.some((name) => name.trim().length > 200)) {
+          throw new Error('单项名称不能超过 200 个字符');
         }
       },
     },
@@ -116,7 +102,7 @@ function applyRecord(value: SealUseRecord): void {
   Object.assign(form, {
     useDate: value.useDate,
     purpose: value.purpose,
-    sealAssetIds: [...value.sealAssetIds],
+    sealAssetNames: [...value.sealAssetNames],
     content: value.content,
     attachments: [...value.attachments],
   });
@@ -126,7 +112,9 @@ function toInput(): SealUseInput {
   return {
     useDate: form.useDate,
     purpose: form.purpose.trim(),
-    sealAssetIds: [...form.sealAssetIds],
+    sealAssetNames: form.sealAssetNames
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0),
     content: form.content.trim(),
     attachments: [...form.attachments],
   };
@@ -275,15 +263,14 @@ onMounted(async () => {
       </FormSection>
 
       <FormSection title="印章证照">
-        <a-form-item label="印章证照名称" name="sealAssetIds">
+        <a-form-item label="印章证照名称" name="sealAssetNames">
           <a-select
-            v-model:value="form.sealAssetIds"
-            :options="assetOptions"
+            v-model:value="form.sealAssetNames"
+            :open="false"
+            :token-separators="['，', ',', '、']"
             allow-clear
-            mode="multiple"
-            option-filter-prop="label"
-            placeholder="选择印章或证照"
-            show-search
+            mode="tags"
+            placeholder="输入印章或证照名称，回车添加"
           />
         </a-form-item>
       </FormSection>

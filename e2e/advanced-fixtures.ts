@@ -80,7 +80,7 @@ export async function createOfficeSealUseFixture(
       {
         useDate: shanghaiBusinessDate(2),
         purpose,
-        sealAssetIds: ['seal-company'],
+        sealAssetNames: ['公司公章'],
         content: `Playwright 独立测试单据 ${index}，不消费共享演示待办。`,
         attachments: [],
       },

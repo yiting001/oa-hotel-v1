@@ -26,9 +26,6 @@ describe('SealApplicationService data scope', () => {
       countAssets: vi.fn<SealRepository['countAssets']>(),
       saveAssets: vi.fn<SealRepository['saveAssets']>(),
       listAssets: vi.fn<SealRepository['listAssets']>(),
-      findAssets: vi.fn<SealRepository['findAssets']>(),
-      checkoutAssets: vi.fn<SealRepository['checkoutAssets']>(),
-      returnAssets: vi.fn<SealRepository['returnAssets']>(),
       saveBorrow: vi.fn<SealRepository['saveBorrow']>(),
       findBorrow: vi.fn<SealRepository['findBorrow']>(),
       saveUse: vi.fn<SealRepository['saveUse']>(),
@@ -57,18 +54,6 @@ describe('SealApplicationService data scope', () => {
   it('syncs the workflow title when an editable borrow request changes destination', async () => {
     const borrow = borrowFixture('NOT_CHECKED_OUT');
     vi.mocked(repository.findBorrow).mockResolvedValue(borrow);
-    vi.mocked(repository.findAssets).mockResolvedValue([
-      {
-        id: 'seal-company',
-        code: 'SEAL-COMPANY',
-        name: '公司公章',
-        type: 'SEAL',
-        custodianUserId: 'user-office',
-        status: 'AVAILABLE',
-        activeBorrowRequestId: null,
-        validUntil: null,
-      },
-    ]);
     workflow.getEditable.mockResolvedValue(documentFixture('DRAFT'));
 
     await service.saveBorrow(
@@ -77,7 +62,7 @@ describe('SealApplicationService data scope', () => {
         plannedReturnDate: '2026-07-14',
         companionIds: [],
         destination: '政务服务中心',
-        sealAssetIds: ['seal-company'],
+        sealAssetNames: ['公司公章'],
         content: '办理证照变更',
         attachments: [],
       },
@@ -115,8 +100,8 @@ describe('SealApplicationService data scope', () => {
       scopedUser,
     );
 
-    expect(repository.checkoutAssets).toHaveBeenCalledWith(borrow.sealAssetIds, borrow.id);
-    expect(repository.returnAssets).toHaveBeenCalledWith(borrow.sealAssetIds);
+    expect(borrow.executionStatus).toBe('RETURNED');
+    expect(vi.mocked(repository.saveBorrow)).toHaveBeenCalledTimes(2);
     expect(iam.canAccessResource).toHaveBeenCalledTimes(2);
     expect(scopedUser.roleCodes).not.toContain('SEAL_MANAGER');
   });
@@ -255,7 +240,7 @@ function borrowFixture(executionStatus: string) {
     plannedReturnDate: '2026-07-14',
     companionIds: [],
     destination: '客户现场',
-    sealAssetIds: ['seal-company'],
+    sealAssetNames: ['公司公章'],
     content: '合同签署',
     attachments: [],
     executionStatus,
@@ -276,7 +261,7 @@ function useFixture() {
     applicationDate: '2026-07-12',
     useDate: '2026-07-13',
     purpose: '合同签署',
-    sealAssetIds: ['seal-company'],
+    sealAssetNames: ['公司公章'],
     content: '合同签署',
     attachments: [],
     executionStatus: 'NOT_EXECUTED',

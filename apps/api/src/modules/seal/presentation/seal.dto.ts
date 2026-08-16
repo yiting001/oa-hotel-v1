@@ -27,7 +27,8 @@ export class SealBorrowDto {
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })
-  sealAssetIds!: string[];
+  @MaxLength(200, { each: true })
+  sealAssetNames!: string[];
 
   @IsString()
   @MaxLength(5000)
@@ -49,7 +50,8 @@ export class SealUseDto {
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })
-  sealAssetIds!: string[];
+  @MaxLength(200, { each: true })
+  sealAssetNames!: string[];
 
   @IsString()
   @MaxLength(5000)

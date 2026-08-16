@@ -30,7 +30,7 @@ export class SealBorrowEntity {
   destination!: string;
 
   @Column('simple-json')
-  sealAssetIds!: string[];
+  sealAssetNames!: string[];
 
   @Column('text')
   content!: string;

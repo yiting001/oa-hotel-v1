@@ -16,7 +16,7 @@ export interface SealBorrowInput {
   plannedReturnDate: string;
   companionIds: string[];
   destination: string;
-  sealAssetIds: string[];
+  sealAssetNames: string[];
   content: string;
   attachments: string[];
 }
@@ -38,7 +38,7 @@ export interface SealBorrowRecord extends SealBorrowInput {
 export interface SealUseInput {
   useDate: string;
   purpose: string;
-  sealAssetIds: string[];
+  sealAssetNames: string[];
   content: string;
   attachments: string[];
 }

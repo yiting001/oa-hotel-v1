@@ -48,7 +48,10 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import RootApp from './app/App.vue';
 import { router } from './app/router';
+import { applyChineseDateLocale } from './shared/locale';
 import './style.css';
+
+applyChineseDateLocale();
 
 const app = createApp(RootApp);
 const uiComponents = [

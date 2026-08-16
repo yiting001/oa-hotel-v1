@@ -7,7 +7,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { apiRequest } from '../../shared/api';
 import { documentDetailPath, documentTypeMeta } from '../../shared/document';
 import type { DepartmentOption } from '../../shared/directory';
-import type { SealAsset } from '../seal/seal.types';
 import BusinessPrintSheet from './components/BusinessPrintSheet.vue';
 import {
   buildBusinessDocumentPrintModel,
@@ -46,21 +45,20 @@ async function load(): Promise<void> {
   errorMessage.value = '';
   model.value = null;
   try {
-    const [envelope, template, users, departments, sealAssets] = await Promise.all([
+    const [envelope, template, users, departments] = await Promise.all([
       apiRequest<DocumentPrintEnvelope>(documentTypeMeta[type].apiPath(documentId.value)),
       apiRequest<DocumentPrintTemplate | null>(
         `/workflow/documents/${documentId.value}/print-template`,
       ),
       optionalRequest<DirectoryUser>('/auth/users'),
       optionalRequest<DepartmentOption>('/auth/departments'),
-      isSealDocument(type) ? optionalRequest<SealAsset>('/seals/assets') : Promise.resolve([]),
     ]);
     if (sequence !== loadSequence) {
       return;
     }
     model.value = buildBusinessDocumentPrintModel(
       envelope,
-      createReferences(users, departments, sealAssets),
+      createReferences(users, departments),
       template,
     );
   } catch (error) {
@@ -96,12 +94,10 @@ async function optionalRequest<T>(path: string): Promise<T[]> {
 function createReferences(
   users: DirectoryUser[],
   departments: DepartmentOption[],
-  sealAssets: SealAsset[],
 ): DocumentPrintReferences {
   return {
     users: users.map((item) => namedReference(item.id, item.displayName)),
     departments: departments.map((item) => namedReference(item.id, item.name)),
-    sealAssets: sealAssets.map((item) => namedReference(item.id, item.name)),
   };
 }
 
@@ -111,10 +107,6 @@ function namedReference(id: string, name: string): NamedReference {
 
 function isDocumentType(value: string): value is DocumentType {
   return Object.hasOwn(documentTypeMeta, value);
-}
-
-function isSealDocument(type: DocumentType): boolean {
-  return type === 'SEAL_BORROW' || type === 'SEAL_USE';
 }
 </script>
 

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { DomainError } from '../../../common/errors/domain-error';
+import { Repository } from 'typeorm';
 import type { SealRepository } from '../domain/seal.repository';
 import { SealAssetEntity } from './seal-asset.entity';
 import { SealBorrowEntity } from './seal-borrow.entity';
@@ -28,36 +27,6 @@ export class TypeOrmSealRepository implements SealRepository {
 
   listAssets(): Promise<SealAssetEntity[]> {
     return this.assets.find({ order: { name: 'ASC' } });
-  }
-
-  findAssets(ids: string[]): Promise<SealAssetEntity[]> {
-    return this.assets.findBy({ id: In(ids) });
-  }
-
-  async checkoutAssets(ids: string[], borrowRequestId: string): Promise<void> {
-    const assets = await this.findAssets(ids);
-    const unavailable = assets.find((asset) => asset.status !== 'AVAILABLE');
-    if (unavailable) {
-      throw new DomainError('SEAL_ASSET_NOT_AVAILABLE', `${unavailable.name} 当前不可外借`);
-    }
-    await this.assets.save(
-      assets.map((asset) => ({
-        ...asset,
-        status: 'BORROWED',
-        activeBorrowRequestId: borrowRequestId,
-      })),
-    );
-  }
-
-  async returnAssets(ids: string[]): Promise<void> {
-    const assets = await this.findAssets(ids);
-    await this.assets.save(
-      assets.map((asset) => ({
-        ...asset,
-        status: 'AVAILABLE',
-        activeBorrowRequestId: null,
-      })),
-    );
   }
 
   saveBorrow(entity: SealBorrowEntity): Promise<SealBorrowEntity> {

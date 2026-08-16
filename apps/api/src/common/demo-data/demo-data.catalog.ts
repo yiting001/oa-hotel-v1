@@ -152,7 +152,7 @@ export const DEMO_SCENARIOS = [
     payload: {
       useDate: '2026-07-15',
       purpose: '[演示] 暑期招聘材料盖章',
-      sealAssetIds: ['seal-company'],
+      sealAssetNames: ['公司公章'],
       content: '用于校企合作函、实习协议及招聘活动授权材料。',
       attachments: ['校企合作函.docx', '实习协议模板.pdf'],
     },
@@ -167,7 +167,7 @@ export const DEMO_SCENARIOS = [
       plannedReturnDate: '2026-07-16',
       companionIds: ['user-office'],
       destination: '[演示] 市行政服务中心',
-      sealAssetIds: ['license-business'],
+      sealAssetNames: ['营业执照'],
       content: '办理酒店经营许可年度信息核验。',
       attachments: ['窗口办理材料清单.pdf'],
     },

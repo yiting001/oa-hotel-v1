@@ -18,7 +18,6 @@ const references: DocumentPrintReferences = {
     { id: 'user-contact', name: '赵联系人' },
   ],
   departments: [{ id: 'dept-business', name: '市场营销部' }],
-  sealAssets: [{ id: 'seal-company', name: '公司公章' }],
 };
 
 const opinion: ApprovalOpinion = {
@@ -100,7 +99,7 @@ describe('buildBusinessDocumentPrintModel', () => {
         departmentId: 'dept-business',
         destination: '政务服务中心',
         companionIds: ['user-manager'],
-        sealAssetIds: ['seal-company'],
+        sealAssetNames: ['公司公章'],
         content: '办理许可证变更',
       },
     ],
@@ -111,7 +110,7 @@ describe('buildBusinessDocumentPrintModel', () => {
         applicantId: 'user-applicant',
         departmentId: 'dept-business',
         purpose: '合同用印',
-        sealAssetIds: ['seal-company'],
+        sealAssetNames: ['公司公章'],
         content: '采购合同盖章',
       },
     ],

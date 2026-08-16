@@ -21,7 +21,7 @@ import {
   getSealUse,
   returnSealBorrow,
 } from './seal.api';
-import { getExecutionStatusMeta, sealAssetTypeLabels } from './seal.constants';
+import { getExecutionStatusMeta } from './seal.constants';
 import type { SealBorrowRecord, SealUseRecord } from './seal.types';
 import { useSealResources } from './useSealResources';
 
@@ -75,11 +75,6 @@ const showActionForm = computed(
 );
 const applicantName = computed(() => resources.userName(record.value?.applicantId));
 const departmentName = computed(() => resources.departmentName(record.value?.departmentId));
-const selectedAssets = computed(() =>
-  (record.value?.sealAssetIds ?? []).map((id) =>
-    resources.assets.value.find((asset) => asset.id === id),
-  ),
-);
 
 const checkoutRules: Record<string, Rule[]> = {
   actualRecipient: [
@@ -285,9 +280,8 @@ onMounted(async () => {
 
       <FormSection title="印章证照">
         <div class="seal-execution-assets">
-          <a-tag v-for="(asset, index) in selectedAssets" :key="asset?.id ?? index">
-            {{ asset?.name ?? record.sealAssetIds[index] }}
-            <template v-if="asset"> · {{ sealAssetTypeLabels[asset.type] ?? asset.type }}</template>
+          <a-tag v-for="(name, index) in record.sealAssetNames" :key="`${name}-${index}`">
+            {{ name }}
           </a-tag>
         </div>
       </FormSection>
