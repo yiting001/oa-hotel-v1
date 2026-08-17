@@ -36,8 +36,22 @@ const resources = useSealResources();
 const activeTab = ref('documents');
 const loading = ref(false);
 const errorMessage = ref('');
-const documentFilters = reactive({ keyword: '', type: '', status: '' });
-const assetFilters = reactive({ keyword: '', type: '', status: '' });
+interface WorkspaceFilters {
+  keyword: string;
+  type: string | undefined;
+  status: string | undefined;
+}
+
+const documentFilters = reactive<WorkspaceFilters>({
+  keyword: '',
+  type: undefined,
+  status: undefined,
+});
+const assetFilters = reactive<WorkspaceFilters>({
+  keyword: '',
+  type: undefined,
+  status: undefined,
+});
 const createPermissions = requiredBusinessModulePermissions('SEAL', 'CREATE');
 const canCreate = computed(() => createPermissions.every((code) => session.can(code)));
 
@@ -80,11 +94,12 @@ const metricItems = computed(() => [
   },
   { key: 'assets', label: '在册资产', value: resources.assets.value.length },
 ]);
-const hasDocumentFilters = computed(() =>
-  Object.values(documentFilters).some((value) => value.trim().length > 0),
+const hasDocumentFilters = computed(
+  () =>
+    documentFilters.keyword.trim().length > 0 || !!documentFilters.type || !!documentFilters.status,
 );
-const hasAssetFilters = computed(() =>
-  Object.values(assetFilters).some((value) => value.trim().length > 0),
+const hasAssetFilters = computed(
+  () => assetFilters.keyword.trim().length > 0 || !!assetFilters.type || !!assetFilters.status,
 );
 
 const assetColumns = [
@@ -112,11 +127,11 @@ async function loadData(): Promise<void> {
 }
 
 function resetDocumentFilters(): void {
-  Object.assign(documentFilters, { keyword: '', type: '', status: '' });
+  Object.assign(documentFilters, { keyword: '', type: undefined, status: undefined });
 }
 
 function resetAssetFilters(): void {
-  Object.assign(assetFilters, { keyword: '', type: '', status: '' });
+  Object.assign(assetFilters, { keyword: '', type: undefined, status: undefined });
 }
 
 function openDocument(document: DocumentSummary): void {

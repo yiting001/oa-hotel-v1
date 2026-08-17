@@ -5,6 +5,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { apiRequest } from '../../../shared/api';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import { approvalActionLabels } from '../../../shared/document';
+import { formatDateTime } from '../../../shared/format';
 import { INSIGHT_API } from '../insight.config';
 import type { OperationLogRow, RequestLogRow } from '../insight.types';
 
@@ -202,7 +203,7 @@ onMounted(() => {
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'createdAt'">
-              {{ new Date((record as OperationLogRow).createdAt).toLocaleString() }}
+              {{ formatDateTime((record as OperationLogRow).createdAt) }}
             </template>
             <template v-else-if="column.key === 'action'">
               <a-tag>{{
@@ -282,7 +283,7 @@ onMounted(() => {
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'createdAt'">
-              {{ new Date((record as RequestLogRow).createdAt).toLocaleString() }}
+              {{ formatDateTime((record as RequestLogRow).createdAt) }}
             </template>
             <template v-else-if="column.key === 'traceId'">
               <a-typography-text code copyable :content="(record as RequestLogRow).traceId">
@@ -324,7 +325,7 @@ onMounted(() => {
                 <a-typography-text code copyable>{{ requestDetail.traceId }}</a-typography-text>
               </a-descriptions-item>
               <a-descriptions-item label="时间">
-                {{ new Date(requestDetail.createdAt).toLocaleString() }}
+                {{ formatDateTime(requestDetail.createdAt) }}
               </a-descriptions-item>
               <a-descriptions-item label="请求">
                 {{ requestDetail.method }} {{ requestDetail.path

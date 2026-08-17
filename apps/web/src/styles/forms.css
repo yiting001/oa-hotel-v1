@@ -91,12 +91,13 @@
 }
 
 .workflow-version {
-  margin: 3px 0 14px;
+  margin: -9px 0 14px;
   color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .sidebar-section-title {
+  margin-bottom: 12px;
   font-size: 15px;
   font-weight: 700;
 }

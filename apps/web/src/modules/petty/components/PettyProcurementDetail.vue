@@ -3,6 +3,7 @@ import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
 import { ref } from 'vue';
 import { apiRequest } from '../../../shared/api';
+import { formatDateTime } from '../../../shared/format';
 import { PETTY_API } from '../petty.config';
 import { formatYuan } from '../petty.format';
 import type { PettyItem, PettyProcurementData } from '../petty.types';
@@ -138,7 +139,7 @@ function removeItem(item: PettyItem): void {
         <a-timeline-item v-for="log in data.changeLogs" :key="log.id">
           <div>{{ log.detail }}</div>
           <div class="petty-detail__log-meta">
-            {{ log.actorName }} · {{ new Date(log.createdAt).toLocaleString() }}
+            {{ log.actorName }} · {{ formatDateTime(log.createdAt) }}
           </div>
         </a-timeline-item>
       </a-timeline>
