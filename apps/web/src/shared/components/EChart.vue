@@ -11,17 +11,25 @@ const container = ref<HTMLDivElement | null>(null);
 let chart: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
+function isDarkTheme(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+}
+
+function themedOption(option: echarts.EChartsOption): echarts.EChartsOption {
+  return { backgroundColor: 'transparent', ...option };
+}
+
 onMounted(() => {
   if (!container.value) return;
-  chart = echarts.init(container.value);
-  chart.setOption(props.option);
+  chart = echarts.init(container.value, isDarkTheme() ? 'dark' : undefined);
+  chart.setOption(themedOption(props.option));
   resizeObserver = new ResizeObserver(() => chart?.resize());
   resizeObserver.observe(container.value);
 });
 
 watch(
   () => props.option,
-  (option) => chart?.setOption(option, { notMerge: true }),
+  (option) => chart?.setOption(themedOption(option), { notMerge: true }),
   { deep: true },
 );
 

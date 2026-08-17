@@ -229,7 +229,7 @@ function resetDocumentFilters(): void {
             :data-source="filteredMaterials"
             :loading="loadingMaterials"
             :locale="{ emptyText: '暂无符合条件的物资' }"
-            :pagination="{ pageSize: 10, hideOnSinglePage: true }"
+            :pagination="{ pageSize: 10, showTotal: (total: number) => `共 ${total} 条` }"
             row-key="id"
             size="middle"
           >

@@ -260,7 +260,7 @@ onMounted(loadData);
             :data-source="filteredAssets"
             :loading="loading || resources.loading.value"
             :locale="{ emptyText: '暂无符合条件的印章证照' }"
-            :pagination="{ pageSize: 10, hideOnSinglePage: true }"
+            :pagination="{ pageSize: 10, showTotal: (total: number) => `共 ${total} 条` }"
             :scroll="{ x: 760 }"
             row-key="id"
             size="middle"

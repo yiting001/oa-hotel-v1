@@ -31,7 +31,7 @@ const columns = [
       :columns="columns"
       :data-source="tasks"
       :loading="loading"
-      :pagination="{ pageSize: 10, hideOnSinglePage: true }"
+      :pagination="{ pageSize: 10, showTotal: (total: number) => `共 ${total} 条` }"
       row-key="id"
     >
       <template #bodyCell="{ column, record }">

@@ -20,16 +20,22 @@ defineProps<{
 
 <style scoped>
 .workspace-filter-bar {
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: minmax(240px, 1fr) auto auto auto;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
 }
 
 .workspace-filter-bar__search {
-  min-width: 0;
+  min-width: 220px;
+  max-width: 380px;
+  flex: 1 1 260px;
+}
+
+.workspace-filter-bar__result {
+  margin-left: auto;
 }
 
 .workspace-filter-bar__filters,
@@ -58,25 +64,22 @@ defineProps<{
 }
 
 @media (max-width: 900px) {
-  .workspace-filter-bar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-  }
-
   .workspace-filter-bar__search {
-    grid-column: 1 / -1;
+    max-width: none;
+    flex-basis: 100%;
   }
 }
 
 @media (max-width: 767px) {
   .workspace-filter-bar {
-    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .workspace-filter-bar__search,
-  .workspace-filter-bar__filters,
-  .workspace-filter-bar__actions,
-  .workspace-filter-bar__result {
-    grid-column: 1;
+  .workspace-filter-bar__search {
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 auto;
   }
 
   .workspace-filter-bar__filters {
@@ -92,7 +95,8 @@ defineProps<{
   }
 
   .workspace-filter-bar__result {
-    justify-self: end;
+    margin-left: 0;
+    align-self: flex-end;
   }
 }
 </style>

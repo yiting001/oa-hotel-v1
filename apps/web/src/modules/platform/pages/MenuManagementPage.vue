@@ -190,9 +190,14 @@ async function removeMenu(menu: MenuTreeNode): Promise<void> {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="路由地址" min-width="170" prop="path" />
-        <el-table-column label="权限标识" min-width="170" prop="permissionCode" />
-        <el-table-column label="图标" prop="icon" width="120" />
+        <el-table-column label="路由地址" min-width="190" prop="path" show-overflow-tooltip />
+        <el-table-column
+          label="权限标识"
+          min-width="230"
+          prop="permissionCode"
+          show-overflow-tooltip
+        />
+        <el-table-column label="图标" prop="icon" show-overflow-tooltip width="110" />
         <el-table-column label="排序" prop="orderNum" width="70" />
         <el-table-column label="显示" width="80">
           <template #default="{ row }">

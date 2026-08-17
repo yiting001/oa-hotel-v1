@@ -33,7 +33,7 @@ const columns = [
       :data-source="documents"
       :loading="loading"
       :locale="{ emptyText: '暂无符合条件的单据' }"
-      :pagination="{ pageSize: 10, hideOnSinglePage: true }"
+      :pagination="{ pageSize: 10, showTotal: (total: number) => `共 ${total} 条` }"
       row-key="id"
       size="middle"
     >

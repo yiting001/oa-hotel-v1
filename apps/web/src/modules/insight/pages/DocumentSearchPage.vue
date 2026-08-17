@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router';
 import { apiRequest } from '../../../shared/api';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import { documentDetailPath, documentStatusMeta, documentTypeMeta } from '../../../shared/document';
+import { formatDateTime } from '../../../shared/format';
 import { DOCUMENT_STATUS_OPTIONS } from '../../contract/contract.config';
 import { formatYuan } from '../../petty/petty.format';
 import { INSIGHT_API, TRACKED_DOCUMENT_TYPE_OPTIONS } from '../insight.config';
@@ -192,7 +193,7 @@ onMounted(() => {
           </a-tag>
         </template>
         <template v-else-if="column.key === 'createdAt'">
-          {{ new Date((record as DocumentSearchRow).createdAt).toLocaleString() }}
+          {{ formatDateTime((record as DocumentSearchRow).createdAt) }}
         </template>
       </template>
     </a-table>

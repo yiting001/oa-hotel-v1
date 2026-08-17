@@ -55,23 +55,27 @@
 }
 
 .workbench-filter-controls {
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: minmax(240px, 1.8fr) repeat(auto-fit, minmax(150px, 1fr));
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .workbench-filter-controls > .el-input {
-  width: 100%;
+  min-width: 200px;
+  max-width: 320px;
+  flex: 1 1 220px;
 }
 
 .workbench-filter-controls > .el-select {
-  width: 100%;
+  min-width: 150px;
+  flex: 0 1 170px;
 }
 
 .workbench-filter-controls > .el-date-editor {
-  width: 100%;
-  min-width: 230px;
+  min-width: 240px;
+  max-width: 280px;
+  flex: 0 1 260px;
 }
 
 .workbench-filter-controls.is-stacked {
