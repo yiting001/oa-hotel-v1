@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
-import { message, Modal } from 'ant-design-vue';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { Plus, Refresh, Search, Upload } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { apiRequest } from '../../../shared/api';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
+import MoneyInput from '../../../shared/components/MoneyInput.vue';
+import WorkspaceFilterBar from '../../../shared/components/WorkspaceFilterBar.vue';
+import UiDataList, { type DataColumn } from '../../../ui/UiDataList.vue';
+import UiDialog from '../../../ui/UiDialog.vue';
+import UiPagination from '../../../ui/UiPagination.vue';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { PETTY_API } from '../petty.config';
 import { formatYuan } from '../petty.format';
 import type { PettyMaterial, PettyMaterialPayload } from '../petty.types';
 
+const { isCompact } = useLayoutMode();
 const loading = ref(false);
 const saving = ref(false);
 const materials = ref<PettyMaterial[]>([]);
@@ -16,28 +23,40 @@ const editorOpen = ref(false);
 const importOpen = ref(false);
 const editingId = ref<string | null>(null);
 const importText = ref('');
+const importFileInput = ref<HTMLInputElement | null>(null);
+const page = ref(1);
+const pageSize = ref(20);
 
-const form = reactive({
+const form = reactive<{
+  name: string;
+  brand: string;
+  unit: string;
+  unitPriceCents: number | null;
+  supplierName: string;
+  supplierContact: string;
+  supplierPhone: string;
+  active: boolean;
+}>({
   name: '',
   brand: '',
   unit: '',
-  unitPriceYuan: 0,
+  unitPriceCents: 0,
   supplierName: '',
   supplierContact: '',
   supplierPhone: '',
   active: true,
 });
 
-const columns = [
-  { title: '物资名称', dataIndex: 'name' },
-  { title: '品牌', dataIndex: 'brand' },
-  { title: '单位', dataIndex: 'unit' },
-  { title: '单价', key: 'unitPrice' },
-  { title: '供货单位', dataIndex: 'supplierName' },
-  { title: '联系人', dataIndex: 'supplierContact' },
-  { title: '联系电话', dataIndex: 'supplierPhone' },
-  { title: '状态', key: 'active' },
-  { title: '操作', key: 'actions' },
+const columns: DataColumn[] = [
+  { key: 'name', label: '物资名称', minWidth: 170 },
+  { key: 'brand', label: '品牌', minWidth: 120 },
+  { key: 'unit', label: '单位', width: 90 },
+  { key: 'unitPrice', label: '单价', width: 132, align: 'right' },
+  { key: 'supplierName', label: '供货单位', minWidth: 180 },
+  { key: 'supplierContact', label: '联系人', width: 130 },
+  { key: 'supplierPhone', label: '联系电话', width: 150 },
+  { key: 'active', label: '状态', width: 104 },
+  { key: 'actions', label: '操作', width: 150 },
 ];
 
 const filteredMaterials = computed(() => {
@@ -50,12 +69,23 @@ const filteredMaterials = computed(() => {
   );
 });
 
+const visibleMaterials = computed(() =>
+  filteredMaterials.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value),
+);
+
+watch(keyword, () => {
+  page.value = 1;
+});
+watch(filteredMaterials, (rows) => {
+  page.value = Math.min(page.value, Math.max(1, Math.ceil(rows.length / pageSize.value)));
+});
+
 async function refresh(): Promise<void> {
   loading.value = true;
   try {
     materials.value = await apiRequest<PettyMaterial[]>(PETTY_API.materials);
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '物资库加载失败');
+    ElMessage.error(error instanceof Error ? error.message : '物资库加载失败');
   } finally {
     loading.value = false;
   }
@@ -67,7 +97,7 @@ function openCreate(): void {
     name: '',
     brand: '',
     unit: '',
-    unitPriceYuan: 0,
+    unitPriceCents: 0,
     supplierName: '',
     supplierContact: '',
     supplierPhone: '',
@@ -82,7 +112,7 @@ function openEdit(record: PettyMaterial): void {
     name: record.name,
     brand: record.brand,
     unit: record.unit,
-    unitPriceYuan: record.unitPriceCents / 100,
+    unitPriceCents: record.unitPriceCents,
     supplierName: record.supplierName,
     supplierContact: record.supplierContact ?? '',
     supplierPhone: record.supplierPhone ?? '',
@@ -96,7 +126,7 @@ function payload(): PettyMaterialPayload {
     name: form.name.trim(),
     brand: form.brand.trim(),
     unit: form.unit.trim(),
-    unitPriceCents: Math.round(form.unitPriceYuan * 100),
+    unitPriceCents: Math.round(form.unitPriceCents ?? 0),
     supplierName: form.supplierName.trim(),
     supplierContact: form.supplierContact.trim() || null,
     supplierPhone: form.supplierPhone.trim() || null,
@@ -106,7 +136,7 @@ function payload(): PettyMaterialPayload {
 
 async function save(): Promise<void> {
   if (!form.name.trim() || !form.brand.trim() || !form.supplierName.trim()) {
-    message.warning('物资名称、品牌与供货单位为必填项');
+    ElMessage.warning('物资名称、品牌与供货单位为必填项');
     return;
   }
   saving.value = true;
@@ -115,33 +145,33 @@ async function save(): Promise<void> {
       method: editingId.value ? 'PATCH' : 'POST',
       body: payload(),
     });
-    message.success('物资已保存');
+    ElMessage.success('物资已保存');
     editorOpen.value = false;
     await refresh();
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '物资保存失败');
+    ElMessage.error(error instanceof Error ? error.message : '物资保存失败');
   } finally {
     saving.value = false;
   }
 }
 
-function deactivate(record: PettyMaterial): void {
-  Modal.confirm({
-    title: `停用「${record.name}（${record.brand}）」？`,
-    content: '停用后发起人无法再选择该物资，历史单据不受影响。',
-    okText: '停用',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        await apiRequest(PETTY_API.material(record.id), { method: 'DELETE' });
-        message.success('物资已停用');
-        await refresh();
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : '停用失败');
-      }
-    },
-  });
+async function deactivate(record: PettyMaterial): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '停用后发起人无法再选择该物资，历史单据不受影响。',
+      `停用「${record.name}（${record.brand}）」？`,
+      { type: 'warning', confirmButtonText: '停用', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await apiRequest(PETTY_API.material(record.id), { method: 'DELETE' });
+    ElMessage.success('物资已停用');
+    await refresh();
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '停用失败');
+  }
 }
 
 function parseImportRows(): PettyMaterialPayload[] {
@@ -176,11 +206,11 @@ async function runImport(): Promise<void> {
   try {
     rows = parseImportRows();
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '导入内容解析失败');
+    ElMessage.error(error instanceof Error ? error.message : '导入内容解析失败');
     return;
   }
   if (rows.length === 0) {
-    message.warning('请粘贴需要导入的物资数据');
+    ElMessage.warning('请粘贴需要导入的物资数据');
     return;
   }
   saving.value = true;
@@ -189,12 +219,12 @@ async function runImport(): Promise<void> {
       method: 'POST',
       body: { materials: rows },
     });
-    message.success(`成功导入 ${result.imported} 条物资`);
+    ElMessage.success(`成功导入 ${result.imported} 条物资`);
     importOpen.value = false;
     importText.value = '';
     await refresh();
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '批量导入失败');
+    ElMessage.error(error instanceof Error ? error.message : '批量导入失败');
   } finally {
     saving.value = false;
   }
@@ -205,147 +235,177 @@ async function readImportFile(file: File): Promise<boolean> {
   return false;
 }
 
+async function onImportFileChange(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (file) await readImportFile(file);
+  input.value = '';
+}
+
 onMounted(() => {
   void refresh();
 });
 </script>
 
 <template>
-  <div class="petty-materials-page">
+  <div class="petty-materials-page ui-page">
     <AppPageHeader
       description="零星采买物资基础数据库，支持批量导入维护"
       eyebrow="业务中心"
       title="零星采买物资库"
     >
       <template #actions>
-        <a-space wrap>
-          <a-button type="primary" @click="openCreate">
-            <template #icon><PlusOutlined /></template>
+        <div class="ui-actions">
+          <el-button type="primary" @click="openCreate">
+            <el-icon><Plus /></el-icon>
             新增物资
-          </a-button>
-          <a-button @click="importOpen = true">
-            <template #icon><UploadOutlined /></template>
+          </el-button>
+          <el-button @click="importOpen = true">
+            <el-icon><Upload /></el-icon>
             批量导入
-          </a-button>
-          <a-button @click="refresh">
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
-        </a-space>
+          </el-button>
+          <el-button :icon="Refresh" :loading="loading" aria-label="刷新" title="刷新" @click="refresh" />
+        </div>
       </template>
     </AppPageHeader>
 
-    <a-input
-      v-model:value="keyword"
-      allow-clear
-      placeholder="按名称、品牌、供货单位搜索"
-      style="max-width: 320px; margin-bottom: 16px"
-    />
-
-    <a-table
-      :columns="columns"
-      :data-source="filteredMaterials"
-      :loading="loading"
-      :pagination="{ pageSize: 20, showTotal: (total: number) => `共 ${total} 条` }"
-      row-key="id"
-      size="middle"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'unitPrice'">
-          {{ formatYuan((record as PettyMaterial).unitPriceCents) }}
-        </template>
-        <template v-else-if="column.key === 'active'">
-          <a-tag :color="(record as PettyMaterial).active ? 'success' : 'default'">
-            {{ (record as PettyMaterial).active ? '启用' : '已停用' }}
-          </a-tag>
-        </template>
-        <template v-else-if="column.key === 'actions'">
-          <a-space>
-            <a-button size="small" type="link" @click="openEdit(record as PettyMaterial)">
-              编辑
-            </a-button>
-            <a-button
-              v-if="(record as PettyMaterial).active"
-              danger
-              size="small"
-              type="link"
-              @click="deactivate(record as PettyMaterial)"
-            >
-              停用
-            </a-button>
-          </a-space>
-        </template>
+    <WorkspaceFilterBar label="物资库筛选" :result-label="`共 ${filteredMaterials.length} 条物资`">
+      <template #search>
+        <el-input
+          v-model="keyword"
+          :prefix-icon="Search"
+          clearable
+          placeholder="按名称、品牌、供货单位搜索"
+          aria-label="搜索物资"
+        />
       </template>
-    </a-table>
+    </WorkspaceFilterBar>
 
-    <a-modal
-      v-model:open="editorOpen"
-      :confirm-loading="saving"
-      :title="editingId ? '编辑物资' : '新增物资'"
-      @ok="save"
+    <UiDataList
+      :columns="columns"
+      :loading="loading"
+      :rows="visibleMaterials"
+      empty-text="暂无符合条件的物资"
     >
-      <a-form layout="vertical">
-        <a-form-item label="物资名称" required>
-          <a-input v-model:value="form.name" :maxlength="200" placeholder="如：大米" />
-        </a-form-item>
-        <a-form-item label="品牌" required>
-          <a-input v-model:value="form.brand" :maxlength="100" placeholder="如：五常" />
-        </a-form-item>
-        <a-form-item label="单位">
-          <a-input v-model:value="form.unit" :maxlength="20" placeholder="如：斤、箱" />
-        </a-form-item>
-        <a-form-item label="单价（元）" required>
-          <a-input-number v-model:value="form.unitPriceYuan" :min="0" :precision="2" />
-        </a-form-item>
-        <a-form-item label="供货单位" required>
-          <a-input v-model:value="form.supplierName" :maxlength="300" />
-        </a-form-item>
-        <a-form-item label="联系人">
-          <a-input v-model:value="form.supplierContact" :maxlength="100" />
-        </a-form-item>
-        <a-form-item label="联系电话">
-          <a-input v-model:value="form.supplierPhone" :maxlength="50" />
-        </a-form-item>
-        <a-form-item v-if="editingId" label="状态">
-          <a-switch
-            v-model:checked="form.active"
-            checked-children="启用"
-            un-checked-children="停用"
+      <template #cell-unitPrice="{ row }">{{ formatYuan(row.unitPriceCents) }}</template>
+      <template #cell-active="{ row }">
+        <el-tag :type="row.active ? 'success' : 'info'">{{ row.active ? '启用' : '已停用' }}</el-tag>
+      </template>
+      <template #mobile-title="{ row }">
+        <strong>{{ row.name }}</strong>
+        <span class="ui-text-muted"> · {{ row.brand }}</span>
+      </template>
+      <template #actions="{ row }">
+        <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+        <el-button v-if="row.active" link type="danger" @click="deactivate(row)">停用</el-button>
+      </template>
+    </UiDataList>
+
+    <UiPagination v-model:page="page" v-model:page-size="pageSize" :total="filteredMaterials.length" />
+
+    <UiDialog v-model="editorOpen" :title="editingId ? '编辑物资' : '新增物资'">
+      <el-form class="ui-fields" :class="{ 'is-compact': isCompact }" label-position="top">
+        <el-form-item class="ui-field-full" label="物资名称" required>
+          <el-input v-model="form.name" :maxlength="200" placeholder="如：大米" />
+        </el-form-item>
+        <el-form-item label="品牌" required>
+          <el-input v-model="form.brand" :maxlength="100" placeholder="如：五常" />
+        </el-form-item>
+        <el-form-item label="单位">
+          <el-input v-model="form.unit" :maxlength="20" placeholder="如：斤、箱" />
+        </el-form-item>
+        <el-form-item label="单价" required>
+          <MoneyInput v-model="form.unitPriceCents" aria-label="物资单价" />
+        </el-form-item>
+        <el-form-item label="供货单位" required>
+          <el-input v-model="form.supplierName" :maxlength="300" />
+        </el-form-item>
+        <el-form-item label="联系人">
+          <el-input v-model="form.supplierContact" :maxlength="100" />
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input v-model="form.supplierPhone" :maxlength="50" />
+        </el-form-item>
+        <el-form-item v-if="editingId" label="状态">
+          <el-switch
+            :model-value="form.active"
+            active-text="启用"
+            inactive-text="停用"
+            @update:model-value="form.active = Boolean($event)"
           />
-        </a-form-item>
-      </a-form>
-    </a-modal>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editorOpen = false">取消</el-button>
+        <el-button :loading="saving" type="primary" @click="save">保存</el-button>
+      </template>
+    </UiDialog>
 
-    <a-modal
-      v-model:open="importOpen"
-      :confirm-loading="saving"
-      title="批量导入物资"
-      width="640px"
-      @ok="runImport"
-    >
-      <a-space direction="vertical" style="width: 100%">
-        <a-alert
-          message="从 Excel 复制数据后直接粘贴，或上传 CSV 文件。每行格式：名称,品牌,单位,单价(元),供货单位,联系人,电话"
+    <UiDialog v-model="importOpen" title="批量导入物资" :width="640">
+      <div class="petty-materials__import">
+        <el-alert
+          title="从 Excel 复制数据后直接粘贴，或上传 CSV 文件。每行格式：名称,品牌,单位,单价(元),供货单位,联系人,电话"
           show-icon
           type="info"
+          :closable="false"
         />
-        <a-upload
-          :before-upload="readImportFile"
-          :max-count="1"
-          :show-upload-list="false"
-          accept=".csv,.txt,.tsv"
-        >
-          <a-button>
-            <template #icon><UploadOutlined /></template>
+        <div class="petty-materials__file-entry">
+          <input
+            ref="importFileInput"
+            accept=".csv,.txt,.tsv"
+            class="petty-materials__file-input"
+            type="file"
+            @change="onImportFileChange"
+          />
+          <el-button @click="importFileInput?.click()">
+            <el-icon><Upload /></el-icon>
             选择 CSV 文件
-          </a-button>
-        </a-upload>
-        <a-textarea
-          v-model:value="importText"
-          :auto-size="{ minRows: 8, maxRows: 16 }"
+          </el-button>
+        </div>
+        <el-input
+          v-model="importText"
+          type="textarea"
+          :autosize="{ minRows: 8, maxRows: 16 }"
+          aria-label="批量导入内容"
           placeholder="大米&#9;五常&#9;斤&#9;3.50&#9;某某粮油&#9;张三&#9;13800000000"
         />
-      </a-space>
-    </a-modal>
+      </div>
+      <template #footer>
+        <el-button @click="importOpen = false">取消</el-button>
+        <el-button :loading="saving" type="primary" @click="runImport">开始导入</el-button>
+      </template>
+    </UiDialog>
   </div>
 </template>
+
+<style scoped>
+.petty-materials-page {
+  min-width: 0;
+}
+
+.petty-materials__import {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.petty-materials__file-entry {
+  display: flex;
+  min-width: 0;
+}
+
+.petty-materials__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.petty-materials-page :deep(.el-textarea) {
+  min-width: 0;
+}
+</style>

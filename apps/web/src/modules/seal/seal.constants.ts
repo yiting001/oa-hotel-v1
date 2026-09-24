@@ -26,24 +26,26 @@ export const sealAssetStatusOptions = [
   { label: '外借中', value: 'BORROWED' },
 ] as const;
 
-export const sealAssetStatusMeta: Record<string, { label: string; color: string }> = {
+export type SealTagTone = 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
+export const sealAssetStatusMeta: Record<string, { label: string; color: SealTagTone }> = {
   AVAILABLE: { label: '可用', color: 'success' },
   BORROWED: { label: '外借中', color: 'warning' },
 };
 
-export const sealExecutionStatusMeta: Record<string, { label: string; color: string }> = {
-  NOT_CHECKED_OUT: { label: '待领用', color: 'processing' },
+export const sealExecutionStatusMeta: Record<string, { label: string; color: SealTagTone }> = {
+  NOT_CHECKED_OUT: { label: '待领用', color: 'primary' },
   CHECKED_OUT: { label: '已领用', color: 'warning' },
   RETURNED: { label: '已归还', color: 'success' },
-  RETURNED_WITH_EXCEPTION: { label: '异常归还', color: 'error' },
-  NOT_EXECUTED: { label: '待用印', color: 'processing' },
+  RETURNED_WITH_EXCEPTION: { label: '异常归还', color: 'danger' },
+  NOT_EXECUTED: { label: '待用印', color: 'primary' },
   EXECUTED: { label: '已用印', color: 'success' },
 };
 
-export function getAssetStatusMeta(status: string): { label: string; color: string } {
-  return sealAssetStatusMeta[status] ?? { label: status, color: 'default' };
+export function getAssetStatusMeta(status: string): { label: string; color: SealTagTone } {
+  return sealAssetStatusMeta[status] ?? { label: status, color: 'info' };
 }
 
-export function getExecutionStatusMeta(status: string): { label: string; color: string } {
-  return sealExecutionStatusMeta[status] ?? { label: status, color: 'default' };
+export function getExecutionStatusMeta(status: string): { label: string; color: SealTagTone } {
+  return sealExecutionStatusMeta[status] ?? { label: status, color: 'info' };
 }

@@ -45,3 +45,16 @@ const safeBody = computed(() => DOMPurify.sanitize(props.content?.body ?? ''));
     </article>
   </el-drawer>
 </template>
+
+<style scoped>
+.portal-content-detail { display: grid; gap: 16px; }
+.portal-content-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--color-text-tertiary); font-size: 13px; }
+.portal-content-detail h1 { margin: 0; font-size: 24px; font-weight: 600; }
+.portal-content-detail__summary { margin: 0; color: var(--color-text-secondary); line-height: 1.7; }
+.portal-content-detail__body { color: var(--color-text-secondary); font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.portal-content-detail__body :deep(img) { max-width: 100%; height: auto; border-radius: var(--radius-md); }
+.portal-content-detail__attachments { display: grid; gap: 8px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.portal-content-detail__attachments h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.portal-content-detail__attachments ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.portal-content-detail__attachments li { display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: 13px; overflow-wrap: anywhere; }
+</style>

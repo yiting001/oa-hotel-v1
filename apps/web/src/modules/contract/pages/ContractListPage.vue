@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { ClearOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue';
+import WorkspaceMetricStrip from '../../../shared/components/WorkspaceMetricStrip.vue';
+import WorkspaceFilterBar from '../../../shared/components/WorkspaceFilterBar.vue';
+import { Plus, Refresh, Search, Close } from '@element-plus/icons-vue';
 import type { DocumentStatus, DocumentSummary, DocumentType } from '@oa/contracts';
 import { requiredBusinessModulePermissions } from '@oa/contracts';
-import { message } from 'ant-design-vue';
-import { computed, onMounted, ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
-import DocumentTable from '../../../shared/components/DocumentTable.vue';
-import WorkspaceFilterBar from '../../../shared/components/WorkspaceFilterBar.vue';
-import WorkspaceMetricStrip from '../../../shared/components/WorkspaceMetricStrip.vue';
+import StatusTag from '../../../shared/components/StatusTag.vue';
 import { documentDetailPath, documentTypeMeta } from '../../../shared/document';
+import { formatDateTime } from '../../../shared/format';
 import { useSessionStore } from '../../../shared/session';
 import { useWorkflowStore } from '../../../shared/workflow';
+import UiDataList from '../../../ui/UiDataList.vue';
+import UiPagination from '../../../ui/UiPagination.vue';
 import {
   CONTRACT_DOCUMENT_TYPES,
   CONTRACT_ROUTE_NAMES,
@@ -25,149 +28,109 @@ const workflow = useWorkflowStore();
 const createPermissions = requiredBusinessModulePermissions('CONTRACT', 'CREATE');
 const canCreate = computed(() => createPermissions.every((code) => session.can(code)));
 const keyword = ref('');
-const documentType = ref<DocumentType>();
-const documentStatus = ref<DocumentStatus>();
+const documentType = ref<DocumentType | ''>('');
+const documentStatus = ref<DocumentStatus | ''>('');
+const page = ref(1);
+const pageSize = ref(10);
 
 const contractDocuments = computed(() =>
   workflow.documents.filter((document) => CONTRACT_DOCUMENT_TYPES.includes(document.documentType)),
 );
-
 const filteredDocuments = computed(() => {
-  const normalizedKeyword = keyword.value.trim().toLocaleLowerCase();
-  return contractDocuments.value.filter((document) => {
-    const matchesKeyword =
-      !normalizedKeyword ||
-      document.title.toLocaleLowerCase().includes(normalizedKeyword) ||
-      documentTypeMeta[document.documentType].label.toLocaleLowerCase().includes(normalizedKeyword);
-    const matchesType = !documentType.value || document.documentType === documentType.value;
-    const matchesStatus = !documentStatus.value || document.status === documentStatus.value;
-    return matchesKeyword && matchesType && matchesStatus;
-  });
+  const query = keyword.value.trim().toLocaleLowerCase();
+  return contractDocuments.value.filter((document) =>
+    (!query || document.title.toLocaleLowerCase().includes(query) ||
+      documentTypeMeta[document.documentType].label.toLocaleLowerCase().includes(query)) &&
+    (!documentType.value || document.documentType === documentType.value) &&
+    (!documentStatus.value || document.status === documentStatus.value),
+  );
 });
-
-const statusCounts = computed(() => ({
-  all: contractDocuments.value.length,
-  attention: contractDocuments.value.filter((document) =>
-    ['DRAFT', 'RETURNED'].includes(document.status),
-  ).length,
-  reviewing: contractDocuments.value.filter((document) => document.status === 'IN_REVIEW').length,
-  approved: contractDocuments.value.filter((document) => document.status === 'APPROVED').length,
-}));
-const metricItems = computed(() => [
-  { key: 'all', label: '全部单据', value: statusCounts.value.all },
-  { key: 'attention', label: '待完善', value: statusCounts.value.attention },
-  { key: 'reviewing', label: '审批中', value: statusCounts.value.reviewing },
-  { key: 'approved', label: '已通过', value: statusCounts.value.approved },
+watch([keyword, documentType, documentStatus], () => { page.value = 1; });
+watch(filteredDocuments, (rows) => {
+  page.value = Math.min(page.value, Math.max(1, Math.ceil(rows.length / pageSize.value)));
+});
+const visibleDocuments = computed(() => filteredDocuments.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
+const metricStripItems = computed(() => [
+  { key: 'all', label: '全部单据', value: contractDocuments.value.length },
+  { key: 'incomplete', label: '待完善', value: contractDocuments.value.filter((document) => ['DRAFT', 'RETURNED'].includes(document.status)).length },
+  { key: 'reviewing', label: '审批中', value: contractDocuments.value.filter((document) => document.status === 'IN_REVIEW').length },
+  { key: 'approved', label: '已通过', value: contractDocuments.value.filter((document) => document.status === 'APPROVED').length },
 ]);
-const hasActiveFilters = computed(
-  () =>
-    Boolean(keyword.value.trim()) || Boolean(documentType.value) || Boolean(documentStatus.value),
-);
+const columns = [
+  { key: 'title', label: '单据标题', minWidth: 260 },
+  { key: 'documentType', label: '类型', width: 160 },
+  { key: 'status', label: '状态', width: 110 },
+  { key: 'revision', label: '修订', width: 76 },
+  { key: 'updatedAt', label: '更新时间', width: 180 },
+  { key: 'actions', label: '操作', width: 90 },
+];
 
 async function refresh(): Promise<void> {
-  try {
-    await workflow.refresh();
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '合同单据加载失败');
-  }
+  try { await workflow.refresh(); }
+  catch (error) { ElMessage.error(error instanceof Error ? error.message : '合同单据加载失败'); }
 }
-
 function openDocument(document: DocumentSummary): void {
   void router.push(documentDetailPath(document.documentType, document.id));
 }
-
 function resetFilters(): void {
   keyword.value = '';
-  documentType.value = undefined;
-  documentStatus.value = undefined;
+  documentType.value = '';
+  documentStatus.value = '';
 }
-
-onMounted(() => {
-  void refresh();
-});
+onMounted(() => { void refresh(); });
 </script>
 
 <template>
-  <div class="contract-list-page">
-    <AppPageHeader
-      description="合同请示、签约审批与履约付款"
-      eyebrow="合同管理"
-      title="合同与支出管理"
-    >
+  <div class="ui-page contract-list-page">
+    <AppPageHeader eyebrow="合同管理" title="合同与支出管理" description="合同请示、签约审批与履约付款">
       <template #actions>
-        <a-space wrap>
-          <a-button
-            v-if="canCreate"
-            type="primary"
-            @click="router.push({ name: CONTRACT_ROUTE_NAMES.requestCreate })"
-          >
-            <template #icon><PlusOutlined /></template>
-            新建请示
-          </a-button>
-          <a-button
-            v-if="canCreate"
-            @click="router.push({ name: CONTRACT_ROUTE_NAMES.approvalCreate })"
-          >
-            <template #icon><PlusOutlined /></template>
-            新建合同审批
-          </a-button>
-          <a-button
-            v-if="canCreate"
-            @click="router.push({ name: CONTRACT_ROUTE_NAMES.paymentCreate })"
-          >
-            <template #icon><PlusOutlined /></template>
-            新建付款申请
-          </a-button>
-          <a-button aria-label="刷新" :loading="workflow.loading" @click="refresh">
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
-        </a-space>
+        <div class="ui-actions">
+          <el-button v-if="canCreate" type="primary" @click="router.push({ name: CONTRACT_ROUTE_NAMES.requestCreate })"><el-icon><Plus /></el-icon>新建请示</el-button>
+          <el-button v-if="canCreate" @click="router.push({ name: CONTRACT_ROUTE_NAMES.approvalCreate })"><el-icon><Plus /></el-icon>合同审批</el-button>
+          <el-button v-if="canCreate" @click="router.push({ name: CONTRACT_ROUTE_NAMES.paymentCreate })"><el-icon><Plus /></el-icon>付款申请</el-button>
+          <el-button :icon="Refresh" :loading="workflow.loading" aria-label="刷新" title="刷新" @click="refresh" />
+        </div>
       </template>
     </AppPageHeader>
-
-    <WorkspaceMetricStrip :items="metricItems" label="合同单据统计" />
-
+    <WorkspaceMetricStrip label="合同单据统计" :items="metricStripItems" />
     <WorkspaceFilterBar label="合同单据筛选" :result-label="`共 ${filteredDocuments.length} 条`">
       <template #search>
-        <a-input v-model:value="keyword" allow-clear placeholder="搜索单据标题或类型">
-          <template #prefix><SearchOutlined /></template>
-        </a-input>
+        <el-input v-model="keyword" clearable :prefix-icon="Search" placeholder="搜索单据标题或类型" aria-label="搜索单据" />
       </template>
       <template #filters>
-        <a-select
-          v-model:value="documentType"
-          aria-label="合同类型"
-          :options="CONTRACT_TYPE_OPTIONS"
-          allow-clear
-          placeholder="全部类型"
-        />
-        <a-select
-          v-model:value="documentStatus"
-          aria-label="合同状态"
-          :options="DOCUMENT_STATUS_OPTIONS"
-          allow-clear
-          placeholder="全部状态"
-        />
+        <el-select v-model="documentType" placeholder="全部类型" aria-label="合同类型" clearable>
+          <el-option v-for="option in CONTRACT_TYPE_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+        </el-select>
+        <el-select v-model="documentStatus" placeholder="全部状态" aria-label="合同状态" clearable>
+          <el-option v-for="option in DOCUMENT_STATUS_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+        </el-select>
       </template>
-      <template v-if="hasActiveFilters" #actions>
-        <a-button @click="resetFilters">
-          <template #icon><ClearOutlined /></template>
-          清空筛选
-        </a-button>
+      <template #actions>
+        <el-button v-if="keyword || documentType || documentStatus" :icon="Close" @click="resetFilters">清空</el-button>
       </template>
     </WorkspaceFilterBar>
-
-    <DocumentTable
-      :documents="filteredDocuments"
-      :loading="workflow.loading"
-      @open="openDocument"
-    />
+    <UiDataList :rows="visibleDocuments" :columns="columns" :loading="workflow.loading" empty-text="暂无符合条件的合同单据" @row-click="openDocument">
+      <template #cell-title="{ row }"><span class="contract-list__title">{{ row.title }}</span></template>
+      <template #cell-documentType="{ row }">{{ documentTypeMeta[row.documentType].label }}</template>
+      <template #cell-status="{ row }"><StatusTag :status="row.status" /></template>
+      <template #cell-updatedAt="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+      <template #mobile-title="{ row }"><button class="contract-list__link" type="button" @click="openDocument(row)">{{ row.title }}</button><StatusTag :status="row.status" /></template>
+      <template #mobile-summary="{ row }"><div class="contract-list__summary">{{ documentTypeMeta[row.documentType].label }} · {{ formatDateTime(row.updatedAt) }} · 修订 {{ row.revision }}</div></template>
+      <template #actions="{ row }"><el-button link type="primary" @click="openDocument(row)">查看</el-button></template>
+    </UiDataList>
+    <UiPagination v-model:page="page" v-model:page-size="pageSize" :total="filteredDocuments.length" />
   </div>
 </template>
 
 <style scoped>
-.contract-list-page {
-  min-width: 0;
-}
+.contract-list__metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--color-border); }
+.contract-list__metrics.is-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.contract-list__metric { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px 20px; border-right: 1px solid var(--color-border); }
+.contract-list__metric:last-child { border-right: 0; }
+.contract-list__metrics.is-compact .contract-list__metric { padding: 12px 8px; }
+.contract-list__metric span, .contract-list__summary { color: var(--color-text-secondary); font-size: 13px; }
+.contract-list__metric strong { font-size: 22px; font-weight: 650; }
+.contract-list__title { font-weight: 600; }
+.contract-list__link { padding: 0; border: 0; background: none; color: var(--color-text); text-align: left; font: inherit; font-weight: 600; cursor: pointer; }
+.contract-list__summary { margin-top: 8px; }
 </style>

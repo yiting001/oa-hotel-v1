@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ReloadOutlined } from '@ant-design/icons-vue';
+import { Refresh } from '@element-plus/icons-vue';
 import type { EChartsOption } from 'echarts';
-import { message } from 'ant-design-vue';
+import { ElMessage } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { apiRequest } from '../../../shared/api';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import EChart from '../../../shared/components/EChart.vue';
+import WorkspaceMetricStrip from '../../../shared/components/WorkspaceMetricStrip.vue';
+import UiDataList from '../../../ui/UiDataList.vue';
 import { formatYuan } from '../../petty/petty.format';
 import { INSIGHT_API, TRACKED_DOCUMENT_TYPE_OPTIONS } from '../insight.config';
 import type { StatisticsBucket } from '../insight.types';
@@ -144,12 +146,12 @@ const summary = computed(() => ({
 }));
 
 const columns = computed(() => [
-  { title: '周期', dataIndex: 'period' },
-  ...typeColumns.map((type) => ({ title: type.label, key: `type-${type.value}` })),
-  { title: '合计单量', dataIndex: 'totalCount' },
-  { title: '合计金额', key: 'totalAmount' },
-  { title: '单量环比', key: 'countChange' },
-  { title: '金额环比', key: 'amountChange' },
+  { key: 'period', label: '周期', minWidth: 115 },
+  ...typeColumns.map((type) => ({ label: type.label, key: `type-${type.value}`, minWidth: 180 })),
+  { key: 'totalCount', label: '合计单量', minWidth: 100 },
+  { key: 'totalAmount', label: '合计金额', minWidth: 140 },
+  { key: 'countChange', label: '单量环比', minWidth: 100 },
+  { key: 'amountChange', label: '金额环比', minWidth: 100 },
 ]);
 
 async function refresh(): Promise<void> {
@@ -163,7 +165,7 @@ async function refresh(): Promise<void> {
       `${INSIGHT_API.statistics}?${params.toString()}`,
     );
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '统计数据加载失败');
+    ElMessage.error(error instanceof Error ? error.message : '统计数据加载失败');
   } finally {
     loading.value = false;
   }
@@ -182,97 +184,67 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="insight-statistics-page">
-    <AppPageHeader
-      description="按日/周/月/年统计三大模块单量与金额，支持多周期对比"
-      eyebrow="运营分析"
-      title="统计看板"
-    />
-
-    <a-card size="small" style="margin-bottom: 16px">
-      <a-space wrap>
-        <a-select
-          v-model:value="filters.granularity"
-          :options="granularityOptions"
-          style="width: 120px"
-          @change="refresh"
-        />
-        <a-range-picker
-          v-model:value="filters.dateRange"
-          value-format="YYYY-MM-DD"
-          @change="refresh"
-        />
-        <a-button @click="refresh">
-          <template #icon><ReloadOutlined /></template>
-          刷新
-        </a-button>
-      </a-space>
-    </a-card>
-
-    <a-row :gutter="16" style="margin-bottom: 16px">
-      <a-col :span="12">
-        <a-card size="small">
-          <a-statistic :value="summary.totalCount" title="区间内提交单量" />
-        </a-card>
-      </a-col>
-      <a-col :span="12">
-        <a-card size="small">
-          <a-statistic :value="formatYuan(summary.totalAmountCents)" title="区间内金额合计" />
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <a-row :gutter="16" style="margin-bottom: 16px">
-      <a-col :lg="14" :span="24">
-        <a-card size="small" title="单量与金额趋势">
-          <EChart :option="trendChartOption" />
-        </a-card>
-      </a-col>
-      <a-col :lg="10" :span="24">
-        <a-card size="small" title="各模块金额占比">
-          <EChart :option="typePieChartOption" />
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <a-card size="small" style="margin-bottom: 16px" title="各模块金额堆叠对比">
+  <main class="ui-page insight-statistics-page">
+    <AppPageHeader eyebrow="运营分析" title="统计看板" />
+    <div class="ui-toolbar insight-statistics-toolbar">
+      <el-select v-model="filters.granularity" aria-label="统计周期" @change="refresh">
+        <el-option v-for="option in granularityOptions" :key="option.value" :label="option.label" :value="option.value" />
+      </el-select>
+      <el-date-picker v-model="filters.dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" range-separator="至" @change="refresh" />
+      <div class="ui-toolbar__end">
+        <el-button :icon="Refresh" :loading="loading" @click="refresh">刷新</el-button>
+      </div>
+    </div>
+    <WorkspaceMetricStrip
+label="统计摘要" :items="[
+      { key: 'count', label: '区间内提交单量', value: summary.totalCount },
+      { key: 'amount', label: '区间内金额合计', value: formatYuan(summary.totalAmountCents) },
+    ]" />
+    <div class="insight-chart-grid">
+      <section class="insight-chart-panel">
+        <h2>单量与金额趋势</h2>
+        <EChart :option="trendChartOption" />
+      </section>
+      <section class="insight-chart-panel">
+        <h2>各模块金额占比</h2>
+        <EChart :option="typePieChartOption" />
+      </section>
+    </div>
+    <section class="insight-chart-panel insight-chart-panel--wide">
+      <h2>各模块金额堆叠对比</h2>
       <EChart :option="typeBarChartOption" />
-    </a-card>
-
-    <a-table
-      :columns="columns"
-      :data-source="periodRows"
-      :loading="loading"
-      :pagination="false"
-      row-key="period"
-      size="middle"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-for="type in typeColumns" :key="type.value">
-          <template v-if="column.key === `type-${type.value}`">
-            {{
-              (record as PeriodRow).byType[type.value]
-                ? `${(record as PeriodRow).byType[type.value].count} 单 / ${formatYuan(
-                    (record as PeriodRow).byType[type.value].amountCents,
-                  )}`
-                : '-'
-            }}
-          </template>
+    </section>
+    <section class="ui-section insight-period-section">
+      <h2>周期明细</h2>
+      <UiDataList :rows="periodRows" :columns="columns" :loading="loading" row-key="period" empty-text="暂无统计数据">
+        <template v-for="type in typeColumns" :key="type.value" #[`cell-type-${type.value}`]="{ row }">
+          {{ row.byType[type.value] ? `${row.byType[type.value].count} 单 / ${formatYuan(row.byType[type.value].amountCents)}` : '-' }}
         </template>
-        <template v-if="column.key === 'totalAmount'">
-          {{ formatYuan((record as PeriodRow).totalAmountCents) }}
+        <template #cell-totalAmount="{ row }">{{ formatYuan(row.totalAmountCents) }}</template>
+        <template #cell-countChange="{ row }"><el-tag effect="plain" size="small" :type="row.countChange === null ? 'info' : row.countChange > 0 ? 'danger' : row.countChange < 0 ? 'success' : 'info'">{{ changeTag(row.countChange).text }}</el-tag></template>
+        <template #cell-amountChange="{ row }"><el-tag effect="plain" size="small" :type="row.amountChange === null ? 'info' : row.amountChange > 0 ? 'danger' : row.amountChange < 0 ? 'success' : 'info'">{{ changeTag(row.amountChange).text }}</el-tag></template>
+        <template #mobile-title="{ row }">{{ row.period }} · {{ row.totalCount }} 单</template>
+        <template #mobile-summary="{ row }">
+          <div class="insight-period-facts">
+            <span>合计 {{ formatYuan(row.totalAmountCents) }}</span>
+            <span>单量环比 {{ changeTag(row.countChange).text }} · 金额环比 {{ changeTag(row.amountChange).text }}</span>
+            <span v-for="type in typeColumns" :key="type.value">{{ type.label }} {{ row.byType[type.value] ? `${row.byType[type.value].count} 单 / ${formatYuan(row.byType[type.value].amountCents)}` : '-' }}</span>
+          </div>
         </template>
-        <template v-else-if="column.key === 'countChange'">
-          <a-tag :color="changeTag((record as PeriodRow).countChange).color">
-            {{ changeTag((record as PeriodRow).countChange).text }}
-          </a-tag>
-        </template>
-        <template v-else-if="column.key === 'amountChange'">
-          <a-tag :color="changeTag((record as PeriodRow).amountChange).color">
-            {{ changeTag((record as PeriodRow).amountChange).text }}
-          </a-tag>
-        </template>
-      </template>
-    </a-table>
-  </div>
+      </UiDataList>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.insight-statistics-toolbar { margin-bottom: 16px; }
+.insight-chart-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
+.insight-chart-panel { min-width: 0; padding: 16px 0; border-top: 1px solid var(--color-border); }
+.insight-chart-panel--wide { margin-top: 16px; }
+.insight-chart-panel h2, .insight-period-section h2 { margin: 0 0 14px; font-size: 16px; font-weight: 650; }
+.insight-period-section { margin-top: 16px; }
+.insight-period-facts { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: 12px; }
+@media (max-width: 1023px) { .insight-chart-grid { grid-template-columns: 1fr; gap: 0; } }
+
+.insight-statistics-page { display: flex; flex-direction: column; gap: 24px; }
+</style>

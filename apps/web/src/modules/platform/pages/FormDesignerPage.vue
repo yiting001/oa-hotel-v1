@@ -3,7 +3,6 @@ import { DocumentChecked, FullScreen, Plus, Printer } from '@element-plus/icons-
 import {
   ElAlert,
   ElButton,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -14,15 +13,17 @@ import {
   ElSlider,
   ElTag,
 } from 'element-plus';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import { useSessionStore } from '../../../shared/session';
+import UiDialog from '../../../ui/UiDialog.vue';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { formApi } from '../api/designer-api';
 import A4Grid from '../components/A4Grid.vue';
 import A4Sheet from '../components/A4Sheet.vue';
 import DefinitionNavigator from '../components/DefinitionNavigator.vue';
 import FormFieldInspector from '../components/form/FormFieldInspector.vue';
 import FormFieldPalette from '../components/form/FormFieldPalette.vue';
-import PlatformPageHeader from '../components/PlatformPageHeader.vue';
 import type {
   FormDefinition,
   FormFieldModel,
@@ -44,8 +45,11 @@ import {
   validateFormSchema,
 } from '../utils/form';
 
+type DesignerPanel = 'preview' | 'library' | 'fields' | 'properties';
+
 const initialSchema = createDefaultFormSchema();
 const session = useSessionStore();
+const { isCompact } = useLayoutMode();
 const definitions = ref<FormDefinition[]>([]);
 const selectedDefinitionId = ref<string | null>(null);
 const selectedVersionId = ref<string | null>(null);
@@ -64,10 +68,8 @@ const zoomPercent = ref(100);
 const fitWidth = ref(true);
 let stageObserver: ResizeObserver | null = null;
 
-type MobilePanel = 'preview' | 'library' | 'fields' | 'properties';
-
-const mobilePanel = ref<MobilePanel>('preview');
-const mobilePanelOptions: Array<{ label: string; value: MobilePanel }> = [
+const compactPanel = ref<DesignerPanel>('preview');
+const compactPanelOptions: Array<{ label: string; value: DesignerPanel }> = [
   { label: '预览', value: 'preview' },
   { label: '表单库', value: 'library' },
   { label: '字段', value: 'fields' },
@@ -101,13 +103,31 @@ const displayedZoom = computed(() => Math.round(previewScale.value * 100));
 
 onMounted(() => {
   void initialize();
-  if (!a4Stage.value) return;
+  ensurePreviewPanel();
+  window.addEventListener('beforeprint', ensurePreviewPanel);
+});
+onBeforeUnmount(() => {
+  stageObserver?.disconnect();
+  window.removeEventListener('beforeprint', ensurePreviewPanel);
+});
+watch(a4Stage, (element) => {
+  stageObserver?.disconnect();
+  stageObserver = null;
+  if (!element) return;
   stageObserver = new ResizeObserver(([entry]) => {
     if (entry) stageWidth.value = entry.contentRect.width;
   });
-  stageObserver.observe(a4Stage.value);
+  stageObserver.observe(element);
 });
-onBeforeUnmount(() => stageObserver?.disconnect());
+
+function panelVisible(panel: DesignerPanel): boolean {
+  return !isCompact.value || compactPanel.value === panel;
+}
+
+/** 打印隔离样式只作用于当前画布：打印前确保 A4 预览处于挂载状态。 */
+function ensurePreviewPanel(): void {
+  if (isCompact.value) compactPanel.value = 'preview';
+}
 
 async function initialize(): Promise<void> {
   loading.value = true;
@@ -207,13 +227,24 @@ function removeField(): void {
   selectedFieldId.value = fields[Math.min(index, fields.length - 1)]?.id ?? null;
 }
 
-function moveField(direction: -1 | 1): void {
-  const index = schema.value.fields.findIndex((field) => field.id === selectedFieldId.value);
+function removeFieldById(id: string): void {
+  if (readonly.value) return;
+  selectedFieldId.value = id;
+  removeField();
+}
+
+function moveField(direction: -1 | 1, id: string | null = selectedFieldId.value): void {
+  if (!id) return;
+  const index = schema.value.fields.findIndex((field) => field.id === id);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= schema.value.fields.length || readonly.value) return;
   const fields = [...schema.value.fields];
   [fields[index], fields[target]] = [fields[target], fields[index]];
   markSchema({ ...schema.value, fields });
+}
+
+function moveFieldById(id: string, direction: -1 | 1): void {
+  moveField(direction, id);
 }
 
 function paletteDragStart(event: DragEvent, type: FormFieldType): void {
@@ -245,7 +276,9 @@ function fieldDrop(event: DragEvent, targetId: string | null): void {
   markSchema({ ...schema.value, fields });
 }
 
-function printForm(): void {
+async function printForm(): Promise<void> {
+  ensurePreviewPanel();
+  await nextTick();
   window.print();
 }
 
@@ -364,30 +397,28 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
 </script>
 
 <template>
-  <div class="platform-page form-page">
-    <PlatformPageHeader
-      eyebrow="系统设置 / Form Builder"
-      title="A4 审批表单设计"
+  <div class="form-page ui-page">
+    <AppPageHeader
       description="以 210 × 297 mm 纸张为设计基准，统一配置录入字段、打印网格、附件清单和审批意见。"
+      eyebrow="系统设置"
+      title="A4 审批表单设计"
     >
       <template #actions>
-        <ElTag
-          v-if="activeVersion"
-          :type="activeVersion.status === 'PUBLISHED' ? 'success' : 'warning'"
-          >V{{ activeVersion.version }} ·
-          {{ activeVersion.status === 'PUBLISHED' ? '已发布' : '草稿' }}</ElTag
-        >
-        <ElButton @click="printForm"
-          ><ElIcon><Printer /></ElIcon>打印预览</ElButton
-        >
-        <ElButton :disabled="readonly || !dirty" :loading="saving" @click="persist()"
-          ><ElIcon><DocumentChecked /></ElIcon>保存草稿</ElButton
-        >
-        <ElButton :disabled="readonly" :loading="saving" type="primary" @click="publish"
-          >发布版本</ElButton
-        >
+        <div class="ui-actions">
+          <ElTag v-if="activeVersion" :type="activeVersion.status === 'PUBLISHED' ? 'success' : 'warning'">
+            V{{ activeVersion.version }} · {{ activeVersion.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+          </ElTag>
+          <ElButton @click="printForm">
+            <ElIcon><Printer /></ElIcon>打印预览
+          </ElButton>
+          <ElButton :disabled="readonly || !dirty" :loading="saving" @click="persist()">
+            <ElIcon><DocumentChecked /></ElIcon>保存草稿
+          </ElButton>
+          <ElButton :disabled="readonly" :loading="saving" type="primary" @click="publish">发布版本</ElButton>
+        </div>
       </template>
-    </PlatformPageHeader>
+    </AppPageHeader>
+
     <ElAlert v-if="error" :closable="false" show-icon :title="error" type="error" />
     <ElAlert
       v-else-if="!canManage"
@@ -396,12 +427,14 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
       title="当前账号仅可查看表单定义，编辑、复制和发布操作已关闭"
       type="info"
     />
-    <div class="form-designer-shell">
-      <nav class="form-designer-mobile-tabs no-print" aria-label="表单设计面板">
-        <ElSegmented v-model="mobilePanel" :options="mobilePanelOptions" />
+
+    <div class="form-designer-shell" :data-compact="isCompact">
+      <nav v-if="isCompact" class="form-designer-mobile-tabs" aria-label="表单设计面板">
+        <ElSegmented v-model="compactPanel" :options="compactPanelOptions" />
       </nav>
+
       <DefinitionNavigator
-        :class="{ 'is-mobile-panel-active': mobilePanel === 'library' }"
+        v-if="panelVisible('library')"
         :definitions="definitions"
         :loading="loading"
         noun="表单"
@@ -413,27 +446,27 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
         @select-definition="selectDefinition"
         @select-version="selectVersion"
       />
+
       <FormFieldPalette
-        :class="{ 'is-mobile-panel-active': mobilePanel === 'fields' }"
+        v-if="panelVisible('fields')"
         :disabled="readonly"
+        :fields="schema.fields"
+        :selected-field-id="selectedFieldId"
         @add="addField"
         @drag-start="paletteDragStart"
+        @move="moveFieldById"
+        @remove="removeFieldById"
+        @select="selectedFieldId = $event"
       />
-      <main
-        class="form-canvas-workspace"
-        :class="{ 'is-mobile-panel-active': mobilePanel === 'preview' }"
-      >
-        <div class="designer-toolbar no-print">
-          <div>
-            <strong>{{ activeDefinition?.name ?? '请选择表单' }}</strong
-            ><small>A4 纵向 · {{ schema.fields.length }} 个字段 · 拖拽字段可调整顺序</small>
+
+      <main v-if="panelVisible('preview')" class="form-canvas-workspace">
+        <div class="designer-toolbar">
+          <div class="designer-toolbar__copy">
+            <strong>{{ activeDefinition?.name ?? '请选择表单' }}</strong>
+            <small>A4 纵向 · {{ schema.fields.length }} 个字段 · 拖拽字段可调整顺序</small>
           </div>
           <div class="a4-zoom-controls">
-            <ElButton
-              :icon="FullScreen"
-              :type="fitWidth ? 'primary' : 'default'"
-              @click="fitPreviewToWidth"
-            >
+            <ElButton :icon="FullScreen" :type="fitWidth ? 'primary' : 'default'" @click="fitPreviewToWidth">
               适应宽度
             </ElButton>
             <ElSlider
@@ -467,8 +500,9 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
           </A4Sheet>
         </div>
       </main>
+
       <FormFieldInspector
-        :class="{ 'is-mobile-panel-active': mobilePanel === 'properties' }"
+        v-if="panelVisible('properties')"
         :field="selectedField"
         :print-schema="printSchema"
         :readonly="readonly"
@@ -481,35 +515,219 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
       />
     </div>
 
-    <ElDialog v-model="createDialogOpen" title="新建表单定义" width="520px">
-      <ElForm label-position="top">
-        <ElFormItem label="表单名称"
-          ><ElInput v-model="createForm.name" maxlength="100" placeholder="例如：合同付款审批单"
-        /></ElFormItem>
-        <ElFormItem label="表单编码"
-          ><ElInput
+    <UiDialog v-model="createDialogOpen" title="新建表单定义" :width="520">
+      <ElForm class="ui-fields" label-position="top">
+        <ElFormItem label="表单名称">
+          <ElInput v-model="createForm.name" maxlength="100" placeholder="例如：合同付款审批单" />
+        </ElFormItem>
+        <ElFormItem label="表单编码">
+          <ElInput
             v-model="createForm.code"
             maxlength="60"
             placeholder="CONTRACT_PAYMENT_FORM"
             @input="createForm.code = createForm.code.toUpperCase()"
-        /></ElFormItem>
-        <ElFormItem label="绑定单据类型"
-          ><ElInput
+          />
+        </ElFormItem>
+        <ElFormItem label="绑定单据类型">
+          <ElInput
             v-model="createForm.documentType"
             maxlength="60"
             placeholder="可选，例如 CONTRACT_PAYMENT"
             @input="createForm.documentType = createForm.documentType.toUpperCase()"
-        /></ElFormItem>
-        <ElFormItem label="用途说明"
-          ><ElInput v-model="createForm.description" maxlength="300" :rows="3" type="textarea"
-        /></ElFormItem>
+          />
+        </ElFormItem>
+        <ElFormItem class="ui-field-full" label="用途说明">
+          <ElInput v-model="createForm.description" maxlength="300" :rows="3" type="textarea" />
+        </ElFormItem>
       </ElForm>
-      <template #footer
-        ><ElButton @click="createDialogOpen = false">取消</ElButton
-        ><ElButton :loading="saving" type="primary" @click="createDefinition"
-          ><ElIcon><Plus /></ElIcon>创建</ElButton
-        ></template
-      >
-    </ElDialog>
+      <template #footer>
+        <ElButton @click="createDialogOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="createDefinition">
+          <ElIcon><Plus /></ElIcon>创建
+        </ElButton>
+      </template>
+    </UiDialog>
   </div>
 </template>
+
+<style scoped>
+.form-page {
+  min-width: 0;
+}
+.form-designer-shell {
+  display: grid;
+  min-height: 880px;
+  grid-template-areas:
+    'definitions canvas inspector'
+    'fields canvas inspector';
+  grid-template-columns: 235px minmax(0, 1fr) 300px;
+  grid-template-rows: 360px minmax(520px, 1fr);
+  overflow: hidden;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.form-designer-shell > :deep(.definition-nav) {
+  grid-area: definitions;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) 0 0 0;
+}
+.form-designer-shell > :deep(.form-palette) {
+  grid-area: fields;
+}
+.form-designer-shell > :deep(.form-inspector) {
+  grid-area: inspector;
+}
+.form-canvas-workspace {
+  min-width: 0;
+  grid-area: canvas;
+  background: var(--color-surface);
+}
+.designer-toolbar {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.designer-toolbar__copy {
+  display: flex;
+  min-width: 160px;
+  flex: 1;
+  flex-direction: column;
+}
+.designer-toolbar__copy small {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+.a4-zoom-controls {
+  display: flex;
+  min-width: 310px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.a4-zoom-controls :deep(.el-slider) {
+  width: 120px;
+}
+.a4-zoom-controls > span {
+  min-width: 52px;
+  padding: 5px 9px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.a4-stage {
+  height: calc(100% - 58px);
+  min-height: 820px;
+  padding: var(--space-lg);
+  overflow: auto;
+}
+.form-designer-mobile-tabs {
+  padding: 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.form-designer-mobile-tabs :deep(.el-segmented) {
+  width: 100%;
+}
+.form-designer-mobile-tabs :deep(.el-segmented__item) {
+  min-width: 0;
+  flex: 1;
+}
+.form-designer-shell[data-compact='true'] {
+  display: block;
+  min-height: 0;
+  overflow: visible;
+}
+.form-designer-shell[data-compact='true'] > :deep(.definition-nav) {
+  height: 320px;
+  border-right: 0;
+  border-radius: 0;
+}
+.form-designer-shell[data-compact='true'] .designer-toolbar {
+  align-items: stretch;
+  flex-direction: column;
+  padding: 12px 16px;
+}
+.form-designer-shell[data-compact='true'] .designer-toolbar__copy {
+  min-width: 0;
+}
+.form-designer-shell[data-compact='true'] .a4-zoom-controls {
+  min-width: 0;
+  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.form-designer-shell[data-compact='true'] .a4-zoom-controls :deep(.el-slider) {
+  min-width: 90px;
+  flex: 1;
+}
+.form-designer-shell[data-compact='true'] .a4-stage {
+  height: auto;
+  min-height: 480px;
+  padding: 16px;
+  overflow-x: auto;
+}
+</style>
+
+<style>
+/* A4 打印隔离：只隐藏 .form-page 内的界面，纸张保持可见并铺满 A4（不作用其它业务打印页）。 */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body,
+  #app {
+    width: 210mm;
+    min-width: 210mm;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+  }
+
+  .form-page * {
+    visibility: hidden !important;
+  }
+
+  .form-page .form-canvas-workspace {
+    display: block !important;
+  }
+
+  .form-page .a4-sheet,
+  .form-page .a4-sheet * {
+    visibility: visible !important;
+  }
+
+  .form-page .a4-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .form-page .a4-grid__field {
+    break-inside: avoid;
+    outline: 0 !important;
+  }
+
+  .form-page .a4-sheet__footer {
+    break-inside: avoid;
+  }
+}
+</style>

@@ -1,102 +1,48 @@
 <script setup lang="ts">
-defineProps<{
-  label: string;
-  resultLabel?: string;
-}>();
+import { useLayoutMode } from '../../ui/useLayoutMode';
+
+defineProps<{ label: string; resultLabel?: string }>();
+const { isCompact } = useLayoutMode();
 </script>
 
 <template>
-  <section :aria-label="label" class="workspace-filter-bar" data-testid="workspace-filter-bar">
-    <div class="workspace-filter-bar__search"><slot name="search" /></div>
-    <div v-if="$slots.filters" class="workspace-filter-bar__filters">
-      <slot name="filters" />
-    </div>
-    <div v-if="$slots.actions" class="workspace-filter-bar__actions">
-      <slot name="actions" />
-    </div>
-    <span v-if="resultLabel" class="workspace-filter-bar__result">{{ resultLabel }}</span>
+  <section
+    :aria-label="label"
+    class="workspace-filter-bar ui-toolbar"
+    :data-compact="isCompact"
+    data-testid="workspace-filter-bar"
+  >
+    <div v-if="$slots.search" class="workspace-filter-bar__search"><slot name="search" /></div>
+    <div v-if="$slots.filters" class="workspace-filter-bar__filters"><slot name="filters" /></div>
+    <div v-if="$slots.actions" class="workspace-filter-bar__actions"><slot name="actions" /></div>
+    <span v-if="resultLabel" class="workspace-filter-bar__result ui-text-muted">{{ resultLabel }}</span>
   </section>
 </template>
 
 <style scoped>
-.workspace-filter-bar {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
+.workspace-filter-bar { margin-bottom: 16px; }
 .workspace-filter-bar__search {
-  min-width: 220px;
-  max-width: 380px;
-  flex: 1 1 260px;
+  width: min(100%, var(--control-w-search));
+  flex: 0 0 auto;
 }
-
-.workspace-filter-bar__result {
-  margin-left: auto;
-}
-
+.workspace-filter-bar__search :deep(.el-input) { width: 100%; }
 .workspace-filter-bar__filters,
 .workspace-filter-bar__actions {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 10px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--filter-gap);
 }
-
-.workspace-filter-bar__filters :deep(.ant-select),
-.workspace-filter-bar__filters :deep(.el-select) {
-  width: 160px;
-}
-
-.workspace-filter-bar__search :deep(.ant-input-affix-wrapper),
-.workspace-filter-bar__search :deep(.ant-input-search),
-.workspace-filter-bar__search :deep(.el-input) {
-  width: 100%;
-}
-
-.workspace-filter-bar__result {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-@media (max-width: 900px) {
-  .workspace-filter-bar__search {
-    max-width: none;
-    flex-basis: 100%;
-  }
-}
-
-@media (max-width: 767px) {
-  .workspace-filter-bar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workspace-filter-bar__search {
-    min-width: 0;
-    max-width: none;
-    flex: 0 0 auto;
-  }
-
-  .workspace-filter-bar__filters {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workspace-filter-bar__filters :deep(.ant-select),
-  .workspace-filter-bar__filters :deep(.el-select),
-  .workspace-filter-bar__actions :deep(.ant-btn),
-  .workspace-filter-bar__actions :deep(.el-button) {
-    width: 100%;
-  }
-
-  .workspace-filter-bar__result {
-    margin-left: 0;
-    align-self: flex-end;
-  }
-}
+.workspace-filter-bar__filters :deep(.el-select) { width: var(--control-w-select); }
+/* 动作插槽在无内容时不占行（避免紧凑模式留下空档） */
+.workspace-filter-bar__actions:empty { display: none; }
+.workspace-filter-bar__result { margin-left: auto; flex: 0 0 auto; font-size: 13px; white-space: nowrap; }
+.workspace-filter-bar[data-compact='true'] .workspace-filter-bar__search,
+.workspace-filter-bar[data-compact='true'] .workspace-filter-bar__filters,
+.workspace-filter-bar[data-compact='true'] .workspace-filter-bar__actions { width: 100%; }
+.workspace-filter-bar[data-compact='true'] .workspace-filter-bar__search :deep(.el-select),
+.workspace-filter-bar[data-compact='true'] .workspace-filter-bar__filters :deep(.el-select) { width: 100%; }
+.workspace-filter-bar[data-compact='true'] .workspace-filter-bar__result { margin-left: 0; }
 </style>

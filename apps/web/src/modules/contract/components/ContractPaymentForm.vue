@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormInstance } from 'ant-design-vue';
+import type { FormInstance, FormRules } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { apiRequest, type ApiEnvelope } from '../../../shared/api';
 import AttachmentField from '../../../shared/components/AttachmentField.vue';
@@ -25,9 +25,11 @@ import type {
   EditorMode,
 } from '../contract.types';
 import { useContractDocumentEditor } from '../useContractDocumentEditor';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import ContractDocumentActions from './ContractDocumentActions.vue';
 
 const props = defineProps<{ mode: EditorMode; documentId?: string }>();
+const { isCompact } = useLayoutMode();
 const formRef = ref<FormInstance>();
 const session = useSessionStore();
 const directory = useDirectoryStore();
@@ -60,7 +62,8 @@ const form = reactive<ContractPaymentPayload>({
   attachments: [],
 });
 
-const rules = createContractPaymentRules(form);
+// 校验规则由领域层提供（FormItemRule），跨字段校验读取同一份 reactive 草稿
+const rules = computed<FormRules>(() => createContractPaymentRules(form));
 
 const departmentName = computed(() => {
   const departmentId = session.user?.departmentId;
@@ -174,11 +177,11 @@ function applyContractSnapshot(contractId: string): void {
   paymentAmountUppercase.value = '';
 }
 
-function handlePaymentMethodChange(value: PaymentMethod): void {
-  if (!PAYMENT_METHODS_REQUIRING_INSTRUMENT_NUMBER.includes(value)) {
+function handlePaymentMethodChange(value: string | number | boolean | undefined): void {
+  if (!PAYMENT_METHODS_REQUIRING_INSTRUMENT_NUMBER.includes(value as PaymentMethod)) {
     form.invoiceNumber = null;
   }
-  void formRef.value?.validateFields('invoiceNumber');
+  void formRef.value?.validateField('invoiceNumber').catch(() => undefined);
 }
 
 onMounted(() => {
@@ -187,206 +190,216 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="contract-document-form">
+  <div class="payment-form ui-page" :data-compact="isCompact">
     <DocumentFormLayout
       :description="props.mode === 'create' ? '已审批合同的履约付款申请' : '编辑合同付款申请'"
       :document-number="editor.documentNumber.value"
       :loading="editor.loading.value"
       :revision="editor.revision.value"
       :status="editor.status.value"
+      eyebrow="合同管理"
       :title="props.mode === 'create' ? '新建合同/协议支出申请' : '合同/协议支出申请'"
     >
-      <a-alert
+      <el-alert
         v-if="!editor.editable.value"
-        message="当前单据已进入流程，不可继续编辑。"
+        :closable="false"
         show-icon
+        title="当前单据已进入流程，不可继续编辑。"
         type="info"
       />
 
-      <a-form
+      <el-form
         ref="formRef"
         :disabled="!editor.editable.value"
         :model="form"
         :rules="rules"
-        layout="vertical"
+        label-position="top"
       >
-        <FormSection title="申请信息">
-          <div class="contract-form-grid">
-            <a-form-item label="申请编号">
-              <div class="contract-readonly-value">
-                {{ editor.documentNumber.value ?? '保存后自动生成' }}
-              </div>
-            </a-form-item>
-            <a-form-item label="申请部门">
-              <div class="contract-readonly-value">{{ departmentName }}</div>
-            </a-form-item>
-            <a-form-item label="申请人">
-              <div class="contract-readonly-value">{{ session.user?.displayName ?? '-' }}</div>
-            </a-form-item>
-            <a-form-item label="已审批合同" name="contractId">
-              <a-select
-                v-model:value="form.contractId"
-                :options="contractOptions"
-                option-filter-prop="label"
+        <FormSection title="申请信息" description="合同快照与预算数据用于校验本次付款额度。">
+          <div class="ui-fields">
+            <el-form-item label="申请编号">
+              <div class="readonly-value">{{ editor.documentNumber.value ?? '保存后自动生成' }}</div>
+            </el-form-item>
+            <el-form-item label="申请部门">
+              <div class="readonly-value">{{ departmentName }}</div>
+            </el-form-item>
+            <el-form-item label="申请人">
+              <div class="readonly-value">{{ session.user?.displayName ?? '-' }}</div>
+            </el-form-item>
+            <el-form-item label="已审批合同" prop="contractId">
+              <el-select
+                :model-value="form.contractId"
+                filterable
                 placeholder="请选择已审批合同"
-                show-search
-                @change="applyContractSnapshot"
-              />
-            </a-form-item>
+                @update:model-value="
+                  (value: string) => {
+                    form.contractId = value;
+                    applyContractSnapshot(value);
+                  }
+                "
+              >
+                <el-option
+                  v-for="option in contractOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </el-form-item>
           </div>
         </FormSection>
 
         <FormSection title="合同快照">
-          <a-alert
-            message="合同审批记录尚未存储履约起止日期，请根据合同正文补录并核对。"
+          <el-alert
+            :closable="false"
             show-icon
+            title="合同审批记录尚未存储履约起止日期，请根据合同正文补录并核对。"
             type="warning"
           />
-          <div class="contract-form-grid contract-form-grid--three">
-            <a-form-item class="contract-form-field--full" label="合同项目" name="project">
-              <a-input
-                v-model:value="form.project"
-                placeholder="从合同名称带出，可按实际付款项目修正"
+          <div class="ui-fields payment-grid payment-grid--three">
+            <el-form-item class="ui-field-full" label="合同项目" prop="project">
+              <el-input v-model="form.project" placeholder="从合同名称带出，可按实际付款项目修正" />
+            </el-form-item>
+            <el-form-item label="合同开始日期" prop="contractStartDate">
+              <el-date-picker
+                v-model="form.contractStartDate"
+                format="YYYY/MM/DD"
+                style="width: 100%"
+                type="date"
+                value-format="YYYY-MM-DD"
               />
-            </a-form-item>
-            <a-form-item label="合同开始日期" name="contractStartDate">
-              <a-input v-model:value="form.contractStartDate" type="date" />
-            </a-form-item>
-            <a-form-item label="合同结束日期" name="contractEndDate">
-              <a-input v-model:value="form.contractEndDate" type="date" />
-            </a-form-item>
-            <a-form-item label="合同签订日期" name="contractSigningDate">
-              <a-input v-model:value="form.contractSigningDate" disabled type="date" />
-            </a-form-item>
-            <a-form-item label="合同金额" name="contractAmountCents">
+            </el-form-item>
+            <el-form-item label="合同结束日期" prop="contractEndDate">
+              <el-date-picker
+                v-model="form.contractEndDate"
+                format="YYYY/MM/DD"
+                style="width: 100%"
+                type="date"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item label="合同签订日期" prop="contractSigningDate">
+              <el-date-picker
+                v-model="form.contractSigningDate"
+                disabled
+                format="YYYY/MM/DD"
+                style="width: 100%"
+                type="date"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item label="合同金额" prop="contractAmountCents">
               <MoneyInput v-model="form.contractAmountCents" aria-label="合同金额" disabled />
-            </a-form-item>
-            <a-form-item
-              class="contract-form-field--full"
-              label="乙方单位（全称）"
-              name="counterpartyFullName"
-            >
-              <a-input v-model:value="form.counterpartyFullName" disabled />
-            </a-form-item>
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="乙方单位（全称）" prop="counterpartyFullName">
+              <el-input v-model="form.counterpartyFullName" disabled />
+            </el-form-item>
           </div>
         </FormSection>
 
         <FormSection title="预算与执行">
-          <div class="contract-form-grid contract-form-grid--three">
-            <a-form-item label="预算金额" name="budgetAmountCents">
+          <div class="ui-fields payment-grid payment-grid--three">
+            <el-form-item label="预算金额" prop="budgetAmountCents">
               <MoneyInput v-model="form.budgetAmountCents" aria-label="预算金额" />
-            </a-form-item>
-            <a-form-item label="预算累计执行金额" name="budgetExecutedCents">
+            </el-form-item>
+            <el-form-item label="预算累计执行金额" prop="budgetExecutedCents">
               <MoneyInput v-model="form.budgetExecutedCents" aria-label="预算累计执行金额" />
-            </a-form-item>
-            <a-form-item label="会计科目" name="accountingSubject">
-              <a-input v-model:value="form.accountingSubject" placeholder="请输入会计科目" />
-            </a-form-item>
-            <a-form-item label="预计后续保养等费用" name="maintenanceEstimateCents">
+            </el-form-item>
+            <el-form-item label="会计科目" prop="accountingSubject">
+              <el-input v-model="form.accountingSubject" placeholder="请输入会计科目" />
+            </el-form-item>
+            <el-form-item label="预计后续保养等费用" prop="maintenanceEstimateCents">
               <MoneyInput v-model="form.maintenanceEstimateCents" aria-label="预计后续保养费用" />
-            </a-form-item>
-            <a-form-item label="合同约定付款次数" name="plannedPaymentCount">
-              <a-input-number
-                v-model:value="form.plannedPaymentCount"
-                :min="1"
-                :precision="0"
-                style="width: 100%"
-              />
-            </a-form-item>
-            <a-form-item label="本次为第几次付款" name="paymentSequence">
-              <a-input-number
-                v-model:value="form.paymentSequence"
-                :min="1"
-                :precision="0"
-                style="width: 100%"
-              />
-            </a-form-item>
-            <a-form-item label="累计已执行合同金额" name="executedAmountCents">
+            </el-form-item>
+            <el-form-item label="合同约定付款次数" prop="plannedPaymentCount">
+              <el-input-number v-model="form.plannedPaymentCount" :controls="false" :min="1" :precision="0" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="本次为第几次付款" prop="paymentSequence">
+              <el-input-number v-model="form.paymentSequence" :controls="false" :min="1" :precision="0" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="累计已执行合同金额" prop="executedAmountCents">
               <MoneyInput v-model="form.executedAmountCents" aria-label="累计已执行合同金额" />
-            </a-form-item>
+            </el-form-item>
           </div>
-          <div class="contract-calculation-strip">
-            <div>
-              <span>付款前合同余额</span><strong>{{ formatMoney(contractBalanceCents) }}</strong>
-            </div>
-            <div>
-              <span>本次后合同余额</span
-              ><strong>{{ formatMoney(remainingAfterPaymentCents) }}</strong>
-            </div>
-            <div>
-              <span>本次后预算余额</span><strong>{{ formatMoney(budgetRemainingCents) }}</strong>
-            </div>
-          </div>
+          <dl class="calc-strip">
+            <div><dt>付款前合同余额</dt><dd>{{ formatMoney(contractBalanceCents) }}</dd></div>
+            <div><dt>本次后合同余额</dt><dd>{{ formatMoney(remainingAfterPaymentCents) }}</dd></div>
+            <div><dt>本次后预算余额</dt><dd>{{ formatMoney(budgetRemainingCents) }}</dd></div>
+          </dl>
         </FormSection>
 
         <FormSection title="付款信息">
-          <div class="contract-form-grid contract-form-grid--three">
-            <a-form-item label="合同约定进度" name="plannedProgress">
-              <a-input v-model:value="form.plannedProgress" addon-after="%" placeholder="0 - 100" />
-            </a-form-item>
-            <a-form-item label="实际进度" name="actualProgress">
-              <a-input v-model:value="form.actualProgress" addon-after="%" placeholder="0 - 100" />
-            </a-form-item>
-            <a-form-item label="实际与合同进度差">
-              <div class="contract-readonly-value">{{ progressVariance }}</div>
-            </a-form-item>
-            <a-form-item class="contract-form-field--full" label="付款方式" name="paymentMethod">
-              <a-radio-group
-                v-model:value="form.paymentMethod"
-                @change="handlePaymentMethodChange($event.target.value)"
-              >
-                <a-radio
-                  v-for="option in PAYMENT_METHOD_OPTIONS"
-                  :key="option.value"
-                  :value="option.value"
-                >
+          <div class="ui-fields payment-grid payment-grid--three">
+            <el-form-item label="合同约定进度" prop="plannedProgress">
+              <el-input v-model="form.plannedProgress" placeholder="0 - 100">
+                <template #append>%</template>
+              </el-input>
+            </el-form-item>
+            <el-form-item label="实际进度" prop="actualProgress">
+              <el-input v-model="form.actualProgress" placeholder="0 - 100">
+                <template #append>%</template>
+              </el-input>
+            </el-form-item>
+            <el-form-item label="实际与合同进度差">
+              <div class="readonly-value">{{ progressVariance }}</div>
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="付款方式" prop="paymentMethod">
+              <el-radio-group :model-value="form.paymentMethod" @update:model-value="handlePaymentMethodChange">
+                <el-radio v-for="option in PAYMENT_METHOD_OPTIONS" :key="option.value" :value="option.value">
                   {{ option.label }}
-                </a-radio>
-              </a-radio-group>
-            </a-form-item>
-            <a-form-item label="票据号码" name="invoiceNumber">
-              <a-input
-                v-model:value="form.invoiceNumber"
+                </el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="票据号码" prop="invoiceNumber">
+              <el-input
+                v-model="form.invoiceNumber"
                 :disabled="!requiresInstrumentNumber"
                 placeholder="支票或承兑汇票号码"
               />
-            </a-form-item>
-            <a-form-item label="工程合同保修期开始" name="warrantyStartDate">
-              <a-input v-model:value="form.warrantyStartDate" type="date" />
-            </a-form-item>
-            <a-form-item label="工程合同保修期结束" name="warrantyEndDate">
-              <a-input v-model:value="form.warrantyEndDate" type="date" />
-            </a-form-item>
-            <a-form-item label="此次付款金额（小写）" name="paymentAmountCents">
+            </el-form-item>
+            <el-form-item label="工程合同保修期开始" prop="warrantyStartDate">
+              <el-date-picker
+                v-model="form.warrantyStartDate"
+                format="YYYY/MM/DD"
+                style="width: 100%"
+                type="date"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item label="工程合同保修期结束" prop="warrantyEndDate">
+              <el-date-picker
+                v-model="form.warrantyEndDate"
+                format="YYYY/MM/DD"
+                style="width: 100%"
+                type="date"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item label="此次付款金额（小写）" prop="paymentAmountCents">
               <MoneyInput v-model="form.paymentAmountCents" aria-label="此次付款金额" :min="0.01" />
-            </a-form-item>
-            <a-form-item label="此次付款金额（大写）">
-              <div class="contract-readonly-value">
-                {{ paymentAmountUppercase || '保存草稿后由系统生成' }}
-              </div>
-            </a-form-item>
-            <a-form-item
-              class="contract-form-field--full"
-              label="此次付款原因"
-              name="paymentReason"
-            >
-              <a-textarea
-                v-model:value="form.paymentReason"
-                :auto-size="{ minRows: 5, maxRows: 12 }"
+            </el-form-item>
+            <el-form-item label="此次付款金额（大写）">
+              <div class="readonly-value">{{ paymentAmountUppercase || '保存草稿后由系统生成' }}</div>
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="此次付款原因" prop="paymentReason">
+              <el-input
+                v-model="form.paymentReason"
+                :autosize="{ minRows: 5, maxRows: 12 }"
                 :maxlength="5000"
                 placeholder="请说明付款依据、履约情况及本次付款必要性"
-                show-count
+                show-word-limit
+                type="textarea"
               />
-            </a-form-item>
+            </el-form-item>
           </div>
         </FormSection>
 
         <FormSection title="附件材料">
-          <a-form-item name="attachments">
+          <el-form-item prop="attachments">
             <AttachmentField v-model="form.attachments" />
-          </a-form-item>
+          </el-form-item>
         </FormSection>
-      </a-form>
+      </el-form>
 
       <template #aside>
         <WorkflowSidebar :loading="editor.loading.value" :overview="editor.overview.value" />
@@ -406,4 +419,30 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped src="../contract-form.css"></style>
+<style scoped>
+.readonly-value {
+  display: flex;
+  min-height: var(--control-h);
+  align-items: center;
+  padding: 0 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+.payment-grid { margin-top: 16px; }
+.payment-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.calc-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 4px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.calc-strip dt { color: var(--color-text-tertiary); font-size: 12px; }
+.calc-strip dd { margin: 4px 0 0; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.payment-form[data-compact='true'] .payment-grid--three { grid-template-columns: minmax(0, 1fr); }
+.payment-form[data-compact='true'] .calc-strip { grid-template-columns: minmax(0, 1fr); }
+</style>

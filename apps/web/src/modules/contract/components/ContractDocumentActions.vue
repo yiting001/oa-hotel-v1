@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeftOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons-vue';
+import { ArrowLeft, Check, Promotion } from '@element-plus/icons-vue';
 
 withDefaults(
   defineProps<{
@@ -18,21 +18,20 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <a-button :disabled="saving || submitting" @click="emit('back')">
-    <template #icon><ArrowLeftOutlined /></template>
-    返回列表
-  </a-button>
-  <a-button :disabled="!editable || submitting" :loading="saving" @click="emit('save')">
-    <template #icon><SaveOutlined /></template>
-    保存草稿
-  </a-button>
-  <a-button
-    :disabled="!editable || saving"
-    :loading="submitting"
-    type="primary"
-    @click="emit('submit')"
-  >
-    <template #icon><SendOutlined /></template>
-    保存并提交
-  </a-button>
+  <div class="ui-actions">
+    <el-button :disabled="saving || submitting" @click="emit('back')">
+      <el-icon><ArrowLeft /></el-icon>返回列表
+    </el-button>
+    <el-button :disabled="!editable || submitting" :loading="saving" @click="emit('save')">
+      <el-icon><Check /></el-icon>保存草稿
+    </el-button>
+    <el-button
+      :disabled="!editable || saving"
+      :loading="submitting"
+      type="primary"
+      @click="emit('submit')"
+    >
+      <el-icon><Promotion /></el-icon>保存并提交
+    </el-button>
+  </div>
 </template>

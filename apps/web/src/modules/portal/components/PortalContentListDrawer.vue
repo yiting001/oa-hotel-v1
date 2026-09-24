@@ -100,3 +100,59 @@ function changePage(page: number): void {
     </template>
   </el-drawer>
 </template>
+
+<style scoped>
+.portal-category-list { display: grid; min-width: 0; }
+.portal-category-list > button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 88px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 4px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+}
+.portal-category-list > button:hover { background: var(--color-surface); }
+.portal-category-list > button > span:nth-child(2) { display: grid; min-width: 0; flex: 1; gap: 5px; }
+.portal-category-list strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.portal-category-list small { color: var(--color-text-tertiary); font-size: 12px; }
+.portal-category-list p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.portal-category-list > button > :deep(.el-icon) { flex: 0 0 auto; margin-top: 4px; color: var(--color-text-tertiary); }
+.portal-content-list__status {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  margin-top: 8px;
+  background: var(--color-danger);
+  border-radius: 50%;
+}
+.portal-content-list__status.is-read { background: var(--color-text-tertiary); }
+.portal-category-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+}
+html[data-layout='compact'] .portal-category-pagination { align-items: flex-start; flex-direction: column; }
+</style>

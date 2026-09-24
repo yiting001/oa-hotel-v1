@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { View } from '@element-plus/icons-vue';
-import type { WorkbenchItem } from '@oa/contracts';
-import type { TableInstance } from 'element-plus';
-import { nextTick, ref, watch } from 'vue';
+import type { DocumentType, WorkbenchItem } from '@oa/contracts';
+import { computed } from 'vue';
+import UiDataList, { type DataColumn } from '../../../ui/UiDataList.vue';
 import { documentTypeMeta, workflowNodeLabel } from '../../../shared/document';
 import { formatDateTime } from '../../../shared/format';
 
@@ -20,129 +20,95 @@ const emit = defineEmits<{
   open: [task: WorkbenchItem];
   'selection-change': [tasks: WorkbenchItem[]];
 }>();
-const table = ref<TableInstance>();
-let selectionSyncSequence = 0;
-let syncingDesktopSelection = false;
 
-watch(
-  () => [props.tasks, props.selectedIds] as const,
-  () => void syncDesktopSelection(),
-  { deep: true, immediate: true },
-);
+const columns: DataColumn[] = [
+  { key: 'documentTitle', label: '单据', minWidth: 240 },
+  { key: 'documentType', label: '流程类型', minWidth: 150 },
+  { key: 'processNodeName', label: '当前节点', minWidth: 150 },
+  { key: 'applicant', label: '发起人 / 部门', minWidth: 170 },
+  { key: 'updatedAt', label: '更新时间', minWidth: 170 },
+  { key: 'actions', label: '操作', width: 108 },
+];
+
+const selectedKeys = computed(() => props.selectedIds ?? []);
+
+function typeLabel(task: WorkbenchItem): string {
+  return documentTypeMeta[task.documentType as DocumentType]?.label ?? task.documentType;
+}
 
 function nodeLabel(task: WorkbenchItem): string {
   if (task.processNodeName) return task.processNodeName;
   if (task.assigneeRole) return workflowNodeLabel(task.assigneeRole);
-  return task.currentStep === null ? '-' : `第 ${task.currentStep + 1} 步`;
-}
-
-function typeLabel(task: WorkbenchItem): string {
-  return documentTypeMeta[task.documentType].label;
-}
-
-function toggleMobileSelection(task: WorkbenchItem, selected: boolean): void {
-  const selectedTasks = new Map(
-    props.tasks
-      .filter((item) => props.selectedIds.includes(item.id))
-      .map((item) => [item.id, item]),
-  );
-  if (selected) selectedTasks.set(task.id, task);
-  else selectedTasks.delete(task.id);
-  emit('selection-change', [...selectedTasks.values()]);
-}
-
-async function syncDesktopSelection(): Promise<void> {
-  const sequence = ++selectionSyncSequence;
-  await nextTick();
-  if (!table.value || sequence !== selectionSyncSequence) return;
-  syncingDesktopSelection = true;
-  table.value.clearSelection();
-  const selectedIds = new Set(props.selectedIds);
-  for (const task of props.tasks) {
-    if (selectedIds.has(task.id)) table.value.toggleRowSelection(task, true);
-  }
-  await nextTick();
-  if (sequence === selectionSyncSequence) syncingDesktopSelection = false;
-}
-
-function handleDesktopSelection(tasks: WorkbenchItem[]): void {
-  if (!syncingDesktopSelection) emit('selection-change', tasks);
+  return task.currentStep === null || task.currentStep === undefined
+    ? '—'
+    : `第 ${task.currentStep + 1} 步`;
 }
 </script>
 
 <template>
-  <div class="portal-table portal-table--desktop">
-    <el-table
-      ref="table"
-      v-loading="loading"
-      :data="tasks"
-      data-testid="workbench-task-table"
-      row-key="id"
-      @selection-change="handleDesktopSelection"
-    >
-      <el-table-column v-if="selectable" type="selection" width="48" />
-      <el-table-column label="单据" min-width="260">
-        <template #default="{ row }">
-          <button
-            :aria-label="`${actionLabel}${row.documentTitle}`"
-            class="portal-table-link"
-            :data-testid="`workbench-task-open-${row.id}`"
-            type="button"
-            @click="emit('open', row)"
-          >
-            {{ row.documentTitle }}
-          </button>
-        </template>
-      </el-table-column>
-      <el-table-column label="流程类型" min-width="150">
-        <template #default="{ row }">{{ typeLabel(row) }}</template>
-      </el-table-column>
-      <el-table-column label="当前节点" min-width="150">
-        <template #default="{ row }">{{ nodeLabel(row) }}</template>
-      </el-table-column>
-      <el-table-column label="发起人 / 部门" min-width="170">
-        <template #default="{ row }">{{ row.applicantName }} / {{ row.departmentName }}</template>
-      </el-table-column>
-      <el-table-column label="更新时间" min-width="170">
-        <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
-      </el-table-column>
-      <el-table-column align="right" label="操作" width="100">
-        <template #default="{ row }">
-          <el-button :icon="View" link type="primary" @click="emit('open', row)">{{
-            actionLabel
-          }}</el-button>
-        </template>
-      </el-table-column>
-      <template #empty><el-empty description="暂无任务" :image-size="64" /></template>
-    </el-table>
-  </div>
-  <div class="portal-card-list portal-table--mobile">
-    <el-skeleton v-if="loading" :rows="6" animated />
-    <article v-for="task in tasks" v-else :key="task.id" class="workbench-task-card">
-      <el-checkbox
-        v-if="selectable"
-        :aria-label="`选择${task.documentTitle}`"
-        :data-testid="`workbench-task-select-${task.id}`"
-        :model-value="selectedIds.includes(task.id)"
-        @change="toggleMobileSelection(task, Boolean($event))"
-      />
+  <UiDataList
+    :columns="columns"
+    :loading="loading"
+    :rows="tasks"
+    :selectable="selectable"
+    :selected-keys="selectedKeys"
+    :selection-test-id="(row) => `workbench-task-select-${row.id}`"
+    empty-text="暂无待办任务"
+    test-id="workbench-task-table"
+    @row-click="emit('open', $event)"
+    @selection-change="emit('selection-change', $event)"
+  >
+    <template #cell-documentTitle="{ row }">
       <button
-        :aria-label="`${actionLabel}${task.documentTitle}`"
-        class="workbench-task-card__open"
-        :data-testid="`workbench-task-open-${task.id}`"
+        :data-testid="`workbench-task-open-${row.id}`"
+        class="task-link"
         type="button"
-        @click="emit('open', task)"
+        @click.stop="emit('open', row)"
       >
-        <span
-          ><strong>{{ task.documentTitle }}</strong
-          ><el-tag size="small" effect="plain">{{
-            documentTypeMeta[task.documentType].label
-          }}</el-tag></span
-        >
-        <small>{{ task.applicantName }} · {{ task.departmentName }}</small>
-        <small>{{ nodeLabel(task) }} · {{ formatDateTime(task.updatedAt) }}</small>
+        {{ row.documentTitle }}
       </button>
-    </article>
-    <el-empty v-if="!loading && tasks.length === 0" description="暂无任务" :image-size="64" />
-  </div>
+    </template>
+    <template #cell-documentType="{ row }">{{ typeLabel(row) }}</template>
+    <template #cell-processNodeName="{ row }">{{ nodeLabel(row) }}</template>
+    <template #cell-applicant="{ row }">{{ row.applicantName }} / {{ row.departmentName }}</template>
+    <template #cell-updatedAt="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+    <template #mobile-title="{ row }">
+      <button
+        :data-testid="`workbench-task-open-${row.id}`"
+        class="task-link"
+        type="button"
+        @click.stop="emit('open', row)"
+      >
+        {{ row.documentTitle }}
+      </button>
+    </template>
+    <template #mobile-summary="{ row }">
+      <dl class="ui-record__facts">
+        <div><dt>流程类型</dt><dd>{{ typeLabel(row) }}</dd></div>
+        <div><dt>当前节点</dt><dd>{{ nodeLabel(row) }}</dd></div>
+        <div><dt>发起人</dt><dd>{{ row.applicantName }}</dd></div>
+        <div><dt>部门</dt><dd>{{ row.departmentName }}</dd></div>
+        <div><dt>更新时间</dt><dd>{{ formatDateTime(row.updatedAt) }}</dd></div>
+      </dl>
+    </template>
+    <template #actions="{ row }">
+      <el-button :icon="View" link @click.stop="emit('open', row)">{{ actionLabel }}</el-button>
+    </template>
+  </UiDataList>
 </template>
+
+<style scoped>
+.task-link {
+  max-width: 100%;
+  padding: 0;
+  color: var(--color-text);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.task-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+</style>

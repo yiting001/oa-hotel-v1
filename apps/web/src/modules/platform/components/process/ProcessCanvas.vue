@@ -128,3 +128,22 @@ function clearSelection(): void {
     </VueFlow>
   </div>
 </template>
+
+<style scoped>
+.process-canvas {
+  height: 620px;
+  background-color: var(--color-surface);
+  background-image: radial-gradient(var(--color-border-strong) 0.7px, transparent 0.7px);
+  background-size: 18px 18px;
+}
+.process-canvas :deep(.vue-flow__pane) {
+  cursor: grab;
+}
+.process-canvas :deep(.vue-flow__edge-path) {
+  stroke: var(--color-text-tertiary);
+  stroke-width: 2;
+}
+.process-canvas :deep(.vue-flow__edge.selected .vue-flow__edge-path) {
+  stroke: var(--color-danger);
+}
+</style>

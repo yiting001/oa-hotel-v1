@@ -1,5 +1,5 @@
 import type { DocumentStatus, DocumentType, WorkflowOverview } from '@oa/contracts';
-import { message } from 'ant-design-vue';
+import { ElMessage, type FormInstance } from 'element-plus';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiRequest, type ApiEnvelope, requestId } from '../../shared/api';
@@ -62,7 +62,7 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
       applyEnvelope(envelope);
       overview.value = workflowOverview;
     } catch (error) {
-      message.error(errorMessage(error));
+      ElMessage.error(errorMessage(error));
     } finally {
       loading.value = false;
     }
@@ -78,13 +78,13 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
       const isNew = entityId.value === null;
       const id = await persist();
       await workflow.refresh();
-      message.success('草稿已保存');
+      ElMessage.success('草稿已保存');
       if (isNew) {
         await router.replace({ name: options.editRouteName, params: { id } });
       }
     } catch (error) {
       if (!isFormValidationError(error)) {
-        message.error(errorMessage(error));
+        ElMessage.error(errorMessage(error));
       }
     } finally {
       saving.value = false;
@@ -104,11 +104,11 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
         body: { requestId: requestId() },
       });
       await workflow.refresh();
-      message.success('单据已提交审批');
+      ElMessage.success('单据已提交审批');
       await router.push(documentDetailPath(options.documentType, id));
     } catch (error) {
       if (!isFormValidationError(error)) {
-        message.error(errorMessage(error));
+        ElMessage.error(errorMessage(error));
       }
     } finally {
       submitting.value = false;
@@ -161,6 +161,22 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '操作失败，请稍后重试';
+}
+
+export async function validateDocumentForm(form: FormInstance | undefined): Promise<void> {
+  if (!form) {
+    throw new Error('表单尚未加载完成，请稍后重试');
+  }
+  // Element Plus rejects with a field map (Ant returned an errorFields envelope).
+  // Mark form failures explicitly so the editor does not turn inline errors into API errors.
+  let valid = false;
+  try {
+    valid = await form.validate();
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw { errorFields: error };
+  }
+  if (!valid) throw { errorFields: [] };
 }
 
 function isFormValidationError(error: unknown): boolean {

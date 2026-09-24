@@ -10,7 +10,8 @@ async function login(page: Page): Promise<void> {
   await page.getByLabel('账号').fill(credentials.username);
   await page.getByLabel('密码').fill(credentials.password);
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.locator('.ui-app-header')).toBeVisible();
 }
 
 async function expectNoPageOverflow(page: Page): Promise<void> {
@@ -25,22 +26,27 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('shows the company portal after login', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: '东方饭店公司门户' })).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: '公司门户', exact: true })).toBeVisible();
   await expect(page.getByText('待我审批')).toBeVisible();
   await expect(page.getByText('待阅信息')).toBeVisible();
-  await expect(page.getByText('快捷发起')).toBeVisible();
   await expect(page.getByText('常用链接')).toBeVisible();
+  await expect(page.locator('.portal-section-panel').first()).toBeVisible();
   await expectNoPageOverflow(page);
 });
 
-test('shows the personal workbench task views', async ({ page }) => {
+test('shows the personal workbench task views', async ({ page }, testInfo) => {
   await page.goto('/workbench');
   await expect(page.getByRole('heading', { name: /工作空间$/ })).toBeVisible();
-  await expect(page.getByRole('tab', { name: /待办/ })).toBeVisible();
-  await expect(page.getByRole('tab', { name: '已办' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: '我发起的' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: /待阅/ })).toBeVisible();
+  // 电脑用页签切换工作箱，手机用下拉选择（同一份数据、同一套筛选）
+  if (testInfo.project.name === 'mobile') {
+    await expect(page.getByRole('combobox', { name: '选择工作箱' })).toBeVisible();
+  } else {
+    await expect(page.getByRole('tab', { name: '我发起的' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /待阅/ })).toBeVisible();
+  }
   await expectNoPageOverflow(page);
+  // 审批中心的待办/已办页签只对有审批权限的账号开放，由 navigation-responsive 用例覆盖
 });
 
 test('saves a complete contract request draft', async ({ page }) => {

@@ -1,42 +1,49 @@
 <script setup lang="ts">
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue';
+import { Refresh, Search } from '@element-plus/icons-vue';
 import type { DocumentStatus, DocumentType } from '@oa/contracts';
-import { message } from 'ant-design-vue';
-import { onMounted, reactive, ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiRequest } from '../../../shared/api';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import { documentDetailPath, documentStatusMeta, documentTypeMeta } from '../../../shared/document';
 import { formatDateTime } from '../../../shared/format';
+import UiDataList from '../../../ui/UiDataList.vue';
+import UiDialog from '../../../ui/UiDialog.vue';
+import UiPagination from '../../../ui/UiPagination.vue';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { DOCUMENT_STATUS_OPTIONS } from '../../contract/contract.config';
 import { formatYuan } from '../../petty/petty.format';
 import { INSIGHT_API, TRACKED_DOCUMENT_TYPE_OPTIONS } from '../insight.config';
 import type { DocumentSearchRow } from '../insight.types';
 
 const router = useRouter();
+const { isCompact } = useLayoutMode();
 const loading = ref(false);
 const rows = ref<DocumentSearchRow[]>([]);
+const filterOpen = ref(false);
+const page = ref(1);
+const pageSize = ref(20);
+const visibleRows = computed(() => rows.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
+const columns = [
+  { key: 'documentNo', label: '单据编号', minWidth: 150 },
+  { key: 'documentType', label: '单据类型', minWidth: 130 },
+  { key: 'title', label: '标题', minWidth: 220 },
+  { key: 'applicantName', label: '申请人', minWidth: 110 },
+  { key: 'amountCents', label: '金额', minWidth: 110 },
+  { key: 'status', label: '状态', width: 105 },
+  { key: 'createdAt', label: '发起时间', minWidth: 170 },
+  { key: 'actions', label: '操作', width: 78 },
+];
 
 const filters = reactive({
-  number: '',
-  keyword: '',
-  applicant: '',
+  number: '', keyword: '', applicant: '',
   documentType: undefined as string | undefined,
   status: undefined as string | undefined,
   dateRange: null as [string, string] | null,
   amountMinYuan: null as number | null,
   amountMaxYuan: null as number | null,
 });
-
-const columns = [
-  { title: '单据编号', key: 'documentNo' },
-  { title: '单据类型', key: 'documentType' },
-  { title: '标题', dataIndex: 'title' },
-  { title: '申请人', dataIndex: 'applicantName' },
-  { title: '金额', key: 'amount' },
-  { title: '状态', key: 'status' },
-  { title: '发起时间', key: 'createdAt' },
-];
 
 async function search(): Promise<void> {
   loading.value = true;
@@ -49,159 +56,85 @@ async function search(): Promise<void> {
     if (filters.status) params.set('status', filters.status);
     if (filters.dateRange?.[0]) params.set('dateFrom', filters.dateRange[0]);
     if (filters.dateRange?.[1]) params.set('dateTo', filters.dateRange[1]);
-    if (filters.amountMinYuan !== null) {
-      params.set('amountMinCents', String(Math.round(filters.amountMinYuan * 100)));
-    }
-    if (filters.amountMaxYuan !== null) {
-      params.set('amountMaxCents', String(Math.round(filters.amountMaxYuan * 100)));
-    }
+    if (filters.amountMinYuan !== null) params.set('amountMinCents', String(Math.round(filters.amountMinYuan * 100)));
+    if (filters.amountMaxYuan !== null) params.set('amountMaxCents', String(Math.round(filters.amountMaxYuan * 100)));
     const query = params.toString();
-    rows.value = await apiRequest<DocumentSearchRow[]>(
-      query ? `${INSIGHT_API.documents}?${query}` : INSIGHT_API.documents,
-    );
+    rows.value = await apiRequest<DocumentSearchRow[]>(query ? `${INSIGHT_API.documents}?${query}` : INSIGHT_API.documents);
+    page.value = 1;
+    filterOpen.value = false;
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '单据检索失败');
+    ElMessage.error(error instanceof Error ? error.message : '单据检索失败');
   } finally {
     loading.value = false;
   }
 }
 
 function reset(): void {
-  Object.assign(filters, {
-    number: '',
-    keyword: '',
-    applicant: '',
-    documentType: undefined,
-    status: undefined,
-    dateRange: null,
-    amountMinYuan: null,
-    amountMaxYuan: null,
-  });
+  Object.assign(filters, { number: '', keyword: '', applicant: '', documentType: undefined, status: undefined,
+    dateRange: null, amountMinYuan: null, amountMaxYuan: null });
   void search();
 }
-
 function openDocument(row: DocumentSearchRow): void {
   void router.push(documentDetailPath(row.documentType as DocumentType, row.id));
 }
-
 function typeLabel(documentType: string): string {
   return documentTypeMeta[documentType as DocumentType]?.label ?? documentType;
 }
-
-function statusMeta(status: string): { label: string; color: string } {
-  return documentStatusMeta[status as DocumentStatus] ?? { label: status, color: 'default' };
+function statusLabel(status: string): string {
+  return documentStatusMeta[status as DocumentStatus]?.label ?? status;
 }
-
-onMounted(() => {
-  void search();
-});
+function changePage(next: { page: number; pageSize: number }): void {
+  page.value = next.page;
+  pageSize.value = next.pageSize;
+}
+onMounted(() => void search());
 </script>
 
 <template>
-  <div class="insight-documents-page">
-    <AppPageHeader
-      description="按单号、日期、申请人、金额等条件检索单据"
-      eyebrow="运营分析"
-      title="单据检索"
-    />
-
-    <a-card size="small" style="margin-bottom: 16px">
-      <a-space wrap>
-        <a-input
-          v-model:value="filters.number"
-          allow-clear
-          placeholder="单号（如 LX20260801001）"
-          style="width: 200px"
-        />
-        <a-input
-          v-model:value="filters.keyword"
-          allow-clear
-          placeholder="标题关键字"
-          style="width: 160px"
-        />
-        <a-input
-          v-model:value="filters.applicant"
-          allow-clear
-          placeholder="申请人"
-          style="width: 120px"
-        />
-        <a-select
-          v-model:value="filters.documentType"
-          :options="TRACKED_DOCUMENT_TYPE_OPTIONS"
-          allow-clear
-          placeholder="单据类型"
-          style="width: 170px"
-        />
-        <a-select
-          v-model:value="filters.status"
-          :options="DOCUMENT_STATUS_OPTIONS"
-          allow-clear
-          placeholder="状态"
-          style="width: 120px"
-        />
-        <a-range-picker v-model:value="filters.dateRange" value-format="YYYY-MM-DD" />
-        <a-input-number
-          v-model:value="filters.amountMinYuan"
-          :min="0"
-          placeholder="金额下限(元)"
-          style="width: 140px"
-        />
-        <a-input-number
-          v-model:value="filters.amountMaxYuan"
-          :min="0"
-          placeholder="金额上限(元)"
-          style="width: 140px"
-        />
-        <a-button type="primary" @click="search">
-          <template #icon><SearchOutlined /></template>
-          查询
-        </a-button>
-        <a-button @click="reset">
-          <template #icon><ReloadOutlined /></template>
-          重置
-        </a-button>
-      </a-space>
-    </a-card>
-
-    <a-table
-      :columns="columns"
-      :custom-row="(record: DocumentSearchRow) => ({ onClick: () => openDocument(record) })"
-      :data-source="rows"
-      :loading="loading"
-      :pagination="{ pageSize: 20, showTotal: (total: number) => `共 ${total} 条` }"
-      row-class-name="insight-documents-page__row"
-      row-key="id"
-      size="middle"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'documentNo'">
-          {{ (record as DocumentSearchRow).documentNo ?? '未提交' }}
-        </template>
-        <template v-else-if="column.key === 'documentType'">
-          {{ typeLabel((record as DocumentSearchRow).documentType) }}
-        </template>
-        <template v-else-if="column.key === 'amount'">
-          {{
-            (record as DocumentSearchRow).amountCents !== null
-              ? formatYuan((record as DocumentSearchRow).amountCents!)
-              : '-'
-          }}
-        </template>
-        <template v-else-if="column.key === 'status'">
-          <a-tag :color="statusMeta((record as DocumentSearchRow).status).color">
-            {{ statusMeta((record as DocumentSearchRow).status).label }}
-          </a-tag>
-        </template>
-        <template v-else-if="column.key === 'createdAt'">
-          {{ formatDateTime((record as DocumentSearchRow).createdAt) }}
-        </template>
+  <main class="ui-page insight-documents-page">
+    <AppPageHeader eyebrow="运营分析" title="单据检索" />
+    <div class="ui-toolbar insight-search-toolbar">
+      <el-input v-model="filters.number" clearable placeholder="单据编号" aria-label="单据编号" @keyup.enter="search" />
+      <el-input v-model="filters.keyword" clearable placeholder="标题关键字" aria-label="标题关键字" @keyup.enter="search" />
+      <template v-if="!isCompact">
+        <el-input v-model="filters.applicant" clearable placeholder="申请人" aria-label="申请人" @keyup.enter="search" />
+        <el-select v-model="filters.documentType" clearable placeholder="单据类型" aria-label="单据类型">
+          <el-option v-for="option in TRACKED_DOCUMENT_TYPE_OPTIONS" :key="option.value" :value="option.value" :label="option.label" />
+        </el-select>
+        <el-select v-model="filters.status" clearable placeholder="状态" aria-label="状态">
+          <el-option v-for="option in DOCUMENT_STATUS_OPTIONS" :key="option.value" :value="option.value" :label="option.label" />
+        </el-select>
+        <el-date-picker v-model="filters.dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" range-separator="至" />
+        <el-input-number v-model="filters.amountMinYuan" :min="0" placeholder="金额下限" aria-label="金额下限" />
+        <el-input-number v-model="filters.amountMaxYuan" :min="0" placeholder="金额上限" aria-label="金额上限" />
       </template>
-    </a-table>
-  </div>
+      <el-button v-if="isCompact" @click="filterOpen = true">筛选</el-button>
+      <div class="ui-toolbar__end">
+        <el-button :icon="Search" type="primary" @click="search">查询</el-button>
+        <el-button :icon="Refresh" @click="reset">重置</el-button>
+      </div>
+    </div>
+    <UiDataList :rows="visibleRows" :columns="columns" :loading="loading" empty-text="暂无单据" @row-click="openDocument">
+      <template #cell-documentNo="{ row }">{{ row.documentNo ?? '未提交' }}</template>
+      <template #cell-documentType="{ row }">{{ typeLabel(row.documentType) }}</template>
+      <template #cell-amountCents="{ row }">{{ row.amountCents !== null ? formatYuan(row.amountCents) : '-' }}</template>
+      <template #cell-status="{ row }"><el-tag effect="plain" size="small">{{ statusLabel(row.status) }}</el-tag></template>
+      <template #cell-createdAt="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      <template #mobile-title="{ row }">{{ row.title }}</template>
+      <template #actions="{ row }"><el-button link @click="openDocument(row)">查看</el-button></template>
+      <template #mobile-summary="{ row }">{{ row.documentNo ?? '未提交' }} · {{ typeLabel(row.documentType) }} · {{ statusLabel(row.status) }}<br />{{ row.applicantName }} · {{ row.amountCents !== null ? formatYuan(row.amountCents) : '-' }} · {{ formatDateTime(row.createdAt) }}</template>
+    </UiDataList>
+    <UiPagination v-model:page="page" v-model:page-size="pageSize" :total="rows.length" @change="changePage" />
+    <UiDialog v-model="filterOpen" title="筛选单据">
+      <div class="ui-filter-grid insight-filter-sheet">
+        <el-input v-model="filters.applicant" clearable placeholder="申请人" aria-label="申请人" />
+        <el-select v-model="filters.documentType" clearable placeholder="单据类型" aria-label="单据类型"><el-option v-for="option in TRACKED_DOCUMENT_TYPE_OPTIONS" :key="option.value" :value="option.value" :label="option.label" /></el-select>
+        <el-select v-model="filters.status" clearable placeholder="状态" aria-label="状态"><el-option v-for="option in DOCUMENT_STATUS_OPTIONS" :key="option.value" :value="option.value" :label="option.label" /></el-select>
+        <el-date-picker v-model="filters.dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" range-separator="至" />
+        <el-input-number v-model="filters.amountMinYuan" :min="0" placeholder="金额下限" aria-label="金额下限" />
+        <el-input-number v-model="filters.amountMaxYuan" :min="0" placeholder="金额上限" aria-label="金额上限" />
+      </div>
+      <template #footer><el-button @click="reset">重置</el-button><el-button type="primary" @click="search">查询</el-button></template>
+    </UiDialog>
+  </main>
 </template>
-
-<style scoped>
-.insight-documents-page :deep(.insight-documents-page__row) {
-  cursor: pointer;
-}
-</style>

@@ -1,90 +1,55 @@
 <script setup lang="ts">
-import { EyeOutlined } from '@ant-design/icons-vue';
+import { View } from '@element-plus/icons-vue';
 import type { DocumentSummary, DocumentType } from '@oa/contracts';
+import { computed, ref, watch } from 'vue';
+import UiDataList from '../../ui/UiDataList.vue';
+import UiPagination from '../../ui/UiPagination.vue';
 import { documentTypeMeta } from '../document';
 import { formatDateTime } from '../format';
 import StatusTag from './StatusTag.vue';
 
-defineProps<{
-  documents: DocumentSummary[];
-  loading?: boolean;
-}>();
-
+const props = defineProps<{ documents: DocumentSummary[]; loading?: boolean }>();
 const emit = defineEmits<{ open: [document: DocumentSummary] }>();
-
-function documentTypeLabel(documentType: DocumentType): string {
-  return documentTypeMeta[documentType].label;
-}
-
+const page = ref(1);
+const pageSize = ref(10);
+const pagedDocuments = computed(() => props.documents.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
 const columns = [
-  { title: '单据', dataIndex: 'title', key: 'title' },
-  { title: '类型', dataIndex: 'documentType', key: 'documentType', width: 160 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '修订', dataIndex: 'revision', key: 'revision', width: 80 },
-  { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 180 },
-  { title: '操作', key: 'actions', width: 88 },
+  { key: 'title', label: '单据', minWidth: 220 },
+  { key: 'documentType', label: '类型', width: 160 },
+  { key: 'status', label: '状态', width: 110 },
+  { key: 'revision', label: '修订', width: 80 },
+  { key: 'updatedAt', label: '更新时间', width: 180 },
+  { key: 'actions', label: '操作', width: 86 },
 ];
+watch(() => props.documents, () => { page.value = 1; });
+watch(() => [props.documents.length, pageSize.value], () => {
+  page.value = Math.min(page.value, Math.max(1, Math.ceil(props.documents.length / pageSize.value)));
+});
+function documentTypeLabel(type: DocumentType): string { return documentTypeMeta[type]?.label ?? type; }
 </script>
 
 <template>
-  <div class="document-table document-table--desktop">
-    <a-table
-      :columns="columns"
-      :data-source="documents"
-      :loading="loading"
-      :locale="{ emptyText: '暂无符合条件的单据' }"
-      :pagination="{ pageSize: 10, showTotal: (total: number) => `共 ${total} 条` }"
-      row-key="id"
-      size="middle"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'title'">
-          <button class="table-link" type="button" @click="emit('open', record)">
-            {{ record.title }}
-          </button>
-        </template>
-        <template v-else-if="column.key === 'documentType'">
-          {{ documentTypeLabel(record.documentType) }}
-        </template>
-        <template v-else-if="column.key === 'status'">
-          <StatusTag :status="record.status" />
-        </template>
-        <template v-else-if="column.key === 'updatedAt'">
-          {{ formatDateTime(record.updatedAt) }}
-        </template>
-        <template v-else-if="column.key === 'actions'">
-          <a-tooltip title="查看单据">
-            <a-button
-              :aria-label="`查看${record.title}`"
-              shape="circle"
-              type="text"
-              @click="emit('open', record)"
-            >
-              <template #icon><EyeOutlined /></template>
-            </a-button>
-          </a-tooltip>
-        </template>
+  <div class="document-table">
+    <UiDataList :rows="pagedDocuments" :columns="columns" :loading="loading" empty-text="暂无符合条件的单据" @row-click="emit('open', $event)">
+      <template #cell-title="{ row }">
+        <button class="document-table__link" type="button" @click.stop="emit('open', row)">{{ row.title }}</button>
       </template>
-    </a-table>
-  </div>
-
-  <div class="document-cards document-table--mobile">
-    <a-empty v-if="!loading && documents.length === 0" description="暂无符合条件的单据" />
-    <article
-      v-for="document in documents"
-      :key="document.id"
-      class="document-card"
-      role="button"
-      tabindex="0"
-      @click="emit('open', document)"
-      @keydown.enter="emit('open', document)"
-    >
-      <div class="document-card__header">
-        <strong>{{ document.title }}</strong>
-        <StatusTag :status="document.status" />
-      </div>
-      <span>{{ documentTypeLabel(document.documentType) }}</span>
-      <small>更新于 {{ formatDateTime(document.updatedAt) }} · 修订 {{ document.revision }}</small>
-    </article>
+      <template #cell-documentType="{ row }">{{ documentTypeLabel(row.documentType) }}</template>
+      <template #cell-status="{ row }"><StatusTag :status="row.status" /></template>
+      <template #cell-updatedAt="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+      <template #mobile-title="{ row }">
+        <button class="document-table__link" type="button" @click.stop="emit('open', row)">{{ row.title }}</button>
+      </template>
+      <template #actions="{ row }">
+        <el-button :icon="View" text :aria-label="`查看${row.title}`" title="查看单据" @click.stop="emit('open', row)" />
+      </template>
+    </UiDataList>
+    <UiPagination v-if="documents.length > 0" v-model:page="page" v-model:page-size="pageSize" :total="documents.length" />
   </div>
 </template>
+
+<style scoped>
+.document-table { min-width: 0; }
+.document-table__link { max-width: 100%; padding: 0; border: 0; background: none; color: var(--color-primary); font: inherit; font-weight: 600; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.document-table__link:hover, .document-table__link:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+</style>

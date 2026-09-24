@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons-vue';
 import type { WorkflowOverview } from '@oa/contracts';
-import type { FormInstance } from 'ant-design-vue';
-import type { Rule } from 'ant-design-vue/es/form';
-import { message } from 'ant-design-vue';
+import { ElMessage } from 'element-plus';
+import type { FormInstance, FormRules } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DocumentFormLayout from '../../shared/components/DocumentFormLayout.vue';
 import FormSection from '../../shared/components/FormSection.vue';
+import KeyValueSummary from '../../shared/components/KeyValueSummary.vue';
 import WorkflowSidebar from '../../shared/components/WorkflowSidebar.vue';
 import { formatDate, formatDateTime } from '../../shared/format';
 import { useSessionStore } from '../../shared/session';
 import { useWorkflowStore } from '../../shared/workflow';
+import { useLayoutMode } from '../../ui/useLayoutMode';
 import SealApplicantSection from './SealApplicantSection.vue';
 import SealAttachmentsField from './SealAttachmentsField.vue';
 import {
@@ -27,11 +27,37 @@ import { useSealResources } from './useSealResources';
 
 type SealDocumentType = 'SEAL_BORROW' | 'SEAL_USE';
 
+interface SealSummaryRow {
+  label: string;
+  value: string | number | null | undefined;
+  span?: number;
+}
+
+interface CheckoutForm {
+  actualRecipient: string;
+  checkedOutAt: string;
+}
+
+interface ReturnForm {
+  returnedAt: string;
+  returnCondition: string;
+  hasException: boolean;
+  exceptionNote: string;
+}
+
+interface UseForm {
+  stampedCopies: number | null;
+  executedAt: string;
+  archiveNumber: string;
+  executionNote: string;
+}
+
 const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
 const workflow = useWorkflowStore();
 const resources = useSealResources();
+const { isCompact } = useLayoutMode();
 const checkoutFormRef = ref<FormInstance>();
 const returnFormRef = ref<FormInstance>();
 const useFormRef = ref<FormInstance>();
@@ -42,15 +68,15 @@ const loading = ref(false);
 const submitting = ref(false);
 const errorMessage = ref('');
 
-const checkoutForm = reactive({ actualRecipient: '', checkedOutAt: '' });
-const returnForm = reactive({
+const checkoutForm = reactive<CheckoutForm>({ actualRecipient: '', checkedOutAt: '' });
+const returnForm = reactive<ReturnForm>({
   returnedAt: '',
   returnCondition: '',
   hasException: false,
   exceptionNote: '',
 });
-const useForm = reactive({
-  stampedCopies: null as number | null,
+const useForm = reactive<UseForm>({
+  stampedCopies: null,
   executedAt: '',
   archiveNumber: '',
   executionNote: '',
@@ -76,14 +102,71 @@ const showActionForm = computed(
 const applicantName = computed(() => resources.userName(record.value?.applicantId));
 const departmentName = computed(() => resources.departmentName(record.value?.departmentId));
 
-const checkoutRules: Record<string, Rule[]> = {
+const applicationItems = computed<SealSummaryRow[]>(() => {
+  if (borrowRecord.value) {
+    return [
+      { label: '使用日期', value: formatDate(borrowRecord.value.useDate) },
+      { label: '计划归还', value: formatDate(borrowRecord.value.plannedReturnDate) },
+      { label: '前往地点', value: borrowRecord.value.destination, span: 2 },
+      {
+        label: '陪同人',
+        value: borrowRecord.value.companionIds.map(resources.userName).join('、') || '-',
+        span: 2,
+      },
+      { label: '申请内容', value: record.value?.content, span: 2 },
+    ];
+  }
+  if (useRecord.value) {
+    return [
+      { label: '使用日期', value: formatDate(useRecord.value.useDate) },
+      { label: '用途', value: useRecord.value.purpose },
+      { label: '申请内容', value: record.value?.content, span: 2 },
+    ];
+  }
+  return [];
+});
+
+const executionItems = computed<SealSummaryRow[]>(() => {
+  const items: SealSummaryRow[] = [];
+  if (borrowRecord.value) {
+    const borrow = borrowRecord.value;
+    if (borrow.actualRecipient) {
+      items.push({ label: '实际领用人', value: borrow.actualRecipient });
+    }
+    if (borrow.checkedOutAt) {
+      items.push({ label: '实际领用时间', value: formatDateTime(borrow.checkedOutAt) });
+    }
+    if (borrow.returnedAt) {
+      items.push({ label: '实际归还时间', value: formatDateTime(borrow.returnedAt) });
+    }
+    if (borrow.returnCondition) {
+      items.push({ label: '归还状态', value: borrow.returnCondition });
+    }
+    if (borrow.exceptionNote) {
+      items.push({ label: '异常说明', value: borrow.exceptionNote, span: 2 });
+    }
+    return items;
+  }
+  if (useRecord.value && useRecord.value.executionStatus === 'EXECUTED') {
+    const use = useRecord.value;
+    items.push(
+      { label: '盖章份数', value: use.stampedCopies },
+      { label: '实际用印时间', value: formatDateTime(use.executedAt) },
+      { label: '文件归档号', value: use.archiveNumber },
+      { label: '执行备注', value: use.executionNote || '-' },
+    );
+  }
+  return items;
+});
+
+const checkoutRules: FormRules<CheckoutForm> = {
   actualRecipient: [
     { required: true, whitespace: true, message: '请输入实际领用人' },
     { max: 200, message: '实际领用人不能超过 200 个字符' },
   ],
   checkedOutAt: [{ required: true, message: '请选择实际领用时间' }],
 };
-const returnRules: Record<string, Rule[]> = {
+const returnRules: FormRules<ReturnForm> = {
   returnedAt: [{ required: true, message: '请选择实际归还时间' }],
   returnCondition: [
     { required: true, whitespace: true, message: '请输入实际归还状态' },
@@ -91,15 +174,17 @@ const returnRules: Record<string, Rule[]> = {
   ],
   exceptionNote: [
     {
-      validator: async () => {
+      validator: (_rule, _value, callback) => {
         if (returnForm.hasException && !returnForm.exceptionNote.trim()) {
-          throw new Error('存在异常时必须填写异常说明');
+          callback(new Error('存在异常时必须填写异常说明'));
+          return;
         }
+        callback();
       },
     },
   ],
 };
-const useRules: Record<string, Rule[]> = {
+const useRules: FormRules<UseForm> = {
   stampedCopies: [
     { required: true, type: 'number', message: '请输入盖章份数' },
     { type: 'number', min: 1, message: '盖章份数必须大于 0' },
@@ -158,7 +243,7 @@ async function registerCheckout(): Promise<void> {
     });
     borrowRecord.value = response.data;
     await resources.load();
-    message.success('领用登记已完成');
+    ElMessage.success('领用登记已完成');
   } catch (error) {
     setError(error);
   } finally {
@@ -178,7 +263,7 @@ async function registerReturn(): Promise<void> {
     });
     borrowRecord.value = response.data;
     await resources.load();
-    message.success('归还登记已完成');
+    ElMessage.success('归还登记已完成');
   } catch (error) {
     setError(error);
   } finally {
@@ -199,12 +284,24 @@ async function registerUse(): Promise<void> {
       executionNote: useForm.executionNote.trim() || null,
     });
     useRecord.value = response.data;
-    message.success('用印执行登记已完成');
+    ElMessage.success('用印执行登记已完成');
   } catch (error) {
     setError(error);
   } finally {
     submitting.value = false;
   }
+}
+
+function confirmRegistration(): void {
+  if (borrowRecord.value?.executionStatus === 'NOT_CHECKED_OUT') {
+    void registerCheckout();
+    return;
+  }
+  if (borrowRecord.value?.executionStatus === 'CHECKED_OUT') {
+    void registerReturn();
+    return;
+  }
+  void registerUse();
 }
 
 onMounted(async () => {
@@ -230,20 +327,10 @@ onMounted(async () => {
     title="印章执行登记"
   >
     <template #headerActions>
-      <a-button @click="router.push('/seal')">
-        <template #icon><ArrowLeftOutlined /></template>
-        返回台账
-      </a-button>
+      <el-button @click="router.push('/seal')">返回台账</el-button>
     </template>
 
-    <a-alert
-      v-if="errorMessage"
-      :message="errorMessage"
-      closable
-      show-icon
-      type="error"
-      @close="errorMessage = ''"
-    />
+    <el-alert v-if="errorMessage" :closable="false" :title="errorMessage" show-icon type="error" />
 
     <template v-if="record && overview">
       <SealApplicantSection
@@ -253,36 +340,19 @@ onMounted(async () => {
       />
 
       <FormSection title="申请事项">
-        <a-descriptions :column="{ xs: 1, sm: 2 }" bordered size="small">
-          <template v-if="borrowRecord">
-            <a-descriptions-item label="使用日期">{{
-              formatDate(borrowRecord.useDate)
-            }}</a-descriptions-item>
-            <a-descriptions-item label="计划归还">{{
-              formatDate(borrowRecord.plannedReturnDate)
-            }}</a-descriptions-item>
-            <a-descriptions-item label="前往地点" :span="2">{{
-              borrowRecord.destination
-            }}</a-descriptions-item>
-            <a-descriptions-item label="陪同人" :span="2">
-              {{ borrowRecord.companionIds.map(resources.userName).join('、') || '-' }}
-            </a-descriptions-item>
-          </template>
-          <template v-else-if="useRecord">
-            <a-descriptions-item label="使用日期">{{
-              formatDate(useRecord.useDate)
-            }}</a-descriptions-item>
-            <a-descriptions-item label="用途">{{ useRecord.purpose }}</a-descriptions-item>
-          </template>
-          <a-descriptions-item label="申请内容" :span="2">{{ record.content }}</a-descriptions-item>
-        </a-descriptions>
+        <KeyValueSummary :items="applicationItems" />
       </FormSection>
 
       <FormSection title="印章证照">
         <div class="seal-execution-assets">
-          <a-tag v-for="(name, index) in record.sealAssetNames" :key="`${name}-${index}`">
+          <el-tag
+            v-for="(name, index) in record.sealAssetNames"
+            :key="`${name}-${index}`"
+            effect="light"
+            type="info"
+          >
             {{ name }}
-          </a-tag>
+          </el-tag>
         </div>
       </FormSection>
 
@@ -291,54 +361,25 @@ onMounted(async () => {
       </FormSection>
 
       <FormSection title="执行状态">
-        <a-descriptions :column="{ xs: 1, sm: 2 }" bordered size="small">
-          <a-descriptions-item label="当前状态" :span="2">
-            <a-tag :color="executionMeta.color">{{ executionMeta.label }}</a-tag>
-          </a-descriptions-item>
-          <template v-if="borrowRecord">
-            <a-descriptions-item v-if="borrowRecord.actualRecipient" label="实际领用人">
-              {{ borrowRecord.actualRecipient }}
-            </a-descriptions-item>
-            <a-descriptions-item v-if="borrowRecord.checkedOutAt" label="实际领用时间">
-              {{ formatDateTime(borrowRecord.checkedOutAt) }}
-            </a-descriptions-item>
-            <a-descriptions-item v-if="borrowRecord.returnedAt" label="实际归还时间">
-              {{ formatDateTime(borrowRecord.returnedAt) }}
-            </a-descriptions-item>
-            <a-descriptions-item v-if="borrowRecord.returnCondition" label="归还状态">
-              {{ borrowRecord.returnCondition }}
-            </a-descriptions-item>
-            <a-descriptions-item v-if="borrowRecord.exceptionNote" label="异常说明" :span="2">
-              {{ borrowRecord.exceptionNote }}
-            </a-descriptions-item>
-          </template>
-          <template v-else-if="useRecord && useRecord.executionStatus === 'EXECUTED'">
-            <a-descriptions-item label="盖章份数">{{
-              useRecord.stampedCopies
-            }}</a-descriptions-item>
-            <a-descriptions-item label="实际用印时间">{{
-              formatDateTime(useRecord.executedAt)
-            }}</a-descriptions-item>
-            <a-descriptions-item label="文件归档号">{{
-              useRecord.archiveNumber
-            }}</a-descriptions-item>
-            <a-descriptions-item label="执行备注">{{
-              useRecord.executionNote || '-'
-            }}</a-descriptions-item>
-          </template>
-        </a-descriptions>
+        <div class="seal-execution-status">
+          <span class="seal-execution-status__label">当前状态</span>
+          <el-tag :type="executionMeta.color" effect="light">{{ executionMeta.label }}</el-tag>
+        </div>
+        <KeyValueSummary v-if="executionItems.length > 0" :items="executionItems" />
       </FormSection>
 
-      <a-alert
+      <el-alert
         v-if="!hasExecutePermission"
-        message="当前账号无执行登记权限"
+        :closable="false"
         show-icon
+        title="当前账号无执行登记权限"
         type="info"
       />
-      <a-alert
+      <el-alert
         v-else-if="!approved"
-        message="单据审批通过后方可执行登记"
+        :closable="false"
         show-icon
+        title="单据审批通过后方可执行登记"
         type="warning"
       />
 
@@ -346,75 +387,128 @@ onMounted(async () => {
         v-if="showActionForm && borrowRecord?.executionStatus === 'NOT_CHECKED_OUT'"
         title="领用登记"
       >
-        <a-form
+        <el-form
           ref="checkoutFormRef"
           :model="checkoutForm"
           :rules="checkoutRules"
-          layout="vertical"
+          label-position="top"
+          @submit.prevent
         >
-          <div class="seal-execution-grid">
-            <a-form-item label="实际领用人" name="actualRecipient">
-              <a-input v-model:value="checkoutForm.actualRecipient" :maxlength="200" />
-            </a-form-item>
-            <a-form-item label="实际领用时间" name="checkedOutAt">
-              <a-input v-model:value="checkoutForm.checkedOutAt" type="datetime-local" />
-            </a-form-item>
+          <div class="ui-fields">
+            <el-form-item label="实际领用人" prop="actualRecipient">
+              <el-input
+                v-model="checkoutForm.actualRecipient"
+                :maxlength="200"
+                placeholder="请输入实际领用人"
+              />
+            </el-form-item>
+            <el-form-item label="实际领用时间" prop="checkedOutAt">
+              <el-date-picker
+                v-model="checkoutForm.checkedOutAt"
+                format="YYYY-MM-DD HH:mm"
+                placeholder="请选择实际领用时间"
+                type="datetime"
+                value-format="YYYY-MM-DDTHH:mm"
+              />
+            </el-form-item>
           </div>
-        </a-form>
+        </el-form>
       </FormSection>
 
       <FormSection
         v-if="showActionForm && borrowRecord?.executionStatus === 'CHECKED_OUT'"
         title="归还登记"
       >
-        <a-form ref="returnFormRef" :model="returnForm" :rules="returnRules" layout="vertical">
-          <div class="seal-execution-grid">
-            <a-form-item label="实际归还时间" name="returnedAt">
-              <a-input v-model:value="returnForm.returnedAt" type="datetime-local" />
-            </a-form-item>
-            <a-form-item label="实际归还状态" name="returnCondition">
-              <a-input v-model:value="returnForm.returnCondition" :maxlength="500" />
-            </a-form-item>
-            <a-form-item class="seal-execution-grid__full" name="hasException">
-              <a-checkbox v-model:checked="returnForm.hasException">存在异常</a-checkbox>
-            </a-form-item>
-            <a-form-item
+        <el-form
+          ref="returnFormRef"
+          :model="returnForm"
+          :rules="returnRules"
+          label-position="top"
+          @submit.prevent
+        >
+          <div class="ui-fields">
+            <el-form-item label="实际归还时间" prop="returnedAt">
+              <el-date-picker
+                v-model="returnForm.returnedAt"
+                format="YYYY-MM-DD HH:mm"
+                placeholder="请选择实际归还时间"
+                type="datetime"
+                value-format="YYYY-MM-DDTHH:mm"
+              />
+            </el-form-item>
+            <el-form-item label="实际归还状态" prop="returnCondition">
+              <el-input
+                v-model="returnForm.returnCondition"
+                :maxlength="500"
+                placeholder="请输入实际归还状态"
+              />
+            </el-form-item>
+            <el-form-item class="ui-field-full" prop="hasException">
+              <el-checkbox v-model="returnForm.hasException">存在异常</el-checkbox>
+            </el-form-item>
+            <el-form-item
               v-if="returnForm.hasException"
-              class="seal-execution-grid__full"
+              class="ui-field-full"
               label="异常说明"
-              name="exceptionNote"
+              prop="exceptionNote"
             >
-              <a-textarea v-model:value="returnForm.exceptionNote" :rows="4" />
-            </a-form-item>
+              <el-input
+                v-model="returnForm.exceptionNote"
+                placeholder="请输入异常说明"
+                :rows="4"
+                type="textarea"
+              />
+            </el-form-item>
           </div>
-        </a-form>
+        </el-form>
       </FormSection>
 
       <FormSection
         v-if="showActionForm && useRecord?.executionStatus === 'NOT_EXECUTED'"
         title="用印登记"
       >
-        <a-form ref="useFormRef" :model="useForm" :rules="useRules" layout="vertical">
-          <div class="seal-execution-grid">
-            <a-form-item label="盖章份数" name="stampedCopies">
-              <a-input-number
-                v-model:value="useForm.stampedCopies"
+        <el-form
+          ref="useFormRef"
+          :model="useForm"
+          :rules="useRules"
+          label-position="top"
+          @submit.prevent
+        >
+          <div class="ui-fields">
+            <el-form-item label="盖章份数" prop="stampedCopies">
+              <el-input-number
+                v-model="useForm.stampedCopies"
                 :min="1"
                 :precision="0"
-                style="width: 100%"
+                controls-position="right"
               />
-            </a-form-item>
-            <a-form-item label="实际用印时间" name="executedAt">
-              <a-input v-model:value="useForm.executedAt" type="datetime-local" />
-            </a-form-item>
-            <a-form-item label="文件归档号" name="archiveNumber">
-              <a-input v-model:value="useForm.archiveNumber" :maxlength="200" />
-            </a-form-item>
-            <a-form-item label="执行备注" name="executionNote">
-              <a-textarea v-model:value="useForm.executionNote" :rows="3" />
-            </a-form-item>
+            </el-form-item>
+            <el-form-item label="实际用印时间" prop="executedAt">
+              <el-date-picker
+                v-model="useForm.executedAt"
+                format="YYYY-MM-DD HH:mm"
+                placeholder="请选择实际用印时间"
+                type="datetime"
+                value-format="YYYY-MM-DDTHH:mm"
+              />
+            </el-form-item>
+            <el-form-item label="文件归档号" prop="archiveNumber">
+              <el-input
+                v-model="useForm.archiveNumber"
+                :maxlength="200"
+                placeholder="请输入文件归档号"
+              />
+            </el-form-item>
+            <el-form-item label="执行备注" prop="executionNote">
+              <el-input
+                v-model="useForm.executionNote"
+                placeholder="请输入执行备注"
+                :rows="3"
+                type="textarea"
+              />
+            </el-form-item>
           </div>
-        </a-form>
+        </el-form>
       </FormSection>
     </template>
 
@@ -423,26 +517,16 @@ onMounted(async () => {
     </template>
 
     <template #actions>
-      <div class="seal-execution-actions">
-        <a-button @click="router.push('/seal')">
-          <template #icon><ArrowLeftOutlined /></template>
-          返回
-        </a-button>
-        <a-button
+      <div class="seal-execution-actions" :data-compact="isCompact">
+        <el-button @click="router.push('/seal')">返回</el-button>
+        <el-button
           v-if="showActionForm"
           :loading="submitting"
           type="primary"
-          @click="
-            borrowRecord?.executionStatus === 'NOT_CHECKED_OUT'
-              ? registerCheckout()
-              : borrowRecord?.executionStatus === 'CHECKED_OUT'
-                ? registerReturn()
-                : registerUse()
-          "
+          @click="confirmRegistration"
         >
-          <template #icon><CheckOutlined /></template>
           确认登记
-        </a-button>
+        </el-button>
       </div>
     </template>
   </DocumentFormLayout>
@@ -455,37 +539,28 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.seal-execution-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 20px;
+.seal-execution-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.seal-execution-grid__full {
-  grid-column: 1 / -1;
+.seal-execution-status__label {
+  color: var(--color-text-secondary);
+  font-size: 12px;
 }
 
 .seal-execution-actions {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
   width: 100%;
 }
 
-@media (max-width: 767px) {
-  .seal-execution-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .seal-execution-grid__full {
-    grid-column: auto;
-  }
-
-  .seal-execution-actions {
-    gap: 8px;
-  }
-
-  .seal-execution-actions > :deep(.ant-btn) {
-    flex: 1;
-  }
+.seal-execution-actions[data-compact='true'] :deep(.el-button) {
+  flex: 1 1 auto;
 }
 </style>

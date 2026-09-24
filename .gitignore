@@ -9,6 +9,7 @@ coverage/
 *.sqlite-wal
 playwright-report/
 test-results/
+.zcode/
 apps/api/storage/
 apps/api/release/
 apps/web/.vite/

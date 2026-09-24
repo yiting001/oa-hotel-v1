@@ -1,12 +1,2 @@
-@import './styles/foundation.css';
-@import './styles/shell.css';
-@import './styles/workspace.css';
-@import './styles/forms.css';
-@import './styles/utility-pages.css';
-@import './styles/responsive.css';
-@import './modules/portal/styles/portal.css';
-@import './modules/portal/styles/portal-drawers.css';
-@import './modules/portal/styles/portal-admin.css';
-@import './modules/workbench/styles/workbench.css';
-@import './modules/workbench/styles/process-start.css';
-@import './styles/portal-workbench-responsive.css';
+@import './ui/tokens.css';
+@import './ui/system.css';

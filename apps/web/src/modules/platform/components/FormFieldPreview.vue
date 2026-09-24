@@ -38,3 +38,15 @@ defineProps<{ field: FormFieldModel }>();
     </template>
   </div>
 </template>
+
+<style scoped>
+.a4-field-preview { min-width: 0; min-height: 12mm; padding: 3mm; }
+.a4-field-preview--textarea { min-height: 30mm; }
+.a4-placeholder { color: #777; font-size: 9pt; }
+.a4-field-preview table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; }
+.a4-field-preview th,
+.a4-field-preview td { height: 8mm; padding: 1mm; border: 0.5px solid #444; text-align: center; }
+.a4-attachment-line { min-height: 8mm; padding: 1mm 0; color: #555; border-bottom: 0.5px solid #888; font-size: 9pt; }
+.a4-opinion-grid { display: flex; min-height: 27mm; flex-direction: column; justify-content: space-between; }
+.a4-opinion-grid small { align-self: flex-end; font-size: 8.5pt; }
+</style>

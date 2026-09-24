@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useLayoutMode } from '../../../ui/useLayoutMode';
+import UiDataList, { type DataColumn } from '../../../ui/UiDataList.vue';
 import { Clock, Edit, Plus, Promotion, Refresh, Remove, Search } from '@element-plus/icons-vue';
 import type {
   PortalAdminContentDetail,
@@ -32,6 +34,8 @@ import PortalContentEditorDrawer from '../components/admin/PortalContentEditorDr
 import { portalCategoryLabels } from '../domain/portal';
 
 const pageSize = 20;
+
+const { isCompact } = useLayoutMode();
 const loading = ref(false);
 const page = ref(1);
 const total = ref(0);
@@ -57,6 +61,15 @@ const auditTrail = ref<PortalContentAuditTrail | null>(null);
 const auditLoading = ref(false);
 
 type StatusTagType = 'info' | 'warning' | 'success' | 'danger';
+const tableColumns: DataColumn[] = [
+  { key: 'title', label: '内容', minWidth: 280 },
+  { key: 'status', label: '状态', width: 120 },
+  { key: 'audience', label: '发布受众', minWidth: 150 },
+  { key: 'currentRevision', label: '修订', width: 84 },
+  { key: 'updatedAt', label: '更新时间', minWidth: 170 },
+  { key: 'actions', label: '操作', width: 240 },
+];
+
 const statusMeta: Record<PortalContentStatus, { label: string; type: StatusTagType }> = {
   DRAFT: { label: '草稿', type: 'info' },
   SCHEDULED: { label: '定时发布', type: 'warning' },
@@ -252,7 +265,7 @@ function messageOf(error: unknown, fallback: string): string {
 </script>
 
 <template>
-  <main class="portal-content-admin-page">
+  <main class="portal-content-admin-page ui-page" :data-compact="isCompact">
     <header class="portal-admin-header">
       <div>
         <span>公司门户</span>
@@ -275,7 +288,7 @@ function messageOf(error: unknown, fallback: string): string {
       </div>
     </section>
 
-    <section class="portal-admin-toolbar" aria-label="内容筛选">
+    <section class="portal-admin-toolbar ui-toolbar" aria-label="内容筛选">
       <el-input
         v-model="filters.keyword"
         aria-label="搜索内容"
@@ -299,129 +312,81 @@ function messageOf(error: unknown, fallback: string): string {
           :value="item[0]"
         />
       </el-select>
-      <el-button :icon="Search" type="primary" @click="search">查询</el-button>
-      <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
+      <div class="ui-toolbar__end">
+        <el-button :icon="Search" type="primary" @click="search">查询</el-button>
+        <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
+      </div>
     </section>
 
     <section v-loading="loading" class="portal-admin-table-surface">
-      <el-table :data="items" data-testid="portal-content-table" row-key="id">
-        <el-table-column label="内容" min-width="280">
-          <template #default="{ row }">
-            <div class="portal-admin-content-cell">
-              <strong>{{ row.title }}</strong>
-              <span>{{ categoryLabel(row) }} · {{ row.summary }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="112">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row)" effect="light">{{ statusLabel(row) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="发布受众" min-width="150">
-          <template #default="{ row }">{{ audienceLabel(row) }}</template>
-        </el-table-column>
-        <el-table-column label="修订" width="78">
-          <template #default="{ row }">V{{ row.currentRevision }}</template>
-        </el-table-column>
-        <el-table-column label="更新时间" width="168">
-          <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
-        </el-table-column>
-        <el-table-column fixed="right" label="操作" width="250">
-          <template #default="{ row }">
-            <div class="portal-admin-actions">
-              <el-button
-                v-if="row.status !== 'WITHDRAWN'"
-                :data-testid="`portal-content-edit-${row.id}`"
-                :icon="Edit"
-                link
-                type="primary"
-                @click="openEdit(row)"
-                >编辑</el-button
-              >
-              <el-button
-                v-if="row.status === 'DRAFT' || row.status === 'SCHEDULED'"
-                :data-testid="`portal-content-publish-${row.id}`"
-                :icon="Promotion"
-                link
-                type="success"
-                @click="openPublish(row)"
-                >发布</el-button
-              >
-              <el-button
-                v-if="row.status === 'PUBLISHED' || row.status === 'SCHEDULED'"
-                :data-testid="`portal-content-withdraw-${row.id}`"
-                :icon="Remove"
-                link
-                type="danger"
-                @click="withdraw(row)"
-                >撤回</el-button
-              >
-              <el-button
-                :data-testid="`portal-content-audit-${row.id}`"
-                :icon="Clock"
-                link
-                @click="openAudit(row)"
-                >审计</el-button
-              >
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="portal-admin-mobile-list">
-        <article
-          v-for="item in items"
-          :key="item.id"
-          :data-testid="`portal-content-card-${item.id}`"
-        >
-          <header>
-            <div>
-              <strong>{{ item.title }}</strong
-              ><span>{{ portalCategoryLabels[item.category] }}</span>
-            </div>
-            <el-tag :type="statusMeta[item.status].type" size="small">{{
-              statusMeta[item.status].label
-            }}</el-tag>
-          </header>
-          <p>{{ item.summary }}</p>
-          <dl>
-            <dt>发布受众</dt>
-            <dd>{{ audienceLabel(item) }}</dd>
-            <dt>更新时间</dt>
-            <dd>{{ formatDateTime(item.updatedAt) }}</dd>
-          </dl>
-          <div class="portal-admin-actions">
-            <el-button
-              v-if="item.status !== 'WITHDRAWN'"
-              :data-testid="`portal-content-edit-mobile-${item.id}`"
-              :icon="Edit"
-              @click="openEdit(item)"
-              >编辑</el-button
-            >
-            <el-button
-              v-if="item.status === 'DRAFT' || item.status === 'SCHEDULED'"
-              :data-testid="`portal-content-publish-mobile-${item.id}`"
-              :icon="Promotion"
-              @click="openPublish(item)"
-              >发布</el-button
-            >
-            <el-button
-              v-if="item.status === 'PUBLISHED' || item.status === 'SCHEDULED'"
-              :data-testid="`portal-content-withdraw-mobile-${item.id}`"
-              :icon="Remove"
-              @click="withdraw(item)"
-              >撤回</el-button
-            >
-            <el-button
-              :data-testid="`portal-content-audit-mobile-${item.id}`"
-              :icon="Clock"
-              @click="openAudit(item)"
-              >审计</el-button
-            >
+      <UiDataList
+        :card-test-id="(row) => `portal-content-card-${row.id}`"
+        :columns="tableColumns"
+        :loading="loading"
+        :rows="items"
+        empty-text="暂无内容"
+        test-id="portal-content-table"
+      >
+        <template #cell-title="{ row }">
+          <div class="content-cell">
+            <strong>{{ row.title }}</strong>
+            <span>{{ categoryLabel(row) }} · {{ row.summary }}</span>
           </div>
-        </article>
-      </div>
+        </template>
+        <template #cell-status="{ row }">
+          <el-tag :type="statusType(row)" effect="light">{{ statusLabel(row) }}</el-tag>
+        </template>
+        <template #cell-audience="{ row }">{{ audienceLabel(row) }}</template>
+        <template #cell-currentRevision="{ row }">V{{ row.currentRevision }}</template>
+        <template #cell-updatedAt="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+        <template #mobile-title="{ row }">
+          <div class="content-cell">
+            <strong>{{ row.title }}</strong>
+            <span>{{ categoryLabel(row) }}</span>
+          </div>
+        </template>
+        <template #mobile-summary="{ row }">
+          <dl class="ui-record__facts">
+            <div><dt>状态</dt><dd>{{ statusLabel(row) }}</dd></div>
+            <div><dt>发布受众</dt><dd>{{ audienceLabel(row) }}</dd></div>
+            <div><dt>更新时间</dt><dd>{{ formatDateTime(row.updatedAt) }}</dd></div>
+            <div><dt>摘要</dt><dd>{{ row.summary }}</dd></div>
+          </dl>
+        </template>
+        <template #actions="{ row }">
+          <el-button
+            v-if="row.status !== 'WITHDRAWN'"
+            :data-testid="`portal-content-edit-${row.id}`"
+            :icon="Edit"
+            link
+            @click="openEdit(row)"
+            >编辑</el-button
+          >
+          <el-button
+            v-if="row.status === 'DRAFT' || row.status === 'SCHEDULED'"
+            :data-testid="`portal-content-publish-${row.id}`"
+            :icon="Promotion"
+            link
+            @click="openPublish(row)"
+            >发布</el-button
+          >
+          <el-button
+            v-if="row.status === 'PUBLISHED' || row.status === 'SCHEDULED'"
+            :data-testid="`portal-content-withdraw-${row.id}`"
+            :icon="Remove"
+            link
+            @click="withdraw(row)"
+            >撤回</el-button
+          >
+          <el-button
+            :data-testid="`portal-content-audit-${row.id}`"
+            :icon="Clock"
+            link
+            @click="openAudit(row)"
+            >审计</el-button
+          >
+        </template>
+      </UiDataList>
 
       <footer class="portal-admin-pagination">
         <span>共 {{ total }} 条</span>
@@ -491,3 +456,25 @@ function messageOf(error: unknown, fallback: string): string {
     </el-dialog>
   </main>
 </template>
+
+<style scoped>
+.portal-admin-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); }
+.portal-admin-header h1 { margin: 4px 0 0; font-size: 32px; font-weight: 600; }
+.portal-admin-header span { color: var(--color-text-tertiary); font-size: 13px; }
+.portal-admin-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.portal-admin-metrics > div { display: grid; min-height: 96px; align-content: center; gap: 4px; padding: 20px 24px 20px 0; border-left: 1px solid var(--color-border); }
+.portal-admin-metrics > div:first-child { padding-left: 0; border-left: 0; }
+.portal-admin-metrics > div:not(:first-child) { padding-left: 24px; }
+.portal-admin-metrics span { color: var(--color-text-tertiary); font-size: 13px; }
+.portal-admin-metrics strong { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.portal-admin-table-surface { min-width: 0; }
+.content-cell { display: grid; gap: 2px; min-width: 0; }
+.content-cell strong { overflow: hidden; color: var(--color-text); font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.content-cell span { overflow: hidden; color: var(--color-text-tertiary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.portal-admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; color: var(--color-text-tertiary); font-size: 13px; }
+.portal-content-admin-page[data-compact='true'] .portal-admin-header { flex-direction: column; }
+.portal-content-admin-page[data-compact='true'] .portal-admin-header h1 { font-size: 24px; }
+.portal-content-admin-page[data-compact='true'] .portal-admin-metrics { grid-template-columns: minmax(0, 1fr); }
+.portal-content-admin-page[data-compact='true'] .portal-admin-metrics > div { min-height: 76px; padding: 14px 0; border-left: 0; border-top: 1px solid var(--color-border); }
+.portal-content-admin-page[data-compact='true'] .portal-admin-metrics > div:first-child { border-top: 0; }
+</style>

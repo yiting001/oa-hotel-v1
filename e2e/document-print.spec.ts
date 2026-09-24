@@ -86,11 +86,15 @@ test.describe('A4 print media isolation', () => {
 
     const panelNavigation = page.getByRole('navigation', { name: '表单设计面板' });
     await panelNavigation.getByText('表单库', { exact: true }).click();
-    await expect(page.locator('.form-canvas-workspace')).toBeHidden();
+    await expect(page.locator('.a4-stage')).toHaveCount(0);
+
+    // 打印预览会把面板切回预览：纸面必须可见（否则打印出的是空白）
+    await page.getByRole('button', { name: '打印预览' }).click();
+    await expect(page.locator('.a4-stage')).toHaveCount(1);
 
     await page.emulateMedia({ media: 'print' });
-
-    await expect(page.locator('.form-canvas-workspace')).toHaveCSS('display', 'block');
     await expect(page.locator('.a4-sheet')).toBeVisible();
+    const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
+    expect(pdf.byteLength).toBeGreaterThan(minimumNonBlankPdfBytes);
   });
 });

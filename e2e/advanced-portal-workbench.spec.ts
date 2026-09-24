@@ -321,8 +321,9 @@ function contentAction(
   action: ContentAction,
   contentId: string,
 ): Locator {
-  const suffix = projectName === 'mobile' ? `-${action}-mobile-` : `-${action}-`;
-  return page.getByTestId(`portal-content${suffix}${contentId}`);
+  // 列表在两种呈现下是同一套操作按钮（电脑表格行 / 手机卡片），不再区分 mobile 前缀
+  void projectName;
+  return page.getByTestId(`portal-content-${action}-${contentId}`);
 }
 
 function contentContainer(
@@ -340,18 +341,15 @@ function portalTitles(home: PortalHomeResponse): string[] {
 }
 
 function workbenchDocumentContainer(page: Page, projectName: string, title: string): Locator {
-  const selector = projectName === 'mobile' ? '.portal-table--mobile' : '.portal-table--desktop';
-  const surface = page.getByRole('tabpanel').locator(selector);
+  // 同一份列表在电脑上是表格行、在手机上是卡片；根节点由页面统一给出 testid
+  const list = page.getByRole('tabpanel').getByTestId('workbench-document-list');
   return projectName === 'mobile'
-    ? surface.getByRole('button').filter({ hasText: title })
-    : surface.getByRole('row').filter({ hasText: title });
+    ? list.locator('.ui-record').filter({ hasText: title })
+    : list.getByRole('row').filter({ hasText: title });
 }
 
 function workbenchDocumentOpen(page: Page, projectName: string, title: string): Locator {
-  const container = workbenchDocumentContainer(page, projectName, title);
-  return projectName === 'mobile'
-    ? container
-    : container.getByRole('button', { name: title, exact: true });
+  return workbenchDocumentContainer(page, projectName, title).getByRole('button', { name: title }).first();
 }
 
 async function selectPendingTask(
@@ -381,8 +379,10 @@ function pendingTaskCheckbox(
 }
 
 function pendingTaskOpen(page: Page, projectName: string, taskId: string): Locator {
-  const selector = projectName === 'mobile' ? '.portal-table--mobile' : '.portal-table--desktop';
-  return page.getByRole('tabpanel').locator(selector).getByTestId(`workbench-task-open-${taskId}`);
+  return page
+    .getByRole('tabpanel')
+    .getByTestId('workbench-task-table')
+    .getByTestId(`workbench-task-open-${taskId}`);
 }
 
 async function expectActiveWorkbenchTabVisible(page: Page, projectName: string): Promise<void> {

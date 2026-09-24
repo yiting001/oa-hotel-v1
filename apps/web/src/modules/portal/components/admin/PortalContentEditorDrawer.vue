@@ -232,3 +232,13 @@ function changeAudienceType(): void {
     </template>
   </el-drawer>
 </template>
+
+<style scoped>
+.portal-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.portal-editor-switches { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+.portal-content-editor :deep(.el-alert) { margin-bottom: 20px; }
+.portal-content-editor :deep(.el-select),
+.portal-content-editor :deep(.el-date-editor) { width: 100%; }
+html[data-layout='compact'] .portal-editor-grid { grid-template-columns: minmax(0, 1fr); }
+html[data-layout='compact'] .portal-editor-switches { gap: 16px; }
+</style>

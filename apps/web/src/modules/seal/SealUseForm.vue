@@ -1,14 +1,7 @@
 <script setup lang="ts">
-import {
-  ArrowLeftOutlined,
-  CheckOutlined,
-  SaveOutlined,
-  SendOutlined,
-} from '@ant-design/icons-vue';
 import type { WorkflowOverview } from '@oa/contracts';
-import type { FormInstance } from 'ant-design-vue';
-import type { Rule } from 'ant-design-vue/es/form';
-import { message } from 'ant-design-vue';
+import { ElMessage } from 'element-plus';
+import type { FormInstance, FormRules } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentFormLayout from '../../shared/components/DocumentFormLayout.vue';
@@ -17,6 +10,7 @@ import WorkflowSidebar from '../../shared/components/WorkflowSidebar.vue';
 import { todayIso } from '../../shared/format';
 import { useSessionStore } from '../../shared/session';
 import { useWorkflowStore } from '../../shared/workflow';
+import { useLayoutMode } from '../../ui/useLayoutMode';
 import SealApplicantSection from './SealApplicantSection.vue';
 import SealAttachmentsField from './SealAttachmentsField.vue';
 import { getSealUse, saveSealUse, submitSealDocument } from './seal.api';
@@ -28,6 +22,7 @@ const router = useRouter();
 const session = useSessionStore();
 const workflow = useWorkflowStore();
 const resources = useSealResources();
+const { isCompact } = useLayoutMode();
 const formRef = ref<FormInstance>();
 const currentId = ref(props.documentId ?? '');
 const record = ref<SealUseRecord | null>(null);
@@ -74,7 +69,7 @@ const departmentName = computed(
 );
 const applicationDate = computed(() => record.value?.applicationDate ?? todayIso());
 
-const rules: Record<keyof SealUseInput, Rule[]> = {
+const rules: FormRules<SealUseInput> = {
   useDate: [{ required: true, message: '请选择使用日期' }],
   purpose: [
     { required: true, whitespace: true, message: '请输入用途' },
@@ -83,10 +78,12 @@ const rules: Record<keyof SealUseInput, Rule[]> = {
   sealAssetNames: [
     { required: true, type: 'array', min: 1, message: '请至少填写一项印章或证照名称' },
     {
-      validator: async () => {
+      validator: (_rule, _value, callback) => {
         if (form.sealAssetNames.some((name) => name.trim().length > 200)) {
-          throw new Error('单项名称不能超过 200 个字符');
+          callback(new Error('单项名称不能超过 200 个字符'));
+          return;
         }
+        callback();
       },
     },
   ],
@@ -118,6 +115,12 @@ function toInput(): SealUseInput {
     content: form.content.trim(),
     attachments: [...form.attachments],
   };
+}
+
+// 输入框内以「，」「,」「、」分隔的名称按多项保存，与标签输入的历史行为一致。
+function normalizeAssetNames(): void {
+  const names = form.sealAssetNames.flatMap((name) => name.split(/[，,、]/));
+  form.sealAssetNames = [...new Set(names)];
 }
 
 function setError(error: unknown): void {
@@ -166,7 +169,7 @@ async function saveDraft(): Promise<void> {
     const result = await persist();
     await refreshOverview();
     await refreshDocumentList();
-    message.success('用印申请草稿已保存');
+    ElMessage.success('用印申请草稿已保存');
     if (result.created) {
       await router.replace(`/seal/use/${result.id}/edit`);
     }
@@ -185,7 +188,7 @@ async function saveAndSubmit(): Promise<void> {
     await submitSealDocument(result.id);
     await refreshOverview();
     await refreshDocumentList();
-    message.success('用印申请已提交审批');
+    ElMessage.success('用印申请已提交审批');
     if (result.created) {
       await router.replace(`/seal/use/${result.id}/edit`);
     }
@@ -216,30 +219,22 @@ onMounted(async () => {
     :loading="loading"
     :revision="revision"
     :status="documentStatus"
+    eyebrow="行政管理"
     title="印章证照使用申请"
   >
     <template #headerActions>
-      <a-button @click="router.push('/seal')">
-        <template #icon><ArrowLeftOutlined /></template>
-        返回台账
-      </a-button>
+      <el-button @click="router.push('/seal')">返回台账</el-button>
     </template>
 
-    <a-alert
-      v-if="errorMessage"
-      :message="errorMessage"
-      closable
-      show-icon
-      type="error"
-      @close="errorMessage = ''"
-    />
+    <el-alert v-if="errorMessage" :closable="false" :title="errorMessage" show-icon type="error" />
 
-    <a-form
+    <el-form
       ref="formRef"
       :disabled="!canEdit || busy"
       :model="form"
       :rules="rules"
-      layout="vertical"
+      label-position="top"
+      @submit.prevent
     >
       <SealApplicantSection
         :applicant-name="applicantName"
@@ -248,74 +243,84 @@ onMounted(async () => {
       />
 
       <FormSection title="用印安排">
-        <div class="seal-form-grid">
-          <a-form-item label="使用日期" name="useDate">
-            <a-date-picker
-              v-model:value="form.useDate"
-              style="width: 100%"
+        <div class="ui-fields">
+          <el-form-item label="使用日期" prop="useDate">
+            <el-date-picker
+              v-model="form.useDate"
+              format="YYYY-MM-DD"
+              placeholder="请选择使用日期"
+              type="date"
               value-format="YYYY-MM-DD"
             />
-          </a-form-item>
-          <a-form-item label="用途" name="purpose">
-            <a-input v-model:value="form.purpose" :maxlength="1000" show-count />
-          </a-form-item>
+          </el-form-item>
+          <el-form-item label="用途" prop="purpose">
+            <el-input
+              v-model="form.purpose"
+              :maxlength="1000"
+              placeholder="请输入用途"
+              show-word-limit
+            />
+          </el-form-item>
         </div>
       </FormSection>
 
       <FormSection title="印章证照">
-        <a-form-item label="印章证照名称" name="sealAssetNames">
-          <a-select
-            v-model:value="form.sealAssetNames"
-            :open="false"
-            :token-separators="['，', ',', '、']"
-            allow-clear
-            mode="tags"
+        <el-form-item label="印章证照名称" prop="sealAssetNames">
+          <el-select
+            v-model="form.sealAssetNames"
+            allow-create
+            clearable
+            default-first-option
+            filterable
+            multiple
+            no-data-text="输入印章或证照名称后回车添加"
             placeholder="输入印章或证照名称，回车添加"
+            :reserve-keyword="false"
+            @change="normalizeAssetNames"
           />
-        </a-form-item>
+        </el-form-item>
       </FormSection>
 
       <FormSection title="申请内容">
-        <a-form-item label="申请内容" name="content">
-          <a-textarea v-model:value="form.content" :maxlength="5000" :rows="7" show-count />
-        </a-form-item>
+        <el-form-item label="申请内容" prop="content">
+          <el-input
+            v-model="form.content"
+            :maxlength="5000"
+            placeholder="请输入申请内容"
+            :rows="7"
+            show-word-limit
+            type="textarea"
+          />
+        </el-form-item>
       </FormSection>
 
       <FormSection title="相关附件">
-        <a-form-item name="attachments">
+        <el-form-item prop="attachments">
           <SealAttachmentsField v-model="form.attachments" :editable="canEdit && !busy" />
-        </a-form-item>
+        </el-form-item>
       </FormSection>
-    </a-form>
+    </el-form>
 
     <template #aside>
       <WorkflowSidebar :loading="loading" :overview="overview" />
     </template>
 
     <template #actions>
-      <div class="seal-action-row">
-        <a-button @click="router.push('/seal')">
-          <template #icon><ArrowLeftOutlined /></template>
-          返回
-        </a-button>
-        <div class="seal-action-row__primary">
-          <a-button
+      <div class="seal-actions" :data-compact="isCompact">
+        <el-button @click="router.push('/seal')">返回</el-button>
+        <div class="seal-actions__primary">
+          <el-button
             v-if="canExecute"
             type="primary"
             @click="router.push(`/seal/execution/SEAL_USE/${currentId}`)"
           >
-            <template #icon><CheckOutlined /></template>
             执行登记
-          </a-button>
+          </el-button>
           <template v-if="canEdit">
-            <a-button :loading="saving" @click="saveDraft">
-              <template #icon><SaveOutlined /></template>
-              保存草稿
-            </a-button>
-            <a-button :loading="submitting" type="primary" @click="saveAndSubmit">
-              <template #icon><SendOutlined /></template>
+            <el-button :loading="saving" @click="saveDraft">保存草稿</el-button>
+            <el-button :loading="submitting" type="primary" @click="saveAndSubmit">
               保存并提交
-            </a-button>
+            </el-button>
           </template>
         </div>
       </div>
@@ -324,40 +329,27 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.seal-form-grid {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
-  gap: 0 20px;
-}
-
-.seal-action-row {
-  align-items: center;
+.seal-actions {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
   width: 100%;
 }
 
-.seal-action-row__primary {
+.seal-actions__primary {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
 }
 
-@media (max-width: 767px) {
-  .seal-form-grid {
-    grid-template-columns: 1fr;
-  }
+.seal-actions[data-compact='true'] {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
 
-  .seal-action-row {
-    align-items: stretch;
-    flex-direction: column-reverse;
-    gap: 8px;
-  }
-
-  .seal-action-row__primary > :deep(.ant-btn),
-  .seal-action-row > :deep(.ant-btn) {
-    flex: 1;
-  }
+.seal-actions[data-compact='true'] :deep(.el-button) {
+  flex: 1 1 auto;
 }
 </style>

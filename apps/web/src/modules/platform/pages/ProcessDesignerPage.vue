@@ -11,7 +11,6 @@ import {
   ElAlert,
   ElButton,
   ElButtonGroup,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -24,12 +23,14 @@ import {
   ElTag,
 } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
+import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import { randomId } from '../../../shared/random-id';
 import { useSessionStore } from '../../../shared/session';
+import UiDialog from '../../../ui/UiDialog.vue';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { processApi } from '../api/designer-api';
 import { iamApi } from '../api/iam-api';
 import DefinitionNavigator from '../components/DefinitionNavigator.vue';
-import PlatformPageHeader from '../components/PlatformPageHeader.vue';
 import ApprovalChainPanel from '../components/process/ApprovalChainPanel.vue';
 import ProcessCanvas from '../components/process/ProcessCanvas.vue';
 import ProcessNodeInspector from '../components/process/ProcessNodeInspector.vue';
@@ -49,7 +50,10 @@ import {
   validateProcessDesign,
 } from '../utils/process';
 
+type DesignerPanel = 'canvas' | 'library' | 'inspector';
+
 const session = useSessionStore();
+const { isCompact } = useLayoutMode();
 const activeTab = ref('chains');
 const definitions = ref<ProcessDefinition[]>([]);
 const roles = ref<RoleSummary[]>([]);
@@ -65,8 +69,8 @@ const error = ref('');
 const dirty = ref(false);
 const createDialogOpen = ref(false);
 const createForm = reactive({ code: '', name: '', documentType: '', description: '' });
-const mobileView = ref<'canvas' | 'library' | 'inspector'>('canvas');
-const mobileViewOptions = [
+const mobileView = ref<DesignerPanel>('canvas');
+const mobileViewOptions: Array<{ label: string; value: DesignerPanel }> = [
   { label: '流程图', value: 'canvas' },
   { label: '流程库', value: 'library' },
   { label: '节点属性', value: 'inspector' },
@@ -87,8 +91,35 @@ const selectedEdge = computed(
 );
 const canManage = computed(() => session.can('PROCESS_DESIGN_MANAGE'));
 const readonly = computed(() => isDefinitionReadOnly(activeVersion.value?.status, canManage.value));
+/** 画布链路的自然顺序：从开始节点沿连线遍历；链路不完整时退回节点的存储顺序。 */
+const chainOrder = computed<ProcessNodeModel[]>(() => {
+  const ordered: ProcessNodeModel[] = [];
+  const visited = new Set<string>();
+  let current = design.value.nodes.find((node) => node.type === 'START');
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    ordered.push(current);
+    const edge = design.value.edges.find((item) => item.source === current?.id);
+    current = edge ? design.value.nodes.find((node) => node.id === edge.target) : undefined;
+  }
+  return ordered.length === design.value.nodes.length ? ordered : design.value.nodes;
+});
+const reorderable = computed(() => {
+  const starts = design.value.nodes.filter((node) => node.type === 'START');
+  const ends = design.value.nodes.filter((node) => node.type === 'END');
+  return (
+    starts.length === 1 &&
+    ends.length === 1 &&
+    design.value.edges.length === design.value.nodes.length - 1 &&
+    chainOrder.value.length === design.value.nodes.length
+  );
+});
 
 onMounted(() => void initialize());
+
+function panelVisible(panel: DesignerPanel): boolean {
+  return !isCompact.value || mobileView.value === panel;
+}
 
 async function initialize(): Promise<void> {
   loading.value = true;
@@ -195,6 +226,11 @@ function insertBeforeEnd(next: ProcessDesign, node: ProcessNodeModel): void {
   next.edges.push({ id: randomId(), source: node.id, target: end.id });
 }
 
+function selectNode(id: string | null): void {
+  selectedNodeId.value = id;
+  selectedEdgeId.value = null;
+}
+
 function deleteSelection(): void {
   if (readonly.value) return;
   if (selectedNodeId.value) {
@@ -212,6 +248,36 @@ function deleteSelection(): void {
     });
     selectedEdgeId.value = null;
   }
+}
+
+function removeNode(id: string): void {
+  if (readonly.value) return;
+  selectNode(id);
+  deleteSelection();
+}
+
+/** 链路顺序调整：仅在同一链路上的审批节点之间交换，随后按链路顺序重排坐标与连线。 */
+function moveNode(id: string, direction: -1 | 1): void {
+  if (readonly.value || !reorderable.value) return;
+  const ordered = [...chainOrder.value];
+  const index = ordered.findIndex((node) => node.id === id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= ordered.length) return;
+  if (ordered[index]?.type !== 'USER_TASK' || ordered[target]?.type !== 'USER_TASK') return;
+  [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+  updateDesign({
+    ...design.value,
+    nodes: ordered.map((node, position) => ({
+      ...node,
+      position: { x: 220 + position * 180, y: 180 + (position % 2) * 120 },
+    })),
+    edges: ordered.slice(0, -1).map((node, position) => ({
+      id: randomId(),
+      source: node.id,
+      target: ordered[position + 1]?.id ?? node.id,
+    })),
+  });
+  selectedEdgeId.value = null;
 }
 
 async function createDefinition(): Promise<void> {
@@ -316,27 +382,26 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
 </script>
 
 <template>
-  <div class="platform-page process-page">
-    <PlatformPageHeader
-      eyebrow="系统设置 / Workflow"
-      title="审批流程设计"
+  <div class="process-page ui-page">
+    <AppPageHeader
       description="链路快捷配置直接编排角色审批顺序；流程画布以版本化流程定义配置节点、流转关系和办理人规则。"
+      eyebrow="系统设置"
+      title="审批流程设计"
     >
       <template v-if="activeTab === 'design'" #actions>
-        <ElTag
-          v-if="activeVersion"
-          :type="activeVersion.status === 'PUBLISHED' ? 'success' : 'warning'"
-          >V{{ activeVersion.version }} ·
-          {{ activeVersion.status === 'PUBLISHED' ? '已发布' : '草稿' }}</ElTag
-        >
-        <ElButton :disabled="readonly || !dirty" :loading="saving" @click="persist()"
-          ><ElIcon><DocumentChecked /></ElIcon>保存草稿</ElButton
-        >
-        <ElButton :disabled="readonly" :loading="saving" type="primary" @click="publish"
-          >发布版本</ElButton
-        >
+        <div class="ui-actions">
+          <ElTag v-if="activeVersion" :type="activeVersion.status === 'PUBLISHED' ? 'success' : 'warning'">
+            V{{ activeVersion.version }} · {{ activeVersion.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+          </ElTag>
+          <ElButton :disabled="readonly || !dirty" :loading="saving" @click="persist()">
+            <ElIcon><DocumentChecked /></ElIcon>
+            保存草稿
+          </ElButton>
+          <ElButton :disabled="readonly" :loading="saving" type="primary" @click="publish">发布版本</ElButton>
+        </div>
       </template>
-    </PlatformPageHeader>
+    </AppPageHeader>
+
     <ElAlert v-if="error" :closable="false" show-icon :title="error" type="error" />
     <ElAlert
       v-else-if="!canManage"
@@ -346,23 +411,19 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
       type="info"
     />
 
-    <ElTabs v-model="activeTab" class="platform-tabs">
+    <ElTabs v-model="activeTab">
       <ElTabPane label="链路快捷配置" name="chains">
         <ApprovalChainPanel v-if="activeTab === 'chains'" />
       </ElTabPane>
       <ElTabPane label="流程画布" name="design">
-        <div class="process-mobile-view-switch no-print">
-          <ElSegmented
-            v-model="mobileView"
-            aria-label="切换流程设计区域"
-            :options="mobileViewOptions"
-          />
-        </div>
+        <div class="process-designer-shell" :data-compact="isCompact">
+          <div v-if="isCompact" class="process-mobile-view-switch">
+            <ElSegmented v-model="mobileView" aria-label="切换流程设计区域" :options="mobileViewOptions" />
+          </div>
 
-        <div class="process-designer-shell">
           <DefinitionNavigator
+            v-if="panelVisible('library')"
             class="process-mobile-panel"
-            :class="{ 'is-mobile-active': mobileView === 'library' }"
             :definitions="definitions"
             :loading="loading"
             noun="流程"
@@ -374,33 +435,32 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
             @select-definition="selectDefinition"
             @select-version="selectVersion"
           />
-          <main
-            class="process-workspace process-mobile-panel"
-            :class="{ 'is-mobile-active': mobileView === 'canvas' }"
-          >
-            <div class="designer-toolbar no-print">
-              <div>
+
+          <main v-if="panelVisible('canvas')" class="process-workspace process-mobile-panel">
+            <div class="designer-toolbar">
+              <div class="designer-toolbar__copy">
                 <strong>{{ activeDefinition?.name ?? '请选择流程' }}</strong>
                 <small>{{ activeDefinition?.code ?? '未选择定义' }}</small>
               </div>
               <ElButtonGroup>
-                <ElButton :disabled="readonly" title="添加开始节点" @click="addNode('START')"
-                  ><ElIcon><VideoPlay /></ElIcon>开始</ElButton
-                >
-                <ElButton :disabled="readonly" title="添加审批节点" @click="addNode('USER_TASK')"
-                  ><ElIcon><UserFilled /></ElIcon>审批</ElButton
-                >
-                <ElButton :disabled="readonly" title="添加结束节点" @click="addNode('END')"
-                  ><ElIcon><CircleCloseFilled /></ElIcon>结束</ElButton
-                >
+                <ElButton :disabled="readonly" title="添加开始节点" @click="addNode('START')">
+                  <ElIcon><VideoPlay /></ElIcon>开始
+                </ElButton>
+                <ElButton :disabled="readonly" title="添加审批节点" @click="addNode('USER_TASK')">
+                  <ElIcon><UserFilled /></ElIcon>审批
+                </ElButton>
+                <ElButton :disabled="readonly" title="添加结束节点" @click="addNode('END')">
+                  <ElIcon><CircleCloseFilled /></ElIcon>结束
+                </ElButton>
               </ElButtonGroup>
               <ElButton
                 :disabled="readonly || (!selectedNodeId && !selectedEdgeId)"
-                type="danger"
                 plain
+                type="danger"
                 @click="deleteSelection"
-                ><ElIcon><Delete /></ElIcon>删除选中</ElButton
               >
+                <ElIcon><Delete /></ElIcon>删除选中
+              </ElButton>
             </div>
             <ProcessCanvas
               :design="design"
@@ -408,53 +468,161 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
               :selected-edge-id="selectedEdgeId"
               :selected-node-id="selectedNodeId"
               @select-edge="selectedEdgeId = $event"
-              @select-node="selectedNodeId = $event"
+              @select-node="selectNode"
               @update="updateDesign"
             />
           </main>
+
           <ProcessNodeInspector
+            v-if="panelVisible('inspector')"
             class="process-mobile-panel"
-            :class="{ 'is-mobile-active': mobileView === 'inspector' }"
+            :chain-order="chainOrder"
             :node="selectedNode"
             :readonly="readonly"
+            :reorderable="reorderable"
             :roles="roles"
             :selected-edge="selectedEdge"
+            :selected-node-id="selectedNodeId"
             :users="users"
+            @add="addNode"
+            @move="moveNode"
+            @remove="removeNode"
+            @select="selectNode"
             @update="updateNode"
           />
         </div>
       </ElTabPane>
     </ElTabs>
 
-    <ElDialog v-model="createDialogOpen" title="新建流程定义" width="520px">
-      <ElForm label-position="top">
-        <ElFormItem label="流程名称"
-          ><ElInput v-model="createForm.name" maxlength="100" placeholder="例如：合同付款审批"
-        /></ElFormItem>
-        <ElFormItem label="流程编码"
-          ><ElInput
+    <UiDialog v-model="createDialogOpen" title="新建流程定义" :width="520">
+      <ElForm class="ui-fields" label-position="top">
+        <ElFormItem label="流程名称">
+          <ElInput v-model="createForm.name" maxlength="100" placeholder="例如：合同付款审批" />
+        </ElFormItem>
+        <ElFormItem label="流程编码">
+          <ElInput
             v-model="createForm.code"
             maxlength="60"
             placeholder="CONTRACT_PAYMENT_APPROVAL"
             @input="createForm.code = createForm.code.toUpperCase()"
-        /></ElFormItem>
-        <ElFormItem label="绑定单据类型"
-          ><ElInput
+          />
+        </ElFormItem>
+        <ElFormItem label="绑定单据类型">
+          <ElInput
             v-model="createForm.documentType"
             maxlength="60"
             placeholder="可选，例如 CONTRACT_PAYMENT"
             @input="createForm.documentType = createForm.documentType.toUpperCase()"
-        /></ElFormItem>
-        <ElFormItem label="用途说明"
-          ><ElInput v-model="createForm.description" maxlength="300" :rows="3" type="textarea"
-        /></ElFormItem>
+          />
+        </ElFormItem>
+        <ElFormItem class="ui-field-full" label="用途说明">
+          <ElInput v-model="createForm.description" maxlength="300" :rows="3" type="textarea" />
+        </ElFormItem>
       </ElForm>
-      <template #footer
-        ><ElButton @click="createDialogOpen = false">取消</ElButton
-        ><ElButton :loading="saving" type="primary" @click="createDefinition"
-          ><ElIcon><Plus /></ElIcon>创建</ElButton
-        ></template
-      >
-    </ElDialog>
+      <template #footer>
+        <ElButton @click="createDialogOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="createDefinition">
+          <ElIcon><Plus /></ElIcon>创建
+        </ElButton>
+      </template>
+    </UiDialog>
   </div>
 </template>
+
+<style scoped>
+.process-page {
+  min-width: 0;
+}
+.process-page :deep(.el-tabs__content) {
+  padding-top: 24px;
+}
+.process-designer-shell {
+  display: grid;
+  min-height: 680px;
+  grid-template-columns: 250px minmax(0, 1fr) 300px;
+  overflow: hidden;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.process-designer-shell > :deep(.definition-nav) {
+  border-right: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+.process-workspace {
+  min-width: 0;
+  background: var(--color-canvas);
+}
+.designer-toolbar {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.designer-toolbar__copy {
+  display: flex;
+  min-width: 160px;
+  flex: 1;
+  flex-direction: column;
+}
+.designer-toolbar__copy small {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+.process-designer-shell :deep(.process-canvas) {
+  border-radius: 0;
+}
+.process-mobile-view-switch {
+  padding: 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.process-mobile-view-switch :deep(.el-segmented) {
+  width: 100%;
+}
+.process-mobile-view-switch :deep(.el-segmented__item) {
+  min-width: 0;
+  flex: 1;
+}
+.process-designer-shell[data-compact='true'] {
+  display: block;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+}
+.process-designer-shell[data-compact='true'] > .process-workspace {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.process-designer-shell[data-compact='true'] .designer-toolbar {
+  align-items: stretch;
+  flex-direction: column;
+  padding: 12px 16px;
+}
+.process-designer-shell[data-compact='true'] .designer-toolbar__copy {
+  min-width: 0;
+}
+.process-designer-shell[data-compact='true'] .designer-toolbar :deep(.el-button-group) {
+  display: flex;
+  width: 100%;
+}
+.process-designer-shell[data-compact='true'] .designer-toolbar :deep(.el-button-group > .el-button) {
+  min-width: 0;
+  flex: 1;
+  padding-inline: 8px;
+}
+.process-designer-shell[data-compact='true'] .designer-toolbar > :deep(.el-button) {
+  width: 100%;
+}
+.process-designer-shell[data-compact='true'] :deep(.definition-nav) {
+  min-height: 420px;
+  border-right: 0;
+  border-radius: var(--radius-lg);
+}
+.process-designer-shell[data-compact='true'] :deep(.process-canvas) {
+  height: 520px;
+}
+</style>

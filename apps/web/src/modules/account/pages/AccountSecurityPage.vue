@@ -135,3 +135,25 @@ async function submit(): Promise<void> {
     </section>
   </main>
 </template>
+
+<style scoped>
+.account-security-page { display: flex; flex-direction: column; gap: 24px; }
+.account-security-panel { width: min(100%, 640px); padding: 24px; background: var(--color-surface); border-radius: var(--radius-lg); }
+.account-security-panel__header { display: flex; align-items: center; gap: 12px; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--color-border); }
+.account-security-panel__icon {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  border-radius: var(--radius-md);
+  font-size: 19px;
+}
+.account-security-panel__header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.account-security-panel__header p { margin: 4px 0 0; color: var(--color-text-tertiary); font-size: 13px; }
+.account-security-form { max-width: none; }
+.account-security-form__actions { display: flex; justify-content: flex-end; }
+</style>

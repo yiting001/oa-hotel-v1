@@ -1,4 +1,4 @@
-import type { Rule } from 'ant-design-vue/es/form';
+import type { FormItemRule } from 'element-plus';
 import { describe, expect, it } from 'vitest';
 import { createContractPaymentRules, parsePaymentProgress } from './contract-payment.rules';
 import type { ContractPaymentPayload } from './contract.types';
@@ -71,7 +71,12 @@ async function validate(
   if (!rule?.validator) {
     throw new Error(`Missing validator for ${field}`);
   }
-  await rule.validator(rule as Rule, value, () => undefined);
+  const validator = rule.validator as unknown as (
+    item: FormItemRule,
+    input: unknown,
+    callback: (error?: string | Error) => void,
+  ) => Promise<void>;
+  await validator(rule as FormItemRule, value, () => undefined);
 }
 
 function paymentForm(overrides: Partial<ContractPaymentPayload> = {}): ContractPaymentPayload {

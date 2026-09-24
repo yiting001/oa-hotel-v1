@@ -116,3 +116,90 @@ function statusLabel(status: VersionSummary['status']): string {
     </ElScrollbar>
   </aside>
 </template>
+
+<style scoped>
+.definition-nav {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+.definition-nav__header {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+.definition-nav__header > div,
+.definition-nav__definition > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.definition-nav__header small,
+.definition-nav__definition small {
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.definition-nav__scroll {
+  min-height: 0;
+  flex: 1;
+}
+.definition-nav__items {
+  padding: var(--space-xs);
+}
+.definition-nav__item {
+  margin-bottom: var(--space-xxs);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.definition-nav__item.is-active {
+  background: var(--color-surface-3);
+  border-color: transparent;
+}
+.definition-nav__definition,
+.definition-nav__version {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-xs);
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.definition-nav__definition {
+  min-height: 52px;
+  padding: var(--space-xs) var(--space-sm);
+}
+.definition-nav__definition > span {
+  flex: 1;
+}
+.definition-nav__versions {
+  padding: 0 7px 7px 22px;
+}
+.definition-nav__version {
+  min-height: 34px;
+  padding: 3px 4px 3px 8px;
+  color: var(--color-text-secondary);
+  border-left: 2px solid var(--color-border);
+}
+.definition-nav__version.is-active {
+  color: var(--color-text);
+  background: var(--color-primary-soft);
+  border-left-color: var(--color-primary);
+}
+.definition-nav__version > span:first-child {
+  flex: 1;
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+}
+</style>

@@ -26,7 +26,7 @@ const groupIcons: Record<string, Component> = {
 </script>
 
 <template>
-  <nav class="app-navigation-menu" aria-label="系统主导航">
+  <nav class="ui-nav" aria-label="系统主导航">
     <el-menu
       :collapse="collapsed"
       :collapse-transition="false"
@@ -38,11 +38,11 @@ const groupIcons: Record<string, Component> = {
         v-for="group in groups"
         :key="group.id"
         :index="group.id"
-        popper-class="app-navigation-popup"
+        popper-class="ui-nav-popup"
       >
         <template #title>
           <el-icon><component :is="group.icon ?? groupIcons[group.id] ?? Monitor" /></el-icon>
-          <span class="app-navigation-menu__group-title">{{ group.label }}</span>
+          <span class="ui-nav__group-title">{{ group.label }}</span>
         </template>
         <el-menu-item v-for="item in group.items" :key="item.path" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>

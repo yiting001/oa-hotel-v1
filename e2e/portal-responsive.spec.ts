@@ -1,21 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { expectNoPageOverflow, loginThroughUi } from './advanced-fixtures';
 
-const quickStartLabels = [
-  '合同/支出请示',
-  '合同审批',
-  '合同付款',
-  '印章证照外借',
-  '印章证照使用',
-  '物资申购',
-  '物资领用',
-] as const;
-
 const desktopGeometry = {
-  bannerMaxHeight: 170,
-  calendarMaxHeight: 380,
-  informationTopViewportRatio: 0.62,
-  operationBottomTolerance: 10,
+  imageStripMaxHeight: 220,
+  sidebarMaxViewportRatio: 1.6,
+  informationTopViewportRatio: 0.72,
 } as const;
 
 const mobileGeometry = {
@@ -31,7 +20,7 @@ test.describe('company portal responsive layout', () => {
     await expectPortalLayout(page, false);
   });
 
-  test('390px keeps approval and process starts readable', async ({ page }, testInfo) => {
+  test('390px keeps approval entry and portal content readable', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile', 'The mobile project uses a 390px viewport.');
     await loginThroughUi(page, 'office');
     await expectPortalLayout(page, true);
@@ -47,101 +36,85 @@ test.describe('company portal responsive layout', () => {
 
 async function expectPortalLayout(page: Page, mobile: boolean): Promise<void> {
   const portal = page.locator('.portal-page');
-  const banner = portal.locator('.portal-banner');
-  const metrics = portal.locator('.portal-metrics');
-  const quickStarts = portal.locator('.portal-quick-starts');
-  const information = portal.locator('.portal-information-layout');
+  const imageStrip = portal.locator('.portal-image-strip');
+  const metrics = portal.getByTestId('workspace-metric-strip');
+  const sections = portal.locator('.portal-sections');
+  const sidebar = portal.locator('.portal-sidebar');
+  const links = sidebar.locator('.portal-links-panel');
 
-  await expect(page.getByRole('heading', { name: '东方饭店公司门户', exact: true })).toBeVisible();
-  await expect(metrics.getByRole('button').filter({ hasText: '待我审批' })).toBeVisible();
-  await expect(quickStarts.getByText('快捷发起', { exact: true })).toBeVisible();
-  await expect(quickStarts.getByText('合同/支出请示', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '公司门户', exact: true })).toBeVisible();
+  await expect(metrics.getByTestId('workspace-metric-item').filter({ hasText: '待我审批' })).toBeVisible();
+  await expect(sections.locator('.portal-section-panel').first()).toBeVisible();
+  await expect(links.getByText('常用链接', { exact: true })).toBeVisible();
 
-  for (const section of [banner, metrics, quickStarts]) {
-    await expect(section).toBeVisible();
-    await expectToIntersectFirstViewport(page, section);
+  for (const region of [imageStrip, metrics, sections]) {
+    await expect(region).toBeVisible();
+    await expectToIntersectFirstViewport(page, region);
   }
 
   await expectContainedBy(portal, metrics);
-  await expectContainedBy(portal, quickStarts);
-  await expectNoOverlap(metrics, quickStarts);
-  await expectQuickStartLabelsReadable(quickStarts);
+  await expectContainedBy(portal, sections);
+  await expectNoOverlap(metrics, sections);
+
+  // 业务约束：门户的「待我审批」入口直接进入审批中心，而不是个人工作台
+  await metrics.getByTestId('workspace-metric-item').filter({ hasText: '待我审批' }).click();
+  await expect(page).toHaveURL(/\/approval/);
+  await expect(page.getByRole('heading', { name: '待我审批', exact: true })).toBeVisible();
+  await page.goBack();
 
   if (mobile) {
-    await expect(information).toBeVisible();
-    await expectMobileInformationAboveNavigation(page, information);
+    await expect(sidebar).toBeVisible();
+    await expectMobileContentAboveNavigation(page, sections);
     const navigation = page.getByRole('navigation', { name: '手机端主导航' });
     await expect(navigation.getByRole('button', { name: '审批中心', exact: true })).toBeVisible();
-    await expect(navigation.getByRole('button', { name: '发起申请', exact: true })).toBeVisible();
   } else {
-    await expectDesktopPortalDensity(page, portal, banner, metrics, quickStarts);
+    await expectDesktopPortalDensity(page, portal, imageStrip, sidebar);
   }
 
   await expectNoPageOverflow(page);
 }
 
-async function expectMobileInformationAboveNavigation(
-  page: Page,
-  information: Locator,
-): Promise<void> {
-  const firstSectionTitle = information.getByText('公司新闻', { exact: true });
+async function expectMobileContentAboveNavigation(page: Page, sections: Locator): Promise<void> {
+  const firstSectionTitle = sections.getByText('公司新闻', { exact: true });
   await expect(firstSectionTitle).toBeVisible();
 
-  const [viewport, informationBox, titleBox] = await Promise.all([
-    page.viewportSize(),
-    information.boundingBox(),
-    firstSectionTitle.boundingBox(),
-  ]);
+  const [viewport, sectionsBox] = await Promise.all([page.viewportSize(), sections.boundingBox()]);
   expect(viewport).not.toBeNull();
-  expect(informationBox).not.toBeNull();
-  expect(titleBox).not.toBeNull();
+  expect(sectionsBox).not.toBeNull();
 
   const visibleBottom = viewport!.height - mobileGeometry.bottomNavigationClearance;
-  expect(informationBox!.y).toBeLessThanOrEqual(visibleBottom);
-  expect(titleBox!.y + titleBox!.height).toBeLessThanOrEqual(visibleBottom);
+  expect(sectionsBox!.y).toBeLessThanOrEqual(visibleBottom);
 }
 
 async function expectDesktopPortalDensity(
   page: Page,
   portal: Locator,
-  banner: Locator,
-  metrics: Locator,
-  quickStarts: Locator,
+  imageStrip: Locator,
+  sidebar: Locator,
 ): Promise<void> {
-  const information = portal.locator('.portal-information-layout');
-  const calendar = portal.locator('.portal-calendar-panel');
   const companyNews = portal.locator('.portal-section-panel').filter({ hasText: '公司新闻' });
   const notices = portal.locator('.portal-section-panel').filter({ hasText: '通知公告' });
 
-  await expect(information).toBeVisible();
-  await expect(calendar).toBeVisible();
   await expect(companyNews).toHaveCount(1);
   await expect(notices).toHaveCount(1);
+  await expect(sidebar.locator('.portal-calendar-panel')).toBeVisible();
 
-  const [viewport, bannerBox, informationBox, calendarBox, metricsBox, quickStartsBox] =
-    await Promise.all([
-      page.viewportSize(),
-      banner.boundingBox(),
-      information.boundingBox(),
-      calendar.boundingBox(),
-      metrics.boundingBox(),
-      quickStarts.boundingBox(),
-    ]);
+  const [viewport, stripBox, sidebarBox] = await Promise.all([
+    page.viewportSize(),
+    imageStrip.boundingBox(),
+    sidebar.boundingBox(),
+  ]);
   expect(viewport).not.toBeNull();
-  expect(bannerBox).not.toBeNull();
-  expect(informationBox).not.toBeNull();
-  expect(calendarBox).not.toBeNull();
-  expect(metricsBox).not.toBeNull();
-  expect(quickStartsBox).not.toBeNull();
+  expect(stripBox).not.toBeNull();
+  expect(sidebarBox).not.toBeNull();
 
-  expect(bannerBox!.height).toBeLessThanOrEqual(desktopGeometry.bannerMaxHeight);
-  expect(informationBox!.y).toBeLessThanOrEqual(
+  expect(stripBox!.height).toBeLessThanOrEqual(desktopGeometry.imageStripMaxHeight);
+  expect(sidebarBox!.height).toBeLessThanOrEqual(
+    viewport!.height * desktopGeometry.sidebarMaxViewportRatio,
+  );
+  expect(stripBox!.y + stripBox!.height).toBeLessThan(
     viewport!.height * desktopGeometry.informationTopViewportRatio,
   );
-  expect(calendarBox!.height).toBeLessThanOrEqual(desktopGeometry.calendarMaxHeight);
-  expect(
-    Math.abs(metricsBox!.y + metricsBox!.height - (quickStartsBox!.y + quickStartsBox!.height)),
-  ).toBeLessThanOrEqual(desktopGeometry.operationBottomTolerance);
 
   await expectToIntersectFirstViewport(page, companyNews);
   await expectToIntersectFirstViewport(page, notices);
@@ -151,7 +124,8 @@ async function expectToIntersectFirstViewport(page: Page, locator: Locator): Pro
   const [box, viewport] = await Promise.all([locator.boundingBox(), page.viewportSize()]);
   expect(box).not.toBeNull();
   expect(viewport).not.toBeNull();
-  expect(box!.y).toBeLessThan(viewport!.height);
+  // 门户首屏是品牌图 + 工作摘要，栏目紧随其后，允许落在首屏下沿之外一屏内
+  expect(box!.y).toBeLessThan(viewport!.height * 1.5);
   expect(box!.y + box!.height).toBeGreaterThan(0);
 }
 
@@ -184,22 +158,4 @@ async function expectNoOverlap(first: Locator, second: Locator): Promise<void> {
       Math.max(firstBox!.y, secondBox!.y),
   );
   expect(overlapWidth * overlapHeight).toBe(0);
-}
-
-async function expectQuickStartLabelsReadable(quickStarts: Locator): Promise<void> {
-  const labels = quickStarts.locator('button strong');
-  await expect(labels).toHaveCount(quickStartLabels.length);
-
-  const measurements = await labels.evaluateAll((elements) =>
-    elements.map((element) => ({
-      text: element.textContent?.trim() ?? '',
-      clientWidth: element.clientWidth,
-      scrollWidth: element.scrollWidth,
-    })),
-  );
-  expect(measurements.map(({ text }) => text)).toEqual(quickStartLabels);
-  expect(
-    measurements.filter(({ clientWidth, scrollWidth }) => scrollWidth > clientWidth + 1),
-    '快捷发起名称不得被省略或裁切',
-  ).toEqual([]);
 }

@@ -90,7 +90,7 @@ async function loadApprovalPaths(): Promise<void> {
 </script>
 
 <template>
-  <main class="process-start-page">
+  <main class="process-start-page ui-page">
     <header class="process-start-header">
       <div>
         <span>流程中心</span>
@@ -157,3 +157,73 @@ async function loadApprovalPaths(): Promise<void> {
     <el-empty v-if="groups.length === 0" description="没有匹配的可发起流程" />
   </main>
 </template>
+
+<style scoped>
+.process-start-page { min-width: 0; }
+.process-start-header {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.process-start-header > div { min-width: 0; flex: 1 1 320px; }
+.process-start-header > div > span { display: block; margin-bottom: 8px; color: var(--color-text-tertiary); font-size: 12px; font-weight: 600; }
+.process-start-header h1 { margin: 0; font-size: 32px; font-weight: 600; line-height: 1.25; }
+.process-start-header p { margin: 8px 0 0; max-width: 76ch; color: var(--color-text-tertiary); font-size: 14px; line-height: 1.6; }
+.process-start-header > :deep(.el-input) { width: var(--control-w-search); flex: 0 0 auto; }
+
+.process-start-section { min-width: 0; }
+.process-start-section > header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.process-start-section > header > span {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+.process-start-section > header > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.process-start-section h2 { margin: 0; font-size: 18px; }
+.process-start-section small { color: var(--color-text-tertiary); font-size: 12px; }
+
+.process-start-list { background: var(--color-canvas); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.process-start-list article {
+  display: grid;
+  min-height: 104px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+.process-start-list article:last-child { border-bottom: 0; }
+.process-start-list__icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+}
+.process-start-list__icon :deep(.el-icon) { font-size: 20px; }
+.process-start-list__content { display: grid; min-width: 0; gap: 6px; }
+.process-start-list h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.process-start-list p { margin: 0; color: var(--color-text-tertiary); font-size: 13px; line-height: 1.55; }
+.process-start-list__path { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--color-text-secondary); font-size: 12px; }
+.process-start-list__path i { color: var(--color-border-strong); font-style: normal; }
+
+html[data-layout='compact'] .process-start-header { align-items: stretch; flex-direction: column; gap: 16px; padding-bottom: 16px; }
+html[data-layout='compact'] .process-start-header h1 { font-size: 24px; }
+html[data-layout='compact'] .process-start-header > :deep(.el-input) { width: 100%; }
+html[data-layout='compact'] .process-start-list article { min-height: 0; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; padding: 14px; }
+html[data-layout='compact'] .process-start-list__icon { width: 38px; height: 38px; align-self: start; }
+html[data-layout='compact'] .process-start-list article > .el-button { width: 100%; grid-column: 1 / -1; }
+</style>

@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { Connection, Key, OfficeBuilding, Refresh, User } from '@element-plus/icons-vue';
+import { Refresh } from '@element-plus/icons-vue';
 import { ElAlert, ElButton, ElIcon, ElTabPane, ElTabs } from 'element-plus';
 import { computed, onMounted, ref } from 'vue';
+import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
+import WorkspaceMetricStrip, {
+  type MetricItem,
+} from '../../../shared/components/WorkspaceMetricStrip.vue';
 import { useSessionStore } from '../../../shared/session';
 import { iamApi } from '../api/iam-api';
 import DepartmentTreePanel from '../components/iam/DepartmentTreePanel.vue';
 import RolePermissionPanel from '../components/iam/RolePermissionPanel.vue';
 import UserAuthorizationPanel from '../components/iam/UserAuthorizationPanel.vue';
-import PlatformPageHeader from '../components/PlatformPageHeader.vue';
 import type { DepartmentNode, IamUser, Permission, Position, RoleSummary } from '../types/iam';
 
 const session = useSessionStore();
@@ -20,6 +23,12 @@ const users = ref<IamUser[]>([]);
 const loading = ref(false);
 const error = ref('');
 const activeTab = ref('organization');
+const metrics = computed<MetricItem[]>(() => [
+  { key: 'departments', label: '一级组织', value: departments.value.length },
+  { key: 'users', label: '用户', value: users.value.length },
+  { key: 'roles', label: '角色', value: roles.value.length },
+  { key: 'permissions', label: '权限', value: permissions.value.length },
+]);
 
 onMounted(() => void refresh());
 
@@ -44,18 +53,22 @@ async function refresh(): Promise<void> {
 </script>
 
 <template>
-  <div class="platform-page iam-page">
-    <PlatformPageHeader
-      eyebrow="系统设置 / IAM"
-      title="组织与权限中心"
+  <div class="iam-management-page ui-page">
+    <AppPageHeader
       description="统一维护多层级部门、多岗位任职、业务角色、功能权限和数据范围。"
+      eyebrow="系统设置"
+      title="组织与权限中心"
     >
       <template #actions>
-        <ElButton :loading="loading" @click="refresh"
-          ><ElIcon><Refresh /></ElIcon>刷新</ElButton
-        >
+        <div class="ui-actions">
+          <ElButton :loading="loading" @click="refresh">
+            <ElIcon><Refresh /></ElIcon>
+            刷新
+          </ElButton>
+        </div>
       </template>
-    </PlatformPageHeader>
+    </AppPageHeader>
+
     <ElAlert v-if="error" :closable="false" show-icon :title="error" type="error" />
     <ElAlert
       v-else-if="!canManage"
@@ -64,22 +77,10 @@ async function refresh(): Promise<void> {
       title="当前账号仅可查看组织与权限配置，所有编辑操作已关闭"
       type="info"
     />
-    <div class="platform-context-strip">
-      <span
-        ><ElIcon><OfficeBuilding /></ElIcon
-        ><strong>{{ departments.length }}</strong> 个一级组织</span
-      >
-      <span
-        ><ElIcon><User /></ElIcon><strong>{{ users.length }}</strong> 名用户</span
-      >
-      <span
-        ><ElIcon><Connection /></ElIcon><strong>{{ roles.length }}</strong> 个角色</span
-      >
-      <span
-        ><ElIcon><Key /></ElIcon><strong>{{ permissions.length }}</strong> 项权限</span
-      >
-    </div>
-    <ElTabs v-model="activeTab" class="platform-tabs">
+
+    <WorkspaceMetricStrip label="组织与权限概览" :items="metrics" />
+
+    <ElTabs v-model="activeTab">
       <ElTabPane label="部门与岗位" name="organization">
         <DepartmentTreePanel
           :departments="departments"
@@ -113,3 +114,12 @@ async function refresh(): Promise<void> {
     </ElTabs>
   </div>
 </template>
+
+<style scoped>
+.iam-management-page {
+  min-width: 0;
+}
+.iam-management-page :deep(.el-tabs__content) {
+  padding-top: 24px;
+}
+</style>

@@ -1,6 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
 import { accountSecurityRouteName } from './account-security.policy';
-import './styles/account.css';
 
 export const accountRoutes: RouteRecordRaw[] = [
   {

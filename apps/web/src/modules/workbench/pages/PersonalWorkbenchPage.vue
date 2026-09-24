@@ -4,6 +4,7 @@ import { WORKBENCH_BOXES, type WorkbenchBox, type WorkbenchItem } from '@oa/cont
 import { ElMessage } from 'element-plus';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { useDirectoryStore } from '../../../shared/directory';
 import { documentDetailPath } from '../../../shared/document';
 import { useSessionStore } from '../../../shared/session';
@@ -44,6 +45,8 @@ const {
   openContent: openReading,
   setDrawerOpen: setContentDrawerOpen,
 } = usePortalContentReader('待阅内容加载失败');
+
+const { isCompact } = useLayoutMode();
 const isApprovalCenter = computed(() => route.path.startsWith('/approval'));
 const approvalTabs: readonly WorkbenchTab[] = ['pending', 'completed'];
 const personalTabs: readonly WorkbenchTab[] = [
@@ -394,7 +397,7 @@ async function scrollActiveTabIntoView(): Promise<void> {
     />
 
     <section ref="workbenchSurface" class="workbench-surface">
-      <div class="workbench-mobile-tab-select">
+      <div v-if="isCompact" class="workbench-mobile-tab-select">
         <span>工作箱</span>
         <el-select v-model="activeTab" aria-label="选择工作箱">
           <el-option
@@ -405,7 +408,7 @@ async function scrollActiveTabIntoView(): Promise<void> {
           />
         </el-select>
       </div>
-      <div v-if="currentBox" class="workbench-filter-bar">
+      <div v-if="currentBox && !isCompact" class="ui-toolbar workbench-filter-bar">
         <WorkbenchFilterControls
           :departments="directory.departments"
           :model-value="filters"
@@ -414,16 +417,18 @@ async function scrollActiveTabIntoView(): Promise<void> {
           :users="directory.users"
           @update:model-value="updateDesktopFilters"
         />
-        <el-button :icon="RefreshLeft" @click="resetFilters">重置</el-button>
+        <div class="ui-toolbar__end">
+          <el-button :icon="RefreshLeft" @click="resetFilters">重置</el-button>
+        </div>
       </div>
-      <div v-if="currentBox" class="workbench-mobile-filter">
+      <div v-if="currentBox && isCompact" class="workbench-mobile-filter">
         <el-button :icon="Filter" @click="openMobileFilters">
           筛选
           <el-badge v-if="activeFilterCount" :value="activeFilterCount" />
         </el-button>
       </div>
 
-      <el-tabs v-model="activeTab" class="workbench-tabs">
+      <el-tabs v-if="!isCompact" v-model="activeTab" class="workbench-tabs">
         <el-tab-pane v-if="isApprovalCenter" name="pending"
           ><template #label>待办<el-badge :value="workbench.count('PENDING')" /></template>
           <div v-if="canBatchApprove" class="workbench-batch-toolbar">
@@ -555,3 +560,22 @@ async function scrollActiveTabIntoView(): Promise<void> {
     </el-drawer>
   </main>
 </template>
+
+<style scoped>
+.personal-workbench-page { display: flex; flex-direction: column; gap: 24px; }
+.workbench-filter-bar { align-items: flex-start; margin-bottom: 16px; }
+.workbench-filter-bar .ui-toolbar__end { align-self: flex-start; }
+.workbench-tabs :deep(.el-tabs__header) { margin-bottom: 10px; }
+.workbench-tabs :deep(.el-badge) { margin-left: 8px; }
+.workbench-mobile-tab-select { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.workbench-mobile-tab-select > span { flex: 0 0 auto; color: var(--color-text-tertiary); font-size: 13px; }
+.workbench-mobile-tab-select :deep(.el-select) { flex: 1; min-width: 0; }
+.workbench-mobile-filter { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.workbench-batch-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0 14px; color: var(--color-text-tertiary); font-size: 13px; }
+.workbench-batch-toolbar > div { display: flex; align-items: center; gap: 8px; }
+.workbench-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; color: var(--color-text-tertiary); font-size: 13px; }
+.workbench-pagination > span { white-space: nowrap; }
+.workbench-mobile-filter__actions { display: flex; align-items: center; gap: 8px; }
+.workbench-mobile-filter__actions .el-button { flex: 1; }
+.workbench-surface { min-width: 0; }
+</style>

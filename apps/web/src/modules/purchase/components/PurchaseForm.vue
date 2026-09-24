@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { FormInstance } from 'ant-design-vue';
-import type { Rule } from 'ant-design-vue/es/form';
+import type { FormInstance, FormRules } from 'element-plus';
 import { onMounted, reactive, ref } from 'vue';
 import AttachmentField from '../../../shared/components/AttachmentField.vue';
 import DocumentFormLayout from '../../../shared/components/DocumentFormLayout.vue';
@@ -9,9 +8,13 @@ import MoneyInput from '../../../shared/components/MoneyInput.vue';
 import WorkflowSidebar from '../../../shared/components/WorkflowSidebar.vue';
 import { useSessionStore } from '../../../shared/session';
 import { useWorkflowStore } from '../../../shared/workflow';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import ContractDocumentActions from '../../contract/components/ContractDocumentActions.vue';
 import type { EditorMode } from '../../contract/contract.types';
-import { useContractDocumentEditor } from '../../contract/useContractDocumentEditor';
+import {
+  useContractDocumentEditor,
+  validateDocumentForm,
+} from '../../contract/useContractDocumentEditor';
 import { PURCHASE_API, PURCHASE_ROUTE_NAMES } from '../purchase.config';
 import type { PurchaseData, PurchasePayload } from '../purchase.types';
 
@@ -19,6 +22,7 @@ const props = defineProps<{ mode: EditorMode; documentId?: string }>();
 const formRef = ref<FormInstance>();
 const session = useSessionStore();
 const workflow = useWorkflowStore();
+const { isCompact } = useLayoutMode();
 
 const form = reactive<PurchasePayload>({
   name: '',
@@ -32,7 +36,7 @@ const form = reactive<PurchasePayload>({
   attachments: [],
 });
 
-const rules: Record<keyof PurchasePayload, Rule[]> = {
+const rules: FormRules<PurchasePayload> = {
   name: [
     { required: true, whitespace: true, message: '请输入采购名称' },
     { max: 200, message: '采购名称不能超过 200 个字' },
@@ -45,9 +49,7 @@ const rules: Record<keyof PurchasePayload, Rule[]> = {
   counterpartyContact: [{ max: 100, message: '乙方联系人不能超过 100 个字' }],
   counterpartyPhone: [{ max: 50, message: '联系电话不能超过 50 个字' }],
   paymentMethod: [{ max: 100, message: '付款方式不能超过 100 个字' }],
-  expectedDeliveryDate: [],
   remark: [{ max: 1000, message: '备注不能超过 1000 个字' }],
-  attachments: [],
 };
 
 const editor = useContractDocumentEditor<PurchaseData, PurchasePayload>({
@@ -58,9 +60,7 @@ const editor = useContractDocumentEditor<PurchaseData, PurchasePayload>({
   itemPath: PURCHASE_API.purchase,
   editRouteName: PURCHASE_ROUTE_NAMES.edit,
   listRouteName: PURCHASE_ROUTE_NAMES.list,
-  validate: async () => {
-    await formRef.value?.validate();
-  },
+  validate: () => validateDocumentForm(formRef.value),
   payload: () => ({ ...form, attachments: [...form.attachments] }),
   assign: (data) => {
     Object.assign(form, {
@@ -90,91 +90,102 @@ onMounted(() => {
       :loading="editor.loading.value"
       :revision="editor.revision.value"
       :status="editor.status.value"
+      eyebrow="采购管理"
       :title="props.mode === 'create' ? '新建采购审批' : '采购审批'"
     >
-      <a-alert
+      <el-alert
         v-if="!editor.editable.value"
-        message="当前单据已进入流程，不可继续编辑。"
+        class="form-note"
+        title="当前单据已进入流程，不可继续编辑。"
         show-icon
         type="info"
+        :closable="false"
       />
 
-      <a-form
+      <el-form
         ref="formRef"
         :disabled="!editor.editable.value"
         :model="form"
         :rules="rules"
-        layout="vertical"
+        label-position="top"
+        @submit.prevent
       >
         <FormSection title="采购信息">
-          <div class="contract-form-grid">
-            <a-form-item label="单据编号">
+          <div class="ui-fields" :class="{ 'is-compact': isCompact }">
+            <el-form-item label="单据编号">
               <div class="contract-readonly-value">
                 {{ editor.documentNumber.value ?? '提交后自动生成 CG 单号' }}
               </div>
-            </a-form-item>
-            <a-form-item label="经办人">
+            </el-form-item>
+            <el-form-item label="经办人">
               <div class="contract-readonly-value">{{ session.user?.displayName ?? '-' }}</div>
-            </a-form-item>
-            <a-form-item class="contract-form-field--full" label="采购名称" name="name">
-              <a-input
-                v-model:value="form.name"
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="采购名称" prop="name">
+              <el-input
+                v-model="form.name"
                 :maxlength="200"
                 placeholder="请输入采购事项名称"
-                show-count
+                show-word-limit
               />
-            </a-form-item>
-            <a-form-item label="采购金额" name="amountCents">
+            </el-form-item>
+            <el-form-item label="采购金额" prop="amountCents">
               <MoneyInput v-model="form.amountCents" aria-label="采购金额" />
-            </a-form-item>
-            <a-form-item label="乙方单位" name="counterpartyName">
-              <a-input
-                v-model:value="form.counterpartyName"
+            </el-form-item>
+            <el-form-item label="乙方单位" prop="counterpartyName">
+              <el-input
+                v-model="form.counterpartyName"
                 :maxlength="300"
                 placeholder="请按证照登记名称完整填写"
               />
-            </a-form-item>
-            <a-form-item label="乙方联系人" name="counterpartyContact">
-              <a-input
-                v-model:value="form.counterpartyContact"
+            </el-form-item>
+            <el-form-item label="乙方联系人" prop="counterpartyContact">
+              <el-input
+                v-model="form.counterpartyContact"
                 :maxlength="100"
                 placeholder="请输入乙方联系人姓名"
               />
-            </a-form-item>
-            <a-form-item label="联系电话" name="counterpartyPhone">
-              <a-input
-                v-model:value="form.counterpartyPhone"
+            </el-form-item>
+            <el-form-item label="联系电话" prop="counterpartyPhone">
+              <el-input
+                v-model="form.counterpartyPhone"
                 :maxlength="50"
                 placeholder="请输入乙方联系电话"
               />
-            </a-form-item>
-            <a-form-item label="付款方式" name="paymentMethod">
-              <a-input
-                v-model:value="form.paymentMethod"
+            </el-form-item>
+            <el-form-item label="付款方式" prop="paymentMethod">
+              <el-input
+                v-model="form.paymentMethod"
                 :maxlength="100"
                 placeholder="如：银行转账、货到付款"
               />
-            </a-form-item>
-            <a-form-item label="期望到货时间" name="expectedDeliveryDate">
-              <a-input v-model:value="form.expectedDeliveryDate" type="date" />
-            </a-form-item>
-            <a-form-item class="contract-form-field--full" label="备注" name="remark">
-              <a-textarea
-                v-model:value="form.remark"
-                :auto-size="{ minRows: 3, maxRows: 6 }"
+            </el-form-item>
+            <el-form-item label="期望到货时间" prop="expectedDeliveryDate">
+              <el-date-picker
+                :model-value="form.expectedDeliveryDate"
+                format="YYYY/MM/DD"
+                placeholder="请选择期望到货时间"
+                value-format="YYYY-MM-DD"
+                @update:model-value="form.expectedDeliveryDate = $event || null"
+              />
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="备注" prop="remark">
+              <el-input
+                v-model="form.remark"
+                type="textarea"
+                :autosize="{ minRows: 3, maxRows: 6 }"
                 :maxlength="1000"
                 placeholder="可选，补充其他说明"
               />
-            </a-form-item>
+            </el-form-item>
           </div>
         </FormSection>
 
         <FormSection title="附件">
-          <a-form-item name="attachments">
-            <AttachmentField v-model="form.attachments" />
-          </a-form-item>
+          <el-form-item prop="attachments">
+            <AttachmentField v-model="form.attachments" :readonly="!editor.editable.value" />
+          </el-form-item>
         </FormSection>
-      </a-form>
+      </el-form>
 
       <template #aside>
         <WorkflowSidebar :loading="editor.loading.value" :overview="editor.overview.value" />

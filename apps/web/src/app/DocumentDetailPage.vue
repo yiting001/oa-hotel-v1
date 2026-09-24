@@ -1,25 +1,21 @@
 <script setup lang="ts">
-import {
-  EditOutlined,
-  PrinterOutlined,
-  ShareAltOutlined,
-  ToolOutlined,
-} from '@ant-design/icons-vue';
+import { Edit, Printer, Share, Tools } from '@element-plus/icons-vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { ElMessage } from 'element-plus';
+import { useRoute, useRouter } from 'vue-router';
 import {
   requiredBusinessModulePermissions,
   type DocumentSummary,
   type DocumentType,
   type WorkflowOverview,
 } from '@oa/contracts';
-import { message } from 'ant-design-vue';
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import { apiRequest, requestId } from '../shared/api';
 import DocumentDataView from '../shared/components/DocumentDataView.vue';
 import DocumentFormLayout from '../shared/components/DocumentFormLayout.vue';
 import FormSection from '../shared/components/FormSection.vue';
 import WorkflowFlowGraph from '../shared/components/WorkflowFlowGraph.vue';
 import WorkflowSidebar from '../shared/components/WorkflowSidebar.vue';
+import UiDialog from '../ui/UiDialog.vue';
 import { documentEditPath, documentTypeMeta, type DocumentTypeMeta } from '../shared/document';
 import { useSessionStore } from '../shared/session';
 import { useWorkflowStore } from '../shared/workflow';
@@ -34,6 +30,19 @@ interface DetailEnvelope {
   data: Record<string, unknown>;
   document: DocumentSummary;
 }
+
+/** 单据类型 → 业务域眉标 */
+const documentTypeEyebrows: Record<string, string> = {
+  CONTRACT_REQUEST: '合同管理',
+  CONTRACT_APPROVAL: '合同管理',
+  CONTRACT_PAYMENT: '合同管理',
+  SEAL_USE: '行政管理',
+  SEAL_BORROW: '行政管理',
+  MATERIAL_PURCHASE: '物资管理',
+  MATERIAL_REQUISITION: '物资管理',
+  PURCHASE_APPROVAL: '采购管理',
+  PETTY_PROCUREMENT: '零星采买',
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -65,9 +74,7 @@ const editable = computed(() => {
   const document = envelope.value?.document;
   return (
     document &&
-    requiredBusinessModulePermissions(document.module, 'CREATE').every((code) =>
-      session.can(code),
-    ) &&
+    requiredBusinessModulePermissions(document.module, 'CREATE').every((code) => session.can(code)) &&
     ['DRAFT', 'RETURNED'].includes(document.status) &&
     document.applicantId === session.user?.id
   );
@@ -78,7 +85,6 @@ const myPendingTask = computed(
       (task) => task.documentId === documentId.value && task.status === 'PENDING',
     ) ?? null,
 );
-
 const executionPath = computed(() => {
   const document = envelope.value?.document;
   if (!document || document.status !== 'APPROVED') return null;
@@ -116,7 +122,7 @@ async function load(): Promise<void> {
       }
     }
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '单据加载失败');
+    ElMessage.error(error instanceof Error ? error.message : '单据加载失败');
   } finally {
     loading.value = false;
   }
@@ -141,12 +147,12 @@ async function submitApproval(): Promise<void> {
       approvalComment.value.trim(),
       approvalRequestId.value,
     );
-    message.success(approvalAction.value === 'approve' ? '审批已提交' : '单据已退回发起人');
+    ElMessage.success(approvalAction.value === 'approve' ? '审批已提交' : '单据已退回发起人');
     approvalDialogOpen.value = false;
     approvalRequestId.value = null;
     await load();
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '审批处理失败');
+    ElMessage.error(error instanceof Error ? error.message : '审批处理失败');
   } finally {
     approvalSubmitting.value = false;
   }
@@ -164,7 +170,7 @@ async function refreshWorkbenchSummary(): Promise<void> {
   try {
     await workbench.refreshSummary();
   } catch (error) {
-    message.warning(error instanceof Error ? error.message : '工作台摘要刷新失败');
+    ElMessage.warning(error instanceof Error ? error.message : '工作台摘要刷新失败');
   }
 }
 </script>
@@ -172,6 +178,7 @@ async function refreshWorkbenchSummary(): Promise<void> {
 <template>
   <DocumentFormLayout
     :description="meta ? `${meta.moduleLabel} · ${meta.label}` : undefined"
+    :eyebrow="documentTypeEyebrows[String(route.params.documentType)] ?? meta?.moduleLabel"
     :document-number="documentNumber"
     :loading="loading"
     :revision="envelope?.document.revision"
@@ -179,29 +186,15 @@ async function refreshWorkbenchSummary(): Promise<void> {
     :title="envelope?.document.title ?? '单据详情'"
   >
     <template #headerActions>
-      <a-space wrap>
-        <a-button v-if="editable" @click="edit">
-          <template #icon><EditOutlined /></template>
-          编辑
-        </a-button>
-        <a-button v-if="executionPath" type="primary" @click="router.push(executionPath)">
-          <template #icon><ToolOutlined /></template>
-          执行登记
-        </a-button>
-        <DocumentFollowButton
-          v-if="session.can('DOCUMENT_FOLLOW')"
-          :document-id="documentId"
-          @changed="refreshWorkbenchSummary"
-        />
-        <a-button v-if="session.can('WORKFLOW_COPY')" @click="copyDialogOpen = true">
-          <template #icon><ShareAltOutlined /></template>
-          抄送
-        </a-button>
-        <a-button @click="print">
-          <template #icon><PrinterOutlined /></template>
-          打印
-        </a-button>
-      </a-space>
+      <el-button v-if="editable" :icon="Edit" @click="edit">编辑</el-button>
+      <el-button v-if="executionPath" :icon="Tools" type="primary" @click="router.push(executionPath)">执行登记</el-button>
+      <DocumentFollowButton
+        v-if="session.can('DOCUMENT_FOLLOW')"
+        :document-id="documentId"
+        @changed="refreshWorkbenchSummary"
+      />
+      <el-button v-if="session.can('WORKFLOW_COPY')" :icon="Share" @click="copyDialogOpen = true">抄送</el-button>
+      <el-button :icon="Printer" @click="print">打印</el-button>
     </template>
 
     <FormSection v-if="overview" title="审批流程">
@@ -221,25 +214,32 @@ async function refreshWorkbenchSummary(): Promise<void> {
       <WorkflowSidebar :loading="loading" :overview="overview" />
     </template>
   </DocumentFormLayout>
+
   <WorkflowCopyDialog v-model:open="copyDialogOpen" :document-id="documentId" />
 
-  <a-modal
-    v-model:open="approvalDialogOpen"
-    :confirm-loading="approvalSubmitting"
-    :ok-button-props="{ disabled: !approvalComment.trim() }"
-    :title="approvalAction === 'approve' ? '同意审批' : '退回单据'"
-    @ok="submitApproval"
-  >
-    <a-radio-group v-model:value="approvalAction" style="margin-bottom: 12px">
-      <a-radio-button value="approve">同意</a-radio-button>
-      <a-radio-button value="return">退回</a-radio-button>
-    </a-radio-group>
-    <a-textarea
-      v-model:value="approvalComment"
+  <UiDialog v-model="approvalDialogOpen" :title="approvalAction === 'approve' ? '同意审批' : '退回单据'" :width="560">
+    <el-radio-group v-model="approvalAction">
+      <el-radio-button value="approve">同意</el-radio-button>
+      <el-radio-button value="return">退回</el-radio-button>
+    </el-radio-group>
+    <el-input
+      v-model="approvalComment"
       :maxlength="500"
-      placeholder="请输入审批意见"
       :rows="4"
-      show-count
+      class="approval-comment"
+      placeholder="请输入审批意见"
+      show-word-limit
+      type="textarea"
     />
-  </a-modal>
+    <template #footer>
+      <el-button @click="approvalDialogOpen = false">取消</el-button>
+      <el-button :disabled="!approvalComment.trim()" :loading="approvalSubmitting" type="primary" @click="submitApproval">
+        {{ approvalAction === 'approve' ? '确认同意' : '确认退回' }}
+      </el-button>
+    </template>
+  </UiDialog>
 </template>
+
+<style scoped>
+.approval-comment { margin-top: 16px; }
+</style>

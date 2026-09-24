@@ -13,7 +13,6 @@ import {
 } from '../../../shared/business-time';
 import { formatDateTime } from '../../../shared/format';
 import { loadPortalCalendar } from '../api/portal-api';
-import '../styles/portal-calendar.css';
 
 const props = defineProps<{ events: PortalCalendarEvent[] }>();
 const cursor = ref(businessMonthStart());
@@ -123,3 +122,38 @@ function dayAriaLabel(dayKey: string): string {
     </div>
   </section>
 </template>
+
+<style scoped>
+.portal-calendar-panel { padding: 16px; background: var(--color-surface); border-radius: var(--radius-lg); }
+.portal-section-heading { display: flex; min-height: 28px; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.portal-section-heading strong { font-size: 18px; font-weight: 600; }
+.portal-calendar-panel__controls { display: flex; align-items: center; gap: 4px; }
+.portal-calendar-panel__controls span { min-width: 84px; text-align: center; font-size: 13px; color: var(--color-text-tertiary); }
+.portal-calendar-weekdays, .portal-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.portal-calendar-weekdays { margin-bottom: 4px; }
+.portal-calendar-weekdays span { padding: 4px 0; color: var(--color-text-tertiary); font-size: 12px; text-align: center; }
+.portal-calendar-grid button {
+  position: relative;
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  padding: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.portal-calendar-grid button:hover { background: var(--color-canvas); color: var(--color-text); }
+.portal-calendar-grid button.is-current { color: var(--color-text-quaternary); }
+.portal-calendar-grid button.is-selected { color: #fff; background: var(--color-primary); font-weight: 600; }
+.portal-calendar-grid button i { position: absolute; bottom: 4px; width: 4px; height: 4px; background: var(--color-brand-coral); border-radius: 50%; }
+.portal-calendar-grid button.is-selected i { background: #fff; }
+.portal-calendar-agenda { display: grid; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.portal-calendar-agenda article { display: grid; gap: 2px; }
+.portal-calendar-agenda strong { font-size: 14px; font-weight: 500; }
+.portal-calendar-agenda span, .portal-calendar-agenda small { color: var(--color-text-tertiary); font-size: 12px; }
+.portal-calendar-agenda small { display: flex; align-items: center; gap: 4px; }
+</style>

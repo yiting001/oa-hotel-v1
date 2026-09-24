@@ -121,3 +121,44 @@ function applyLink(): void {
     <EditorContent :editor="editor" />
   </div>
 </template>
+
+<style scoped>
+.portal-rich-editor {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+.portal-rich-editor:focus-within { border-color: var(--color-text); box-shadow: 0 0 0 1px var(--color-text) inset; }
+.portal-rich-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 7px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.portal-rich-editor__toolbar :deep(.el-button + .el-button) { margin-left: 0; }
+.portal-rich-editor__toolbar :deep(.el-button.is-active) {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.portal-rich-editor__link-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.portal-rich-editor :deep(.portal-rich-editor__surface) {
+  min-height: 220px;
+  padding: 14px;
+  outline: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.portal-rich-editor :deep(.portal-rich-editor__surface:empty::before) {
+  color: var(--color-text-quaternary);
+  content: '请输入正文';
+  pointer-events: none;
+}
+.portal-rich-editor :deep(.portal-rich-editor__surface p) { margin: 0 0 0.75em; }
+</style>

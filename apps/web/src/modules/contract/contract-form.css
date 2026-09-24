@@ -1,153 +1,30 @@
+/**
+ * 单据表单共用样式（合同 / 零采 / 采购共享）
+ *
+ * 只保留跨模块复用的三个类：外层容器、只读值展示、字段说明。
+ * 栅格与间距统一走全局 `ui-fields` / `ui-field-full` / `ui-section`，这里不再定义栅格。
+ */
+
 .contract-document-form {
   min-width: 0;
 }
 
-.contract-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 24px;
-}
-
-.contract-form-grid--three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.contract-form-field--full {
-  grid-column: 1 / -1;
-}
-
 .contract-readonly-value {
-  min-height: 32px;
-  padding: 5px 11px;
+  display: flex;
+  min-height: var(--control-h);
+  align-items: center;
+  padding: 0 12px;
   color: var(--color-text-secondary);
-  background: var(--color-fill-subtle);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
 }
 
 .contract-field-note {
   display: block;
-  margin-top: 5px;
-  color: var(--color-text-secondary);
-  font-size: 12px;
+  margin-top: var(--space-xxs);
+  color: var(--color-text-tertiary);
+  font-size: 13px;
   line-height: 1.5;
-}
-
-.contract-calculation-strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  padding: 16px 0 4px;
-  border-top: 1px solid var(--color-border);
-}
-
-.contract-calculation-strip span,
-.contract-calculation-strip strong {
-  display: block;
-}
-
-.contract-calculation-strip span {
-  margin-bottom: 4px;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
-.contract-calculation-strip strong {
-  color: var(--color-text);
-  font-size: 16px;
-}
-
-.contract-document-form :deep(.document-form-page) {
-  min-width: 0;
-}
-
-.contract-document-form :deep(.document-form-layout) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 304px;
-  gap: 28px;
-  align-items: start;
-}
-
-.contract-document-form :deep(.document-form-layout__main) {
-  min-width: 0;
-}
-
-.contract-document-form :deep(.document-form-layout__aside) {
-  position: sticky;
-  top: 20px;
-  min-width: 0;
-  padding-left: 24px;
-  border-left: 1px solid var(--color-border);
-}
-
-.contract-document-form :deep(.form-section) {
-  padding: 20px 0 8px;
-  border-top: 1px solid var(--color-border);
-}
-
-.contract-document-form :deep(.form-section:first-child) {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.contract-document-form :deep(.form-section__heading) {
-  margin-bottom: 18px;
-}
-
-.contract-document-form :deep(.form-section__heading h2) {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.contract-document-form :deep(.form-section__heading p) {
-  margin: 4px 0 0;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-}
-
-@media (max-width: 1100px) {
-  .contract-document-form :deep(.document-form-layout) {
-    grid-template-columns: minmax(0, 1fr) 264px;
-    gap: 20px;
-  }
-
-  .contract-document-form :deep(.document-form-layout__aside) {
-    padding-left: 18px;
-  }
-}
-
-@media (max-width: 900px) {
-  .contract-document-form :deep(.document-form-layout) {
-    grid-template-columns: 1fr;
-  }
-
-  .contract-document-form :deep(.document-form-layout__aside) {
-    position: static;
-    padding: 20px 0 0;
-    border-top: 1px solid var(--color-border);
-    border-left: 0;
-  }
-
-  .contract-form-grid--three {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .contract-form-grid,
-  .contract-form-grid--three,
-  .contract-calculation-strip {
-    grid-template-columns: 1fr;
-  }
-
-  .contract-document-form :deep(.document-action-bar) {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .contract-document-form :deep(.document-action-bar .ant-btn:first-child) {
-    grid-column: 1 / -1;
-  }
 }

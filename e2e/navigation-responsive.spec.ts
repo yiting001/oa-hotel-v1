@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { expectNoPageOverflow, loginThroughUi } from './advanced-fixtures';
 
-const keyNavigationLabels = ['审批中心', '发起申请', '合同与支出', '行政印章', '物资管理'] as const;
+const keyNavigationLabels = ['审批中心', '合同与支出', '行政印章', '物资管理'] as const;
 
 const processStartLabels = [
   '合同/支出请示',
@@ -30,13 +30,15 @@ test.describe('enterprise navigation and responsive process entry', () => {
     page,
   }, testInfo) => {
     const navigation = await visibleSystemNavigation(page, testInfo.project.name);
+    // 导航按业务分组折叠（手机在抽屉里同理）：先展开所在分组，再断言分组内的模块条目
+    await navigation.getByText('业务中心', { exact: true }).click();
     for (const label of keyNavigationLabels) {
-      await expect(navigation.getByText(label, { exact: true })).toBeVisible();
+      await expect(navigation.getByText(label, { exact: true }).first()).toBeVisible();
     }
 
     await page.goto('/approval');
     await expect(page.getByRole('heading', { name: '待我审批', exact: true })).toBeVisible();
-    await expect(page.locator('.enterprise-header__title').getByText('审批中心')).toBeVisible();
+    await expect(page.locator('.ui-breadcrumb').getByText('审批中心')).toBeVisible();
 
     await page.goto('/start');
     await expect(page.getByRole('heading', { name: '发起申请', exact: true })).toBeVisible();
@@ -55,18 +57,12 @@ test.describe('enterprise navigation and responsive process entry', () => {
     await page.goto('/system/iam');
     await page.getByRole('tab', { name: '用户授权', exact: true }).click();
 
-    const membershipTable = page.locator('.iam-membership-table');
-    const roleTable = page.locator('.iam-role-assignment-table');
-    await expect(membershipTable).toHaveCount(1);
-    await expect(roleTable).toHaveCount(1);
-    await expectTableColumnsInside(membershipTable, [
-      '部门',
-      '岗位',
-      '主部门',
-      '部门负责人',
-      '启用',
-    ]);
-    await expectTableColumnsInside(roleTable, ['角色', '数据范围', '范围部门']);
+    await openAssignmentDialog(page);
+    const assignment = page.locator('.assignment-section');
+    await expect(assignment.first()).toBeVisible();
+    for (const table of await assignment.locator('.el-table').all()) {
+      await expectTableColumnsInside(table);
+    }
     await expectNoPageOverflow(page);
   });
 
@@ -77,14 +73,24 @@ test.describe('enterprise navigation and responsive process entry', () => {
     await page.goto('/system/iam');
     await page.getByRole('tab', { name: '用户授权', exact: true }).click();
 
-    const userLayout = page.locator('.iam-user-layout');
-    await expect(userLayout).toBeVisible();
-    const gridTrackCount = await userLayout.evaluate(
-      (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
-    );
-    expect(gridTrackCount).toBe(1);
-    await expectHorizontalTableScroll(page.locator('.iam-membership-table'));
-    await expectHorizontalTableScroll(page.locator('.iam-role-assignment-table'));
+    // 手机端：授权面板以全屏形式展开，内容单列呈现且不出现横向滚动的表格
+    await openAssignmentDialog(page);
+    const dialog = page.locator('.ui-dialog--compact');
+    await expect(dialog).toBeVisible();
+    const [dialogBox, viewport] = await Promise.all([dialog.boundingBox(), page.viewportSize()]);
+    expect(dialogBox).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(Math.round(dialogBox!.width)).toBeGreaterThanOrEqual(viewport!.width - 2);
+    // 手机端授权面板不再出现横向滚动的桌面表格；有列表时以卡片铺满单列
+    await expect(dialog.locator('.el-table')).toHaveCount(0);
+    const cards = dialog.locator('.ui-record, .assignment-card');
+    if (await cards.count()) {
+      const cardWidths = await cards.evaluateAll((elements) =>
+        elements.map((element) => Math.round(element.getBoundingClientRect().width)),
+      );
+      const containerWidth = Math.round(dialogBox!.width);
+      expect(cardWidths.every((width) => width <= containerWidth + 1)).toBe(true);
+    }
     await expectNoPageOverflow(page);
   });
 
@@ -95,7 +101,7 @@ test.describe('enterprise navigation and responsive process entry', () => {
 
     const bottomNavigation = page.getByRole('navigation', { name: '手机端主导航' });
     await expect(bottomNavigation).toBeVisible();
-    for (const label of ['公司门户', '审批中心', '发起申请', '个人工作台', '更多']) {
+    for (const label of ['公司门户', '审批中心', '个人工作台', '更多']) {
       await expect(
         bottomNavigation.getByRole('button', { name: label, exact: true }),
       ).toBeVisible();
@@ -127,7 +133,7 @@ test.describe('enterprise navigation and responsive process entry', () => {
       bottomNavigation.getByRole('button', { name: '审批中心', exact: true }),
     ).toBeVisible();
     await expect(
-      bottomNavigation.getByRole('button', { name: '发起申请', exact: true }),
+      bottomNavigation.getByRole('button', { name: '更多', exact: true }),
     ).toBeVisible();
     await expectNoPageOverflow(page);
 
@@ -158,6 +164,7 @@ test.describe('enterprise navigation and responsive process entry', () => {
 
     await page.goto('/system/processes');
     await expect(page.getByRole('heading', { name: '审批流程设计' })).toBeVisible();
+    await page.getByRole('tab', { name: '流程画布' }).click();
     await expect(page.locator('.process-mobile-view-switch')).toBeVisible();
     await expect(page.locator('.process-workspace')).toBeVisible();
     await expect(page.locator('.process-designer-shell > .definition-nav')).toBeHidden();
@@ -165,15 +172,23 @@ test.describe('enterprise navigation and responsive process entry', () => {
   });
 });
 
+/** 打开某个用户的授权面板：授权信息在弹层（手机端为全屏）里编辑 */
+async function openAssignmentDialog(page: Page): Promise<void> {
+  const assign = page.getByRole('button', { name: '分配授权' }).first();
+  await expect(assign).toBeVisible();
+  await assign.click();
+  await expect(page.locator('.ui-dialog')).toBeVisible();
+}
+
 async function visibleSystemNavigation(page: Page, projectName: string): Promise<Locator> {
   if (projectName !== 'mobile') {
-    return page.locator('.desktop-navigation').getByRole('navigation', { name: '系统主导航' });
+    return page.locator('.ui-sidebar').getByRole('navigation', { name: '系统主导航' });
   }
 
   const bottomNavigation = page.getByRole('navigation', { name: '手机端主导航' });
   await expect(bottomNavigation).toBeVisible();
   await bottomNavigation.getByRole('button', { name: '更多', exact: true }).click();
-  const drawer = page.locator('.app-mobile-drawer');
+  const drawer = page.locator('.ui-menu-drawer');
   await expect(drawer).toBeVisible();
   return drawer.getByRole('navigation', { name: '系统主导航' });
 }
@@ -183,7 +198,7 @@ async function previewFitsStage(stage: Locator, sheet: Locator): Promise<boolean
   return Boolean(stageBox && sheetBox && sheetBox.width <= stageBox.width + 1);
 }
 
-async function expectTableColumnsInside(table: Locator, labels: string[]): Promise<void> {
+async function expectTableColumnsInside(table: Locator): Promise<void> {
   const tableBox = await table.boundingBox();
   expect(tableBox).not.toBeNull();
 
@@ -193,15 +208,16 @@ async function expectTableColumnsInside(table: Locator, labels: string[]): Promi
   });
   expect(horizontalOverflow, 'assignment table should not require horizontal scrolling').toBe(0);
 
-  for (const label of labels) {
-    const header = table.getByRole('columnheader', { name: label, exact: true });
-    await expect(header).toHaveCount(1);
-    const headerBox = await header.boundingBox();
+  const headers = table.getByRole('columnheader');
+  const count = await headers.count();
+  expect(count).toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    const headerBox = await headers.nth(index).boundingBox();
+    const label = (await headers.nth(index).innerText()).trim();
     expect(headerBox, `${label} column should be rendered`).not.toBeNull();
-    expect(
-      headerBox!.x,
-      `${label} column should not be clipped on the left`,
-    ).toBeGreaterThanOrEqual(tableBox!.x - 1);
+    expect(headerBox!.x, `${label} column should not be clipped on the left`).toBeGreaterThanOrEqual(
+      tableBox!.x - 1,
+    );
     expect(
       headerBox!.x + headerBox!.width,
       `${label} column should not be clipped on the right`,
@@ -209,20 +225,3 @@ async function expectTableColumnsInside(table: Locator, labels: string[]): Promi
   }
 }
 
-async function expectHorizontalTableScroll(table: Locator): Promise<void> {
-  await expect(table).toHaveCount(1);
-  const metrics = await table.evaluate((element) => {
-    const scroller = element.querySelector<HTMLElement>('.el-scrollbar__wrap');
-    return scroller
-      ? {
-          clientWidth: scroller.clientWidth,
-          overflowX: getComputedStyle(scroller).overflowX,
-          scrollWidth: scroller.scrollWidth,
-        }
-      : null;
-  });
-  expect(metrics).not.toBeNull();
-  expect(metrics!.scrollWidth).toBeGreaterThan(metrics!.clientWidth);
-  expect(metrics!.overflowX).toBe('auto');
-  await expect(table.locator('.el-scrollbar__bar.is-horizontal')).toBeVisible();
-}

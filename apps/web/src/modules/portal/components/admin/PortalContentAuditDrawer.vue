@@ -57,3 +57,27 @@ const actionLabels: Record<PortalContentAuditEvent['action'], string> = {
     <el-empty v-if="!loading && (trail?.events.length ?? 0) === 0" description="暂无审计记录" />
   </el-drawer>
 </template>
+
+<style scoped>
+.portal-audit-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.portal-audit-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-audit-heading span { flex: 0 0 auto; color: var(--color-text-tertiary); font-size: 12px; }
+.portal-audit-timeline article {
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+}
+.portal-audit-timeline article > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.portal-audit-timeline article p { margin: 7px 0 0; color: var(--color-text-secondary); }
+.portal-audit-timeline article small { display: block; margin-top: 5px; color: var(--color-text-tertiary); }
+</style>

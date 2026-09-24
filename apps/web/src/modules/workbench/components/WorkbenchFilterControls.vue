@@ -89,3 +89,20 @@ function fieldModel<Key extends keyof WorkbenchFilters>(key: Key) {
     />
   </div>
 </template>
+
+<style scoped>
+/* 与全局 .ui-toolbar 同规格：统一间距与控件宽度档，避免嵌入块级容器后零间距、错行 */
+.workbench-filter-controls {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--filter-gap);
+}
+.workbench-filter-controls > :deep(.el-input) { width: var(--control-w-search); flex: 0 0 auto; }
+.workbench-filter-controls > :deep(.el-select) { width: var(--control-w-select); flex: 0 0 auto; }
+.workbench-filter-controls > :deep(.el-date-editor) { width: var(--control-w-date); flex: 0 0 auto; }
+.workbench-filter-controls.is-stacked { display: grid; flex: 0 0 auto; gap: var(--filter-gap); }
+.workbench-filter-controls.is-stacked > :deep(*) { width: 100%; min-width: 0; }
+</style>

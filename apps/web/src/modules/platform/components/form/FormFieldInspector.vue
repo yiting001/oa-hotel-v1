@@ -17,6 +17,7 @@ import {
   ElTabs,
 } from 'element-plus';
 import { computed, ref } from 'vue';
+import { useLayoutMode } from '../../../../ui/useLayoutMode';
 import type { FormFieldModel, FormSchema, PrintSchema } from '../../types/designer';
 import { createTableColumn } from '../../utils/form';
 
@@ -33,6 +34,7 @@ const emit = defineEmits<{
   remove: [];
   move: [direction: -1 | 1];
 }>();
+const { isCompact } = useLayoutMode();
 const activeTab = ref('field');
 
 const optionsText = computed({
@@ -91,7 +93,7 @@ function removeColumn(index: number): void {
 </script>
 
 <template>
-  <aside class="form-inspector no-print">
+  <aside class="form-inspector" :data-compact="isCompact">
     <ElTabs v-model="activeTab">
       <ElTabPane label="字段属性" name="field">
         <template v-if="field">
@@ -147,11 +149,14 @@ function removeColumn(index: number): void {
               ><ElInput v-model="optionsText" :rows="5" type="textarea"
             /></ElFormItem>
             <div v-if="field.type === 'table'" class="table-column-editor">
-              <div class="platform-subheading">
-                <div><strong>明细列</strong><small>配置打印表格的列名和宽度</small></div>
-                <ElButton :disabled="readonly" size="small" @click="addColumn"
-                  ><ElIcon><Plus /></ElIcon>新增列</ElButton
-                >
+              <div class="panel-subheading">
+                <div>
+                  <strong>明细列</strong>
+                  <small>配置打印表格的列名和宽度</small>
+                </div>
+                <ElButton :disabled="readonly" size="small" @click="addColumn">
+                  <ElIcon><Plus /></ElIcon>新增列
+                </ElButton>
               </div>
               <div
                 v-for="(column, index) in field.columns"
@@ -177,7 +182,7 @@ function removeColumn(index: number): void {
             </div>
           </ElForm>
         </template>
-        <div v-else class="platform-empty-hint">在 A4 纸张中选择字段后编辑属性</div>
+        <div v-else class="empty-hint">在 A4 纸张中选择字段后编辑属性</div>
       </ElTabPane>
       <ElTabPane label="纸张设置" name="paper">
         <ElForm label-position="top" :disabled="readonly">
@@ -231,3 +236,74 @@ function removeColumn(index: number): void {
     </ElTabs>
   </aside>
 </template>
+
+<style scoped>
+.form-inspector {
+  min-width: 0;
+  padding: 0 16px 20px;
+  overflow: auto;
+  background: var(--color-canvas);
+  border-left: 1px solid var(--color-border);
+}
+.form-inspector :deep(.el-tabs__header) {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding-top: 8px;
+  background: var(--color-canvas);
+}
+.form-inspector__actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.form-inspector :deep(.el-select),
+.form-inspector :deep(.el-input-number) {
+  width: 100%;
+}
+.panel-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+.panel-subheading > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+.panel-subheading strong {
+  font-size: var(--font-size-title-sm);
+  font-weight: 600;
+}
+.panel-subheading small {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+.table-column-editor {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.table-column-editor__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px 32px;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.empty-hint {
+  display: grid;
+  min-height: 160px;
+  place-content: center;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+.form-inspector[data-compact='true'] {
+  border-left: 0;
+  overflow: visible;
+}
+html[data-layout='compact'] .table-column-editor__row {
+  grid-template-columns: minmax(0, 1fr) 84px 44px;
+}
+</style>

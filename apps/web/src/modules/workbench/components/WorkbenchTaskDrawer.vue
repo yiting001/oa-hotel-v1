@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UiDataList, { type DataColumn } from '../../../ui/UiDataList.vue';
 import { Paperclip, Share, View } from '@element-plus/icons-vue';
 import type { WorkbenchItem, WorkflowOverview } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
@@ -53,6 +54,10 @@ const fields = computed(() =>
 const items = computed<Record<string, unknown>[]>(() =>
   Array.isArray(data.value?.items) ? (data.value.items as Record<string, unknown>[]) : [],
 );
+const itemColumns = computed<DataColumn[]>(() =>
+  itemKeys.value.map((key) => ({ key, label: fieldLabels[key] ?? key, minWidth: 120 })),
+);
+
 const itemKeys = computed(() =>
   [...new Set(items.value.flatMap((item) => Object.keys(item)))].filter(
     (key) => key !== 'materialItemId',
@@ -221,16 +226,19 @@ function clearCommandIntent(): void {
             field.value
           }}</el-descriptions-item>
         </el-descriptions>
-        <el-table v-if="items.length" :data="items" class="workbench-task-detail__items">
-          <el-table-column
+        <UiDataList
+          v-if="items.length"
+          class="workbench-task-detail__items"
+          :columns="itemColumns"
+          empty-text="暂无明细"
+          :rows="items"
+        >
+          <template
             v-for="key in itemKeys"
             :key="key"
-            :label="fieldLabels[key] ?? key"
-            min-width="120"
-          >
-            <template #default="{ row }">{{ formatFieldValue(key, row[key]) }}</template>
-          </el-table-column>
-        </el-table>
+            #[`cell-${key}`]="{ row }"
+          >{{ formatFieldValue(key, (row as Record<string, unknown>)[key]) }}</template>
+        </UiDataList>
       </section>
       <section>
         <h3>附件材料（{{ attachments.length }}）</h3>
@@ -313,3 +321,34 @@ function clearCommandIntent(): void {
   </el-dialog>
   <WorkflowCopyDialog v-if="task" v-model:open="copyDialogOpen" :document-id="task.documentId" />
 </template>
+
+<style scoped>
+.workbench-task-detail { min-width: 0; }
+.workbench-task-detail > header {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.workbench-task-detail > header > div:first-child { min-width: 0; flex: 1 1 auto; }
+.workbench-task-detail > header span { color: var(--color-text-tertiary); font-size: 12px; }
+.workbench-task-detail h2 { margin: 4px 0 0; font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.workbench-task-detail__header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.workbench-task-detail section { margin-top: 24px; }
+.workbench-task-detail h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+.workbench-task-detail__version { margin: 0 0 16px; color: var(--color-text-tertiary); font-size: 12px; }
+.workbench-task-detail__items { margin-top: 12px; }
+.workbench-task-detail__attachments { display: grid; gap: 8px; }
+.workbench-task-detail__attachments span { display: flex; min-width: 0; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: 13px; overflow-wrap: anywhere; }
+.workbench-task-detail__attachments :deep(.el-icon) { flex: 0 0 auto; color: var(--color-text-tertiary); }
+.workbench-task-detail :deep(.el-timeline-item__content) { display: grid; gap: 2px; }
+.workbench-task-detail :deep(.el-timeline-item__content p) { margin: 6px 0 0; color: var(--color-text-secondary); }
+.workbench-task-detail :deep(.el-timeline-item__content span) { color: var(--color-text-tertiary); font-size: 12px; }
+.workbench-task-detail__actions { display: flex; align-items: center; gap: 8px; }
+.workbench-task-detail__actions .el-button { flex: 1; }
+html[data-layout='compact'] .workbench-task-detail > header { flex-direction: column; gap: 12px; }
+html[data-layout='compact'] .workbench-task-detail__header-actions { width: 100%; flex-wrap: wrap; }
+</style>

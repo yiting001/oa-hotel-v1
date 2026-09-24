@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { computed } from 'vue';
+import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { createRequisitionLine, fieldKey } from '../domain/supply-form';
 import type { FieldErrors, MaterialItem, RequisitionLineForm } from '../types';
 
@@ -10,433 +10,121 @@ const props = defineProps<{
   errors: FieldErrors;
   disabled?: boolean;
 }>();
-
 const emit = defineEmits<{ 'update:modelValue': [value: RequisitionLineForm[]] }>();
-
+const { isCompact } = useLayoutMode();
 const materialMap = computed(() => new Map(props.materials.map((item) => [item.id, item])));
-
-function addLine(): void {
-  emit('update:modelValue', [...props.modelValue, createRequisitionLine()]);
-}
-
-function removeLine(index: number): void {
-  if (props.modelValue.length <= 1) {
-    return;
-  }
-  emit(
-    'update:modelValue',
-    props.modelValue.filter((_, lineIndex) => lineIndex !== index),
-  );
-}
-
-function updateLine(index: number, patch: Partial<RequisitionLineForm>): void {
-  emit(
-    'update:modelValue',
-    props.modelValue.map((line, lineIndex) => (lineIndex === index ? { ...line, ...patch } : line)),
-  );
-}
-
 function materialAt(index: number): MaterialItem | undefined {
   return materialMap.value.get(props.modelValue[index]?.materialItemId ?? '');
 }
-
+function addLine(): void {
+  if (!props.disabled) emit('update:modelValue', [...props.modelValue, createRequisitionLine()]);
+}
+function removeLine(index: number): void {
+  if (props.disabled || props.modelValue.length <= 1) return;
+  emit('update:modelValue', props.modelValue.filter((_, lineIndex) => lineIndex !== index));
+}
+function updateLine(index: number, patch: Partial<RequisitionLineForm>): void {
+  if (props.disabled) return;
+  emit('update:modelValue', props.modelValue.map((line, lineIndex) =>
+    lineIndex === index ? { ...line, ...patch } : line,
+  ));
+}
 function errorAt(index: number, field: string): string | undefined {
   return props.errors[fieldKey(index, field)];
 }
-
 function selectedElsewhere(materialId: string, currentIndex: number): boolean {
-  return props.modelValue.some(
-    (line, index) => index !== currentIndex && line.materialItemId === materialId,
-  );
+  return props.modelValue.some((line, index) => index !== currentIndex && line.materialItemId === materialId);
 }
-
 function numberValue(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 </script>
 
 <template>
-  <div class="line-editor-toolbar">
-    <span>从启用的库存项目中选择，共 {{ modelValue.length }} 项</span>
-    <a-button :disabled="disabled" type="primary" ghost @click="addLine">
-      <template #icon><PlusOutlined /></template>
-      增加明细
-    </a-button>
-  </div>
+  <div class="requisition-editor">
+    <div class="editor-heading ui-toolbar">
+      <div><strong>{{ modelValue.length }} 项领用物资</strong><p class="ui-text-muted">库存信息取自物资目录。</p></div>
+      <el-button :disabled="disabled" @click="addLine">添加物资</el-button>
+    </div>
+    <el-alert v-if="errors.items" :title="errors.items" type="error" show-icon :closable="false" />
 
-  <a-alert v-if="errors.items" :message="errors.items" show-icon type="error" />
+    <el-form v-if="!isCompact" class="desktop-editor" label-position="top" :disabled="disabled">
+      <el-table :data="modelValue" row-key="key" table-layout="fixed" :scrollbar-always-on="true">
+        <el-table-column type="index" label="#" width="56" />
+        <el-table-column label="库存物资 *" width="300">
+          <template #default="{ row, $index }">
+            <el-form-item :error="errorAt($index, 'materialItemId')">
+              <el-select :model-value="row.materialItemId" :aria-label="`第 ${$index + 1} 项库存物资`" filterable placeholder="按编号、品名或规格搜索" @update:model-value="(value: string) => updateLine($index, { materialItemId: value })">
+                <el-option v-for="material in materials" :key="material.id" :label="`${material.code} · ${material.name} · ${material.specification}`" :value="material.id" :disabled="!material.active || selectedElsewhere(material.id, $index)" />
+              </el-select>
+            </el-form-item>
+          </template>
+        </el-table-column>
+        <el-table-column label="货物编号" width="160"><template #default="{ $index }">{{ materialAt($index)?.code ?? '-' }}</template></el-table-column>
+        <el-table-column label="品名" width="180"><template #default="{ $index }">{{ materialAt($index)?.name ?? '-' }}</template></el-table-column>
+        <el-table-column label="规格" width="200"><template #default="{ $index }">{{ materialAt($index)?.specification ?? '-' }}</template></el-table-column>
+        <el-table-column label="单位" width="90"><template #default="{ $index }">{{ materialAt($index)?.unit ?? '-' }}</template></el-table-column>
+        <el-table-column label="可用库存" width="130"><template #default="{ $index }">{{ materialAt($index)?.availableQuantity ?? '-' }}</template></el-table-column>
+        <el-table-column label="请领数量 *" width="160">
+          <template #default="{ row, $index }">
+            <el-form-item :error="errorAt($index, 'requestedQuantity')">
+              <el-input-number :model-value="row.requestedQuantity" :aria-label="`第 ${$index + 1} 项请领数量`" :min="0" :precision="2" :controls="false" @update:model-value="(value: unknown) => updateLine($index, { requestedQuantity: numberValue(value) })" />
+            </el-form-item>
+          </template>
+        </el-table-column>
+        <el-table-column label="用途 *" width="280">
+          <template #default="{ row, $index }">
+            <el-form-item :error="errorAt($index, 'purpose')">
+              <el-input :model-value="row.purpose" :aria-label="`第 ${$index + 1} 项用途`" :maxlength="500" placeholder="说明领用用途" @update:model-value="(value: string) => updateLine($index, { purpose: value })" />
+            </el-form-item>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="88" fixed="right"><template #default="{ $index }"><el-button text type="danger" :aria-label="`删除第 ${$index + 1} 项`" :disabled="disabled || modelValue.length <= 1" @click="removeLine($index)">删除</el-button></template></el-table-column>
+      </el-table>
+      <p class="scroll-hint ui-text-muted">横向滚动查看全部字段，操作列固定在右侧。</p>
+    </el-form>
 
-  <div class="requisition-table-wrap">
-    <table class="requisition-table">
-      <thead>
-        <tr>
-          <th class="sequence-column">序号</th>
-          <th>库存物资<span>*</span></th>
-          <th>货物编号</th>
-          <th>品名</th>
-          <th>规格</th>
-          <th>单位</th>
-          <th>可用库存</th>
-          <th>请领数量<span>*</span></th>
-          <th>用途<span>*</span></th>
-          <th class="action-column">操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(line, index) in modelValue" :key="line.key">
-          <td class="sequence-cell">{{ index + 1 }}</td>
-          <td>
-            <a-select
-              :disabled="disabled"
-              :status="errorAt(index, 'materialItemId') ? 'error' : undefined"
-              :value="line.materialItemId || undefined"
-              class="full-control"
-              option-filter-prop="label"
-              placeholder="选择物资"
-              show-search
-              @update:value="(value: string) => updateLine(index, { materialItemId: value })"
-            >
-              <a-select-option
-                v-for="material in materials"
-                :key="material.id"
-                :disabled="!material.active || selectedElsewhere(material.id, index)"
-                :label="`${material.code} ${material.name} ${material.specification}`"
-                :value="material.id"
-              >
-                {{ material.code }} · {{ material.name }}
-              </a-select-option>
-            </a-select>
-            <small v-if="errorAt(index, 'materialItemId')" class="field-error">
-              {{ errorAt(index, 'materialItemId') }}
-            </small>
-          </td>
-          <td>{{ materialAt(index)?.code ?? '-' }}</td>
-          <td>{{ materialAt(index)?.name ?? '-' }}</td>
-          <td>{{ materialAt(index)?.specification ?? '-' }}</td>
-          <td>{{ materialAt(index)?.unit ?? '-' }}</td>
-          <td class="stock-cell">{{ materialAt(index)?.availableQuantity ?? '-' }}</td>
-          <td>
-            <a-input-number
-              :disabled="disabled"
-              :min="0"
-              :precision="2"
-              :status="errorAt(index, 'requestedQuantity') ? 'error' : undefined"
-              :value="line.requestedQuantity"
-              class="full-control"
-              placeholder="0.00"
-              @update:value="
-                (value: unknown) => updateLine(index, { requestedQuantity: numberValue(value) })
-              "
-            />
-            <small v-if="errorAt(index, 'requestedQuantity')" class="field-error">
-              {{ errorAt(index, 'requestedQuantity') }}
-            </small>
-          </td>
-          <td>
-            <a-input
-              :disabled="disabled"
-              :maxlength="500"
-              :status="errorAt(index, 'purpose') ? 'error' : undefined"
-              :value="line.purpose"
-              placeholder="说明领用用途"
-              @update:value="(value: string) => updateLine(index, { purpose: value })"
-            />
-            <small v-if="errorAt(index, 'purpose')" class="field-error">
-              {{ errorAt(index, 'purpose') }}
-            </small>
-          </td>
-          <td class="action-cell">
-            <a-tooltip title="删除明细">
-              <a-button
-                :aria-label="`删除第 ${index + 1} 条明细`"
-                :disabled="disabled || modelValue.length <= 1"
-                danger
-                shape="circle"
-                type="text"
-                @click="removeLine(index)"
-              >
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </a-tooltip>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="requisition-cards">
-    <article v-for="(line, index) in modelValue" :key="line.key" class="line-card">
-      <header>
-        <strong>领用明细 {{ index + 1 }}</strong>
-        <a-button
-          :aria-label="`删除第 ${index + 1} 条明细`"
-          :disabled="disabled || modelValue.length <= 1"
-          danger
-          shape="circle"
-          type="text"
-          @click="removeLine(index)"
-        >
-          <template #icon><DeleteOutlined /></template>
-        </a-button>
-      </header>
-      <label class="mobile-field">
-        <span>库存物资 <b>*</b></span>
-        <a-select
-          :disabled="disabled"
-          :status="errorAt(index, 'materialItemId') ? 'error' : undefined"
-          :value="line.materialItemId || undefined"
-          class="full-control"
-          option-filter-prop="label"
-          placeholder="按编号或品名搜索"
-          show-search
-          @update:value="(value: string) => updateLine(index, { materialItemId: value })"
-        >
-          <a-select-option
-            v-for="material in materials"
-            :key="material.id"
-            :disabled="!material.active || selectedElsewhere(material.id, index)"
-            :label="`${material.code} ${material.name} ${material.specification}`"
-            :value="material.id"
-          >
-            {{ material.code }} · {{ material.name }}
-          </a-select-option>
-        </a-select>
-        <small v-if="errorAt(index, 'materialItemId')" class="field-error">
-          {{ errorAt(index, 'materialItemId') }}
-        </small>
-      </label>
-      <dl class="material-snapshot">
-        <div>
-          <dt>编号</dt>
-          <dd>{{ materialAt(index)?.code ?? '-' }}</dd>
-        </div>
-        <div>
-          <dt>品名</dt>
-          <dd>{{ materialAt(index)?.name ?? '-' }}</dd>
-        </div>
-        <div>
-          <dt>规格</dt>
-          <dd>{{ materialAt(index)?.specification ?? '-' }}</dd>
-        </div>
-        <div>
-          <dt>单位</dt>
-          <dd>{{ materialAt(index)?.unit ?? '-' }}</dd>
-        </div>
-        <div>
-          <dt>可用库存</dt>
-          <dd>{{ materialAt(index)?.availableQuantity ?? '-' }}</dd>
-        </div>
-      </dl>
-      <div class="mobile-field-grid">
-        <label class="mobile-field">
-          <span>请领数量 <b>*</b></span>
-          <a-input-number
-            :disabled="disabled"
-            :min="0"
-            :precision="2"
-            :status="errorAt(index, 'requestedQuantity') ? 'error' : undefined"
-            :value="line.requestedQuantity"
-            class="full-control"
-            @update:value="
-              (value: unknown) => updateLine(index, { requestedQuantity: numberValue(value) })
-            "
-          />
-          <small v-if="errorAt(index, 'requestedQuantity')" class="field-error">
-            {{ errorAt(index, 'requestedQuantity') }}
-          </small>
-        </label>
-        <label class="mobile-field">
-          <span>用途 <b>*</b></span>
-          <a-textarea
-            :disabled="disabled"
-            :maxlength="500"
-            :rows="2"
-            :status="errorAt(index, 'purpose') ? 'error' : undefined"
-            :value="line.purpose"
-            @update:value="(value: string) => updateLine(index, { purpose: value })"
-          />
-          <small v-if="errorAt(index, 'purpose')" class="field-error">
-            {{ errorAt(index, 'purpose') }}
-          </small>
-        </label>
-      </div>
-    </article>
+    <div v-else class="item-cards">
+      <article v-for="(line, index) in modelValue" :key="line.key" class="item-card">
+        <header><div><span class="ui-text-muted">领用物资 {{ String(index + 1).padStart(2, '0') }}</span><h3>{{ materialAt(index)?.name || '选择库存物资' }}</h3></div><el-button text type="danger" :disabled="disabled || modelValue.length <= 1" :aria-label="`删除第 ${index + 1} 项`" @click="removeLine(index)">删除</el-button></header>
+        <el-form label-position="top" :disabled="disabled">
+          <el-form-item label="库存物资" required :error="errorAt(index, 'materialItemId')">
+            <el-select :model-value="line.materialItemId" filterable placeholder="按编号、品名或规格搜索" @update:model-value="(value: string) => updateLine(index, { materialItemId: value })">
+              <el-option v-for="material in materials" :key="material.id" :label="`${material.code} · ${material.name} · ${material.specification}`" :value="material.id" :disabled="!material.active || selectedElsewhere(material.id, index)" />
+            </el-select>
+          </el-form-item>
+          <dl class="material-facts">
+            <div><dt>货物编号</dt><dd>{{ materialAt(index)?.code ?? '-' }}</dd></div>
+            <div><dt>品名</dt><dd>{{ materialAt(index)?.name ?? '-' }}</dd></div>
+            <div><dt>规格</dt><dd>{{ materialAt(index)?.specification ?? '-' }}</dd></div>
+            <div><dt>单位</dt><dd>{{ materialAt(index)?.unit ?? '-' }}</dd></div>
+            <div><dt>可用库存</dt><dd>{{ materialAt(index)?.availableQuantity ?? '-' }}</dd></div>
+          </dl>
+          <el-form-item label="请领数量" required :error="errorAt(index, 'requestedQuantity')"><el-input-number :model-value="line.requestedQuantity" :min="0" :precision="2" controls-position="right" @update:model-value="(value: unknown) => updateLine(index, { requestedQuantity: numberValue(value) })" /></el-form-item>
+          <el-form-item label="用途" required :error="errorAt(index, 'purpose')"><el-input :model-value="line.purpose" type="textarea" :rows="3" :maxlength="500" show-word-limit @update:model-value="(value: string) => updateLine(index, { purpose: value })" /></el-form-item>
+        </el-form>
+      </article>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.line-editor-toolbar {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.line-editor-toolbar > span {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-}
-
-.requisition-table-wrap {
-  border: 1px solid var(--color-border-strong);
-  border-radius: 6px;
-  overflow-x: auto;
-}
-
-.requisition-table {
-  border-collapse: collapse;
-  min-width: 1320px;
-  table-layout: fixed;
-  width: 100%;
-}
-
-th {
-  background: var(--color-fill-subtle);
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 11px 8px;
-  text-align: left;
-}
-
-th > span,
-.mobile-field b {
-  color: var(--color-danger);
-  font-weight: 400;
-  margin-left: 2px;
-}
-
-td {
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text);
-  padding: 10px 8px;
-  vertical-align: top;
-}
-
-th:nth-child(2) {
-  width: 210px;
-}
-
-th:nth-child(3),
-th:nth-child(4) {
-  width: 140px;
-}
-
-th:nth-child(5) {
-  width: 180px;
-}
-
-th:nth-child(6),
-th:nth-child(7) {
-  width: 90px;
-}
-
-th:nth-child(8) {
-  width: 130px;
-}
-
-th:nth-child(9) {
-  width: 210px;
-}
-
-.sequence-column,
-.action-column {
-  text-align: center;
-  width: 58px;
-}
-
-.sequence-cell,
-.action-cell {
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-.stock-cell {
-  color: var(--color-success);
-  font-weight: 600;
-}
-
-.full-control {
-  width: 100%;
-}
-
-.field-error {
-  color: var(--color-danger);
-  display: block;
-  font-size: 12px;
-  line-height: 1.35;
-  margin-top: 4px;
-}
-
-.requisition-cards {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  .requisition-table-wrap {
-    display: none;
-  }
-
-  .requisition-cards {
-    display: grid;
-    gap: 12px;
-  }
-
-  .line-card {
-    border: 1px solid var(--color-border-strong);
-    border-radius: 6px;
-    padding: 14px;
-  }
-
-  .line-card header {
-    align-items: center;
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-  }
-
-  .mobile-field > span {
-    color: var(--color-text);
-    display: block;
-    font-size: 13px;
-    margin-bottom: 6px;
-  }
-
-  .material-snapshot {
-    background: var(--color-fill-subtle);
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: 12px 0;
-    padding: 12px;
-  }
-
-  .material-snapshot div:last-child {
-    grid-column: 1 / -1;
-  }
-
-  dt {
-    color: var(--color-text-secondary);
-    font-size: 12px;
-  }
-
-  dd {
-    color: var(--color-text);
-    margin: 2px 0 0;
-  }
-
-  .mobile-field-grid {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  }
-}
-
-@media (max-width: 520px) {
-  .mobile-field-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.requisition-editor, .desktop-editor { min-width: 0; max-width: 100%; }
+.requisition-editor { display: grid; gap: 16px; }
+.editor-heading { justify-content: space-between; align-items: center; }
+.editor-heading p { margin: 6px 0 0; font-size: 13px; }
+.desktop-editor { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.desktop-editor :deep(.el-form-item) { margin: 6px 0 20px; }
+.desktop-editor :deep(.el-form-item__error) { position: static; padding-top: 6px; }
+:deep(.el-input-number), :deep(.el-select) { width: 100%; }
+.scroll-hint { margin: 12px 16px; font-size: 12px; }
+.item-cards { display: grid; gap: 16px; min-width: 0; }
+.item-card { padding: 20px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: #fff; min-width: 0; }
+.item-card header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.item-card header > div { min-width: 0; }
+.item-card h3 { margin: 4px 0 0; font-size: 17px; overflow-wrap: anywhere; }
+.material-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; padding: 14px; background: var(--color-surface); border-radius: 6px; }
+.material-facts div { min-width: 0; }
+.material-facts dt { font-size: 12px; color: var(--color-text-secondary); }
+.material-facts dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 </style>

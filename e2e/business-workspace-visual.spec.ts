@@ -17,7 +17,7 @@ test.describe('业务工作台视觉一致性', () => {
       await expect(page.getByRole('heading', { name: workspace.title, exact: true })).toBeVisible();
       await expect(page.getByTestId('workspace-metric-strip')).toBeVisible();
       await expect(page.getByTestId('workspace-metric-item')).toHaveCount(4);
-      await expect(page.getByTestId('workspace-filter-bar')).toBeVisible();
+      await expect(page.locator('[data-testid="workspace-filter-bar"]:visible')).toBeVisible();
       await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeVisible();
       await expect(page.getByText('No data', { exact: true })).toHaveCount(0);
       await expectNoPageOverflow(page);
@@ -29,17 +29,17 @@ test.describe('业务工作台视觉一致性', () => {
     test.skip(testInfo.project.name !== 'desktop', '品牌图片路径只需要检查一次。');
 
     await page.goto('/login');
-    await expect(page.locator('.login-page')).toHaveCSS(
+    await expect(page.locator('.login__visual')).toHaveCSS(
       'background-image',
       /dongfang-courtyard-dusk\.webp/,
     );
 
     await loginThroughUi(page, 'office');
-    await expect(page.locator('.portal-banner')).toHaveCSS(
+    await expect(page.locator('.portal-image-strip')).toHaveCSS(
       'background-image',
       /dongfang-courtyard-day\.webp/,
     );
-    await expect(page.locator('.portal-featured-news img')).toHaveAttribute(
+    await expect(page.locator('.portal-section-panel img').first()).toHaveAttribute(
       'src',
       /dongfang-tower-sunset\.webp/,
     );

@@ -64,6 +64,7 @@ npm run verify:production
 - [系统架构](docs/architecture/00-system-architecture.md)
 - [数据、接口与安全设计](docs/architecture/01-data-api-security.md)
 - [响应式 UI/UX 规范](docs/architecture/02-ui-ux.md)
+- [UI 实现规范与历史缺陷规避清单](docs/architecture/03-ui-implementation-rules.md)
 - [开发路线与验收标准](docs/delivery/00-roadmap-and-acceptance.md)
 - [待确认事项与决策记录](docs/delivery/01-open-questions.md)
 - [前三模块企业化实现差距审计](docs/delivery/02-enterprise-gap-audit.md)

@@ -1,221 +1,119 @@
 <script setup lang="ts">
-import LogicFlow, { RectNode, RectNodeModel } from '@logicflow/core';
-import '@logicflow/core/lib/style/index.css';
+import { ArrowRight } from '@element-plus/icons-vue';
 import type { WorkflowOverview } from '@oa/contracts';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed } from 'vue';
+import { useLayoutMode } from '../../ui/useLayoutMode';
 import { workflowNodeLabel } from '../document';
 
-type EdgeConfig = LogicFlow.EdgeConfig;
-
-const props = defineProps<{
-  overview: WorkflowOverview;
-  /** 当前用户可办理时传入待办任务 id，当前节点变为可点击进入审批。 */
-  actionableTaskId?: string | null;
-}>();
-
+const props = defineProps<{ overview: WorkflowOverview; actionableTaskId?: string | null }>();
 const emit = defineEmits<{ act: [taskId: string] }>();
+const { isCompact } = useLayoutMode();
 
-const container = ref<HTMLDivElement | null>(null);
-let lf: LogicFlow | null = null;
-
-type NodeStatus = 'done' | 'current' | 'pending' | 'returned';
-
-class ApprovalNodeModel extends RectNodeModel {
-  override initNodeData(data: Parameters<RectNodeModel['initNodeData']>[0]): void {
-    super.initNodeData(data);
-    this.width = 132;
-    this.height = 46;
-    this.radius = 8;
-  }
-
-  override getNodeStyle() {
-    const style = super.getNodeStyle();
-    const status = this.properties.status as NodeStatus | undefined;
-    if (status === 'done') {
-      style.fill = '#16241a';
-      style.stroke = '#27a644';
-    } else if (status === 'current') {
-      style.fill = '#1b1e3a';
-      style.stroke = '#5e6ad2';
-      style.strokeWidth = 2;
-    } else if (status === 'returned') {
-      style.fill = '#2a1a1a';
-      style.stroke = '#e56a6a';
-    } else {
-      style.fill = '#18191a';
-      style.stroke = '#34343a';
-    }
-    if (this.properties.actionable) {
-      style.strokeDasharray = '0';
-      style.cursor = 'pointer';
-    }
-    return style;
-  }
-
-  override getTextStyle() {
-    const style = super.getTextStyle();
-    style.fontSize = 13;
-    style.color = '#f7f8f8';
-    return style;
-  }
-}
-
-const currentStep = computed(() => {
-  if (props.overview.document.status === 'APPROVED') {
-    return props.overview.definition.steps.length;
-  }
-  return props.overview.document.currentStep ?? 0;
-});
-
-interface GraphNode {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  text: string;
-  properties: { status: NodeStatus; actionable?: boolean; taskStep?: number };
-}
-
-function buildGraph(): { nodes: GraphNode[]; edges: EdgeConfig[] } {
-  const steps = props.overview.definition.steps;
-  const documentStatus = props.overview.document.status;
-  const spacing = 176;
-  const y = 70;
-  const nodes: GraphNode[] = [
-    {
-      id: 'node-start',
-      type: 'approval-node',
-      x: 90,
-      y,
-      text: documentStatus === 'RETURNED' ? '发起（已退回）' : '发起',
-      properties: { status: documentStatus === 'RETURNED' ? 'returned' : 'done' },
-    },
-    ...steps.map((step, index) => {
-      const status: NodeStatus =
-        documentStatus === 'APPROVED' || index < currentStep.value
-          ? 'done'
-          : index === currentStep.value && documentStatus === 'IN_REVIEW'
-            ? 'current'
-            : 'pending';
-      const actionable = status === 'current' && Boolean(props.actionableTaskId);
-      return {
-        id: `node-step-${index}`,
-        type: 'approval-node',
-        x: 90 + spacing * (index + 1),
-        y,
-        text: workflowNodeLabel(step) + (actionable ? '（点击审批）' : ''),
-        properties: { status, actionable, taskStep: index },
-      };
-    }),
-    {
-      id: 'node-end',
-      type: 'approval-node',
-      x: 90 + spacing * (steps.length + 1),
-      y,
-      text: '完成归档',
-      properties: { status: documentStatus === 'APPROVED' ? 'done' : 'pending' },
-    },
-  ];
-  const edges: EdgeConfig[] = nodes.slice(0, -1).map((node, index) => ({
-    id: `edge-${index}`,
-    type: 'polyline',
-    sourceNodeId: node.id,
-    targetNodeId: nodes[index + 1].id,
+type State = 'done' | 'current' | 'pending' | 'returned' | 'draft';
+const nodes = computed(() => {
+  const status = props.overview.document.status;
+  const current = props.overview.document.currentStep ?? 0;
+  const start: { label: string; state: State; step: number | null } = {
+    label: '发起',
+    state: status === 'DRAFT' ? 'draft' : status === 'RETURNED' ? 'returned' : 'done',
+    step: null,
+  };
+  const steps = props.overview.definition.steps.map((step, index) => ({
+    label: workflowNodeLabel(step),
+    state: (status === 'APPROVED' || (status === 'IN_REVIEW' && index < current)
+      ? 'done'
+      : status === 'IN_REVIEW' && index === current
+        ? 'current'
+        : 'pending') as State,
+    step: index,
   }));
-  return { nodes, edges };
-}
-
-function render(): void {
-  if (!lf) return;
-  lf.render(buildGraph());
-  lf.translateCenter();
-}
-
-onMounted(() => {
-  if (!container.value) return;
-  lf = new LogicFlow({
-    container: container.value,
-    isSilentMode: true,
-    grid: false,
-    background: { backgroundColor: '#141516' },
-  });
-  lf.register({ type: 'approval-node', view: RectNode, model: ApprovalNodeModel });
-  lf.on('node:click', ({ data }) => {
-    const properties = (data?.properties ?? {}) as GraphNode['properties'];
-    if (properties.actionable && props.actionableTaskId) {
-      emit('act', props.actionableTaskId);
-    }
-  });
-  render();
+  return [
+    start,
+    ...steps,
+    { label: '完成归档', state: (status === 'APPROVED' ? 'done' : 'pending') as State, step: null },
+  ];
 });
 
-watch(
-  () => [props.overview, props.actionableTaskId] as const,
-  () => render(),
-  { deep: true },
-);
-
-onBeforeUnmount(() => {
-  lf?.destroy();
-  lf = null;
-});
+function act(state: State): void {
+  if (state === 'current' && props.actionableTaskId) emit('act', props.actionableTaskId);
+}
+function stateLabel(state: State): string {
+  return { done: '已完成', current: '办理中', pending: '待流转', returned: '已退回', draft: '草稿' }[state];
+}
 </script>
 
 <template>
-  <div class="workflow-flow-graph">
-    <div ref="container" class="workflow-flow-graph__canvas" />
-    <div class="workflow-flow-graph__legend">
-      <span><i class="dot dot--done" />已完成</span>
-      <span><i class="dot dot--current" />当前节点</span>
-      <span><i class="dot dot--pending" />待流转</span>
-      <span v-if="actionableTaskId">点击高亮节点可直接审批</span>
-    </div>
-  </div>
+  <ol class="flow" :data-compact="isCompact" aria-label="审批流程">
+    <li v-for="(node, index) in nodes" :key="index" class="flow__node" :data-state="node.state">
+      <span class="flow__index">{{ index + 1 }}</span>
+      <div class="flow__content">
+        <strong>{{ node.label }}</strong>
+        <span class="flow__state">{{ stateLabel(node.state) }}</span>
+        <el-button
+          v-if="node.state === 'current' && actionableTaskId"
+          link
+          type="primary"
+          @click="act(node.state)"
+          >进入审批</el-button
+        >
+      </div>
+      <el-icon v-if="index < nodes.length - 1" class="flow__arrow" aria-hidden="true"><ArrowRight /></el-icon>
+    </li>
+  </ol>
 </template>
 
 <style scoped>
-.workflow-flow-graph__canvas {
-  width: 100%;
-  height: 150px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.workflow-flow-graph__legend {
+.flow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin-top: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+.flow__node {
+  display: flex;
+  min-width: 0;
+  flex: 1 0 132px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 8px 12px 0;
+  border-top: 2px solid var(--color-border);
+}
+.flow__node[data-state='done'] { border-top-color: var(--color-success); }
+.flow__node[data-state='current'] { border-top-color: var(--color-primary); }
+.flow__node[data-state='returned'] { border-top-color: var(--color-error); }
+.flow__node[data-state='draft'] { border-top-color: var(--color-text-quaternary); }
+.flow__index {
+  display: grid;
+  flex: 0 0 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-3);
+  border-radius: 50%;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
-
-.workflow-flow-graph__legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.flow__node[data-state='done'] .flow__index { color: var(--color-success-text); background: var(--color-success-bg); }
+.flow__node[data-state='current'] .flow__index { color: #fff; background: var(--color-primary); font-weight: 600; }
+.flow__node[data-state='returned'] .flow__index { color: var(--color-error-text); background: var(--color-error-bg); }
+.flow__content { display: grid; min-width: 0; gap: 4px; }
+.flow__content strong { font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.flow__state { color: var(--color-text-tertiary); font-size: 12px; }
+.flow__content :deep(.el-button) { justify-self: start; padding: 0; }
+.flow__arrow { margin: 3px 0 0 auto; color: var(--color-text-quaternary); }
+.flow[data-compact='true'] { display: grid; overflow: visible; }
+.flow[data-compact='true'] .flow__node {
+  min-width: 0;
+  padding: 10px 0 10px 12px;
+  border-top: 0;
+  border-left: 2px solid var(--color-border);
 }
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  display: inline-block;
-}
-
-.dot--done {
-  background: #16241a;
-  border: 1px solid #27a644;
-}
-
-.dot--current {
-  background: #1b1e3a;
-  border: 1px solid #5e6ad2;
-}
-
-.dot--pending {
-  background: #18191a;
-  border: 1px solid #34343a;
-}
+.flow[data-compact='true'] .flow__node[data-state='done'] { border-left-color: var(--color-success); }
+.flow[data-compact='true'] .flow__node[data-state='current'] { border-left-color: var(--color-primary); }
+.flow[data-compact='true'] .flow__node[data-state='returned'] { border-left-color: var(--color-error); }
+.flow[data-compact='true'] .flow__arrow { display: none; }
 </style>

@@ -1,17 +1,25 @@
-import type { Rule } from 'ant-design-vue/es/form';
+import type { FormItemRule } from 'element-plus';
+
+/**
+ * Element Plus 的 validator 类型要求回调式签名，而这里的校验器是 async 抛出式
+ * （async-validator 运行时同样支持 Promise 拒绝）。统一用一个小包装做类型收敛，
+ * 校验逻辑与其抛出的错误文案保持不变。
+ */
+const asValidator = (fn: (...args: never[]) => Promise<void>): FormItemRule['validator'] =>
+  fn as unknown as FormItemRule['validator'];
 import { PAYMENT_METHODS_REQUIRING_INSTRUMENT_NUMBER } from './contract.config';
 import type { ContractPaymentPayload } from './contract.types';
 
 export function createContractPaymentRules(
   form: ContractPaymentPayload,
-): Record<keyof ContractPaymentPayload, Rule[]> {
+): Record<keyof ContractPaymentPayload, FormItemRule[]> {
   return {
     contractId: [{ required: true, message: '请选择已审批合同' }],
     project: [{ required: true, whitespace: true, message: '请输入合同项目' }],
     contractStartDate: [{ required: true, message: '请选择合同开始日期' }],
     contractEndDate: [
       { required: true, message: '请选择合同结束日期' },
-      { validator: () => validateContractDates(form), trigger: 'change' },
+      { validator: asValidator(() => validateContractDates(form)), trigger: 'change' },
     ],
     contractSigningDate: [{ required: true, message: '缺少合同签订日期' }],
     contractAmountCents: [{ required: true, type: 'number', min: 0 }],
@@ -29,18 +37,18 @@ export function createContractPaymentRules(
     ],
     paymentSequence: [
       { required: true, type: 'integer', min: 1, message: '本次付款次序必须大于等于 1' },
-      { validator: (_rule, value) => validatePaymentSequence(form, value), trigger: 'change' },
+      { validator: asValidator((_rule, value) => validatePaymentSequence(form, value)), trigger: 'change' },
     ],
     executedAmountCents: [
       { required: true, type: 'number', min: 0, message: '累计已执行合同金额不能小于 0' },
     ],
     plannedProgress: [
       { required: true, whitespace: true, message: '请输入合同约定进度' },
-      { validator: validateProgress, trigger: 'blur' },
+      { validator: asValidator(validateProgress), trigger: 'blur' },
     ],
     actualProgress: [
       { required: true, whitespace: true, message: '请输入实际进度' },
-      { validator: validateProgress, trigger: 'blur' },
+      { validator: asValidator(validateProgress), trigger: 'blur' },
     ],
     paymentMethod: [{ required: true, message: '请选择付款方式' }],
     paymentReason: [
@@ -48,13 +56,13 @@ export function createContractPaymentRules(
       { max: 5000, message: '付款原因不能超过 5000 个字' },
     ],
     invoiceNumber: [
-      { validator: (_rule, value) => validateInstrumentNumber(form, value), trigger: 'blur' },
+      { validator: asValidator((_rule, value) => validateInstrumentNumber(form, value)), trigger: 'blur' },
     ],
-    warrantyStartDate: [{ validator: () => validateWarrantyDates(form), trigger: 'change' }],
-    warrantyEndDate: [{ validator: () => validateWarrantyDates(form), trigger: 'change' }],
+    warrantyStartDate: [{ validator: asValidator(() => validateWarrantyDates(form)), trigger: 'change' }],
+    warrantyEndDate: [{ validator: asValidator(() => validateWarrantyDates(form)), trigger: 'change' }],
     paymentAmountCents: [
       { required: true, type: 'number', min: 1, message: '本次付款金额必须大于 0' },
-      { validator: (_rule, value) => validatePaymentAmount(form, value), trigger: 'change' },
+      { validator: asValidator((_rule, value) => validatePaymentAmount(form, value)), trigger: 'change' },
     ],
     attachments: [],
   };
@@ -65,7 +73,7 @@ export function parsePaymentProgress(value: string): number | null {
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
 }
 
-async function validateProgress(_rule: Rule, value: unknown): Promise<void> {
+async function validateProgress(_rule: FormItemRule, value: unknown): Promise<void> {
   if (value && parsePaymentProgress(String(value)) === null) {
     throw new Error('进度必须是 0 到 100 之间的数值');
   }

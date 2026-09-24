@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
+import ErrorPage from './ErrorPage.vue';
 </script>
 
 <template>
-  <div class="not-found-page">
-    <a-result status="403" title="无权访问" sub-title="当前账号没有访问此功能所需的权限">
-      <template #extra>
-        <a-button type="primary" @click="router.replace('/')">返回工作台</a-button>
-      </template>
-    </a-result>
-  </div>
+  <ErrorPage
+    code="403"
+    description="当前账号没有访问此功能所需的权限。如需开通，请联系系统管理员调整角色授权。"
+    title="无权访问"
+  />
 </template>
