@@ -195,6 +195,10 @@ export class IamService implements OnApplicationBootstrap {
     return this.access.resolveCandidateUsers(roleCode, departmentId);
   }
 
+  async resolveDepartmentManagerUsersByName(departmentName: string): Promise<CandidateUser[]> {
+    return this.organization.resolveDepartmentManagerUsersByName(departmentName);
+  }
+
   async resolveApplicantDepartmentManagerUsers(departmentId: string): Promise<CandidateUser[]> {
     await this.legacyBootstrap.ensureInitialized();
     return this.organization.resolveApplicantDepartmentManagerUsers(departmentId);

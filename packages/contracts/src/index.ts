@@ -114,6 +114,20 @@ export interface DirectoryUser {
   departmentName: string;
 }
 
+/** 人工选择下一步：审批人在本节点勾选后续审核方（如外部律师、兄弟部门）。 */
+export interface WorkflowChoiceOption {
+  id: string;
+  name: string;
+}
+
+/** 由「人工选择下一步」派发出的分支任务。 */
+export interface WorkflowBranchSummary {
+  taskId: string;
+  label: string;
+  status: 'PENDING' | 'COMPLETED';
+  completedByName: string | null;
+}
+
 export interface ApprovalTaskSummary {
   id: string;
   documentId: string;
@@ -124,6 +138,10 @@ export interface ApprovalTaskSummary {
   processNodeName: string | null;
   assigneeRole: string;
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  /** CHOICE 表示该待办需要审批人选择下一步审核方。 */
+  nodeKind: 'APPROVAL' | 'CHOICE';
+  /** 仅 CHOICE 节点返回可选项。 */
+  choiceOptions: WorkflowChoiceOption[];
   createdAt: string;
   updatedAt: string;
 }
@@ -177,6 +195,8 @@ export interface WorkflowOverview {
   document: DocumentSummary;
   definition: WorkflowDefinitionSummary;
   currentTask: ApprovalTaskSummary | null;
+  /** 当前节点派发出去、尚未办结的分支任务（外部律师、兄弟部门等）。 */
+  pendingBranches: WorkflowBranchSummary[];
   opinions: ApprovalOpinion[];
 }
 

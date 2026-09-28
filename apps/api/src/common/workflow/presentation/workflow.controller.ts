@@ -43,7 +43,14 @@ export class WorkflowController {
     @Body() dto: CompleteTaskDto,
     @CurrentUser() user: SessionUser,
   ) {
-    return this.workflow.completeTask(taskId, dto.requestId, dto.comment, 'APPROVE', user);
+    return this.workflow.completeTask(
+      taskId,
+      dto.requestId,
+      dto.comment,
+      'APPROVE',
+      user,
+      dto.choices ?? [],
+    );
   }
 
   @Post('tasks/:id/return')

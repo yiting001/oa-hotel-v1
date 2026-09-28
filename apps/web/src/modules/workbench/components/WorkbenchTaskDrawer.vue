@@ -35,6 +35,8 @@ const actionDialogOpen = ref(false);
 const action = ref<'approve' | 'return'>('approve');
 const comment = ref('');
 const submitting = ref(false);
+/** 人工选择下一步：行政审批人勾选的后续审核方。 */
+const selectedChoices = ref<string[]>([]);
 const loadedItemId = ref<string | null>(null);
 const commandRequestId = ref<string | null>(null);
 const mobile = ref(false);
@@ -75,6 +77,17 @@ const currentStep = computed(() => {
     ? value.definition.steps.length
     : (value.document.currentStep ?? 0);
 });
+const currentChoiceOptions = computed(() => overview.value?.currentTask?.choiceOptions ?? []);
+const isChoiceTask = computed(
+  () => overview.value?.currentTask?.nodeKind === 'CHOICE' && currentChoiceOptions.value.length > 0,
+);
+const pendingBranches = computed(() =>
+  (overview.value?.pendingBranches ?? []).filter((branch) => branch.status === 'PENDING'),
+);
+const settledBranches = computed(() =>
+  (overview.value?.pendingBranches ?? []).filter((branch) => branch.status === 'COMPLETED'),
+);
+
 const taskNodeLabel = computed(() => {
   const task = props.task;
   if (!task) return '审批节点';
@@ -100,6 +113,7 @@ watch(
     actionDialogOpen.value = false;
     copyDialogOpen.value = false;
     comment.value = '';
+    selectedChoices.value = [];
     commandRequestId.value = null;
     if (open && props.task) {
       void load(props.task, sequence);
@@ -158,13 +172,21 @@ async function submitAction(): Promise<void> {
     return;
   submitting.value = true;
   try {
+    const choices = action.value === 'approve' ? [...selectedChoices.value] : [];
     await workflow.completeTask(
       props.task.taskId,
       action.value,
       comment.value.trim(),
       commandRequestId.value,
+      choices,
     );
-    ElMessage.success(action.value === 'approve' ? '审批已提交' : '单据已退回发起人');
+    ElMessage.success(
+      action.value === 'return'
+        ? '单据已退回发起人'
+        : choices.length > 0
+          ? '已指派后续审核'
+          : '审批已提交',
+    );
     actionDialogOpen.value = false;
     commandRequestId.value = null;
     emit('update:open', false);
@@ -266,6 +288,28 @@ function clearCommandIntent(): void {
           />
         </el-steps>
       </section>
+      <section v-if="isChoiceTask || pendingBranches.length > 0">
+        <h3>下一步审核方</h3>
+        <p class="workbench-task-detail__version">
+          可先指派外部律师或兄弟部门先行审核，审核完成后回到本人继续办理。
+        </p>
+        <el-checkbox-group v-if="isChoiceTask" v-model="selectedChoices" class="workbench-task-detail__choices">
+          <el-checkbox v-for="option in currentChoiceOptions" :key="option.id" :value="option.id">
+            {{ option.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+        <div v-if="pendingBranches.length" class="workbench-task-detail__branches">
+          <span v-for="branch in pendingBranches" :key="branch.taskId">
+            <el-tag effect="plain" type="warning" size="small">办理中</el-tag>{{ branch.label }}
+          </span>
+        </div>
+        <div v-if="settledBranches.length" class="workbench-task-detail__branches">
+          <span v-for="branch in settledBranches" :key="branch.taskId">
+            <el-tag effect="plain" type="success" size="small">已办</el-tag>
+            {{ branch.label }}<template v-if="branch.completedByName"> · {{ branch.completedByName }}</template>
+          </span>
+        </div>
+      </section>
       <section>
         <h3>审批记录</h3>
         <el-timeline>
@@ -289,7 +333,9 @@ function clearCommandIntent(): void {
     >
       <div class="workbench-task-detail__actions">
         <el-button type="danger" plain @click="requestAction('return')">退回</el-button
-        ><el-button type="primary" @click="requestAction('approve')">同意</el-button>
+        ><el-button type="primary" @click="requestAction('approve')">
+          {{ selectedChoices.length > 0 ? '指派并继续' : '同意' }}
+        </el-button>
       </div>
     </template>
   </el-drawer>
@@ -349,6 +395,11 @@ function clearCommandIntent(): void {
 .workbench-task-detail :deep(.el-timeline-item__content span) { color: var(--color-text-tertiary); font-size: 12px; }
 .workbench-task-detail__actions { display: flex; align-items: center; gap: 8px; }
 .workbench-task-detail__actions .el-button { flex: 1; }
+.workbench-task-detail__choices { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.workbench-task-detail__choices :deep(.el-checkbox) { margin-right: 0; min-height: var(--control-h-sm); }
+.workbench-task-detail__branches { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
+.workbench-task-detail__branches span { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: 13px; }
+html[data-layout='compact'] .workbench-task-detail__choices { grid-template-columns: minmax(0, 1fr); }
 html[data-layout='compact'] .workbench-task-detail > header { flex-direction: column; gap: 12px; }
 html[data-layout='compact'] .workbench-task-detail__header-actions { width: 100%; flex-wrap: wrap; }
 </style>

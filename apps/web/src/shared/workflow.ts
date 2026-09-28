@@ -52,10 +52,11 @@ export const useWorkflowStore = defineStore('workflow', {
       action: 'approve' | 'return',
       comment: string,
       commandRequestId: string,
+      choices: string[] = [],
     ): Promise<void> {
       await apiRequest(`/workflow/tasks/${taskId}/${action}`, {
         method: 'POST',
-        body: { requestId: commandRequestId, comment },
+        body: { requestId: commandRequestId, comment, ...(choices.length ? { choices } : {}) },
       });
     },
     async batchApprove(

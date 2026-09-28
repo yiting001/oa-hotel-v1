@@ -33,7 +33,9 @@ import { PostgresHotelApprovalChainAdjustment1785900000001 } from './migrations-
 import { PurchaseFinanceExecStep1786000000000 } from './migrations/1786000000000-PurchaseFinanceExecStep';
 import { PostgresPurchaseFinanceExecStep1786000000001 } from './migrations-postgres/1786000000001-PostgresPurchaseFinanceExecStep';
 import { SealAssetNamesFreeText1786100000000 } from './migrations/1786100000000-SealAssetNamesFreeText';
+import { WorkflowManualChoice1786200000000 } from './migrations/1786200000000-WorkflowManualChoice';
 import { PostgresSealAssetNamesFreeText1786100000001 } from './migrations-postgres/1786100000001-PostgresSealAssetNamesFreeText';
+import { PostgresWorkflowManualChoice1786200000001 } from './migrations-postgres/1786200000001-PostgresWorkflowManualChoice';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -55,6 +57,7 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
         PostgresHotelApprovalChainAdjustment1785900000001,
         PostgresPurchaseFinanceExecStep1786000000001,
         PostgresSealAssetNamesFreeText1786100000001,
+        PostgresWorkflowManualChoice1786200000001,
       ],
       migrationsRun: overrides.migrationsRun ?? true,
       synchronize: false,
@@ -97,6 +100,7 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
       HotelApprovalChainAdjustment1785900000000,
       PurchaseFinanceExecStep1786000000000,
       SealAssetNamesFreeText1786100000000,
+      WorkflowManualChoice1786200000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

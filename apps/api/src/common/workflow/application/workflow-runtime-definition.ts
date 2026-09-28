@@ -5,6 +5,8 @@ import type {
   ProcessDefinition,
   ProcessVersion,
   PublishedAssigneeRule,
+  PublishedChoiceOption,
+  PublishedTaskKind,
 } from '../../process-design/domain/process-design.types';
 import type { WorkflowDefinitionEntity } from '../infrastructure/workflow-definition.entity';
 import type { WorkflowTaskEntity } from '../infrastructure/workflow-task.entity';
@@ -12,7 +14,9 @@ import type { WorkflowTaskEntity } from '../infrastructure/workflow-task.entity'
 export interface RuntimeWorkflowTask {
   id: string | null;
   name: string;
+  kind: PublishedTaskKind;
   assigneeRule: PublishedAssigneeRule;
+  options: readonly PublishedChoiceOption[];
 }
 
 export interface RuntimeWorkflowDefinition {
@@ -52,7 +56,9 @@ export function legacyRuntimeDefinition(
     tasks: definition.steps.map((roleCode) => ({
       id: null,
       name: WORKFLOW_ROLE_LABELS[roleCode] ?? '审批办理',
-      assigneeRule: { type: 'ROLE', roleCode },
+      kind: 'APPROVAL' as const,
+      assigneeRule: { type: 'ROLE' as const, roleCode },
+      options: [],
     })),
   };
 }
@@ -60,6 +66,9 @@ export function legacyRuntimeDefinition(
 export function storedTaskAssigneeRule(task: WorkflowTaskEntity): PublishedAssigneeRule {
   if (task.assigneeType === 'APPLICANT_DEPARTMENT_MANAGER') {
     return { type: 'APPLICANT_DEPARTMENT_MANAGER' };
+  }
+  if (task.assigneeType === 'DEPARTMENT_MANAGER' && task.assigneeValue) {
+    return { type: 'DEPARTMENT_MANAGER', departmentId: task.assigneeValue };
   }
   if (task.assigneeType === 'USER' && task.assigneeValue) {
     return { type: 'USER', userId: task.assigneeValue };
@@ -81,6 +90,13 @@ export function taskAssigneeColumns(rule: PublishedAssigneeRule): {
       assigneeType: rule.type,
       assigneeValue: null,
       assigneeRole: 'APPLICANT_DEPARTMENT_MANAGER',
+    };
+  }
+  if (rule.type === 'DEPARTMENT_MANAGER') {
+    return {
+      assigneeType: rule.type,
+      assigneeValue: 'departmentId' in rule ? rule.departmentId : null,
+      assigneeRole: 'DEPARTMENT_MANAGER',
     };
   }
   if (rule.type === 'USER') {

@@ -2,10 +2,12 @@ import { DomainError } from '../../errors/domain-error';
 import type {
   ProcessVersion,
   PublishedAssigneeRule,
+  PublishedChoiceOption,
   PublishedUserTask,
 } from './process-design.types';
 
-const publishableNodeTypes = new Set(['START', 'USER_TASK', 'END']);
+const publishableNodeTypes = new Set(['START', 'USER_TASK', 'MANUAL_CHOICE', 'END']);
+const executableNodeTypes = new Set(['USER_TASK', 'MANUAL_CHOICE']);
 
 /** Published and retired process versions remain immutable for audit replay. */
 export function assertProcessVersionEditable(version: ProcessVersion): void {
@@ -39,7 +41,7 @@ export function parsePublishedUserTasks(designJson: Record<string, unknown>): Pu
 
   const starts = nodes.filter((node) => node.type === 'START');
   const ends = nodes.filter((node) => node.type === 'END');
-  const tasks = nodes.filter((node) => node.type === 'USER_TASK');
+  const tasks = nodes.filter((node) => executableNodeTypes.has(node.type));
   if (starts.length !== 1 || ends.length !== 1 || tasks.length === 0) {
     invalid('流程必须包含一个开始节点、至少一个审批节点和一个结束节点');
   }
@@ -53,13 +55,47 @@ export function parsePublishedUserTasks(designJson: Record<string, unknown>): Pu
   const byId = new Map(nodes.map((node) => [node.id, node]));
   return order.slice(1, -1).map((nodeId) => {
     const node = byId.get(nodeId);
-    if (!node || node.type !== 'USER_TASK') {
-      invalid('开始和结束节点之间只能包含审批节点');
+    if (!node || !executableNodeTypes.has(node.type)) {
+      invalid('开始和结束节点之间只能包含审批节点或人工选择节点');
+    }
+    const assigneeRule = parseAssigneeRule(node);
+    if (node.type === 'MANUAL_CHOICE') {
+      const options = parseChoiceOptions(node);
+      if (options.length === 0) {
+        invalid('人工选择节点必须配置至少一个可选审核方');
+      }
+      return { id: node.id, name: node.name, kind: 'CHOICE' as const, assigneeRule, options };
+    }
+    return { id: node.id, name: node.name, kind: 'APPROVAL' as const, assigneeRule, options: [] };
+  });
+}
+
+const CHOICE_OPTION_ASSIGNEE_TYPES = new Set<string>(['DEPARTMENT_MANAGER', 'ROLE', 'USER']);
+
+function parseChoiceOptions(node: ParsedNode): PublishedChoiceOption[] {
+  const raw = node.choiceOptions;
+  if (raw === null) return [];
+  if (!Array.isArray(raw)) {
+    invalid('人工选择节点的可选审核方必须是数组');
+  }
+  const seen = new Set<string>();
+  return raw.map((value) => {
+    if (!isRecord(value) || !text(value.id) || !text(value.name)) {
+      invalid('每个可选审核方都必须包含 id 和 name');
+    }
+    const optionId = value.id as string;
+    if (seen.has(optionId)) {
+      invalid('人工选择节点的可选审核方 ID 不能重复');
+    }
+    seen.add(optionId);
+    const rule = isRecord(value.assigneeRule) ? value.assigneeRule : null;
+    if (!rule || !text(rule.type) || !CHOICE_OPTION_ASSIGNEE_TYPES.has(rule.type)) {
+      invalid('可选审核方仅支持指定部门负责人、角色或指定用户');
     }
     return {
-      id: node.id,
-      name: node.name,
-      assigneeRule: parseAssigneeRule(node),
+      id: optionId,
+      name: value.name as string,
+      assigneeRule: parseAssigneeRuleValue(rule),
     };
   });
 }
@@ -69,6 +105,7 @@ interface ParsedNode {
   name: string;
   type: string;
   assigneeRule: Record<string, unknown> | null;
+  choiceOptions: unknown[] | null;
 }
 
 interface ParsedEdge {
@@ -85,6 +122,7 @@ function parseNode(value: unknown): ParsedNode {
     name: value.name as string,
     type: value.type as string,
     assigneeRule: isRecord(value.assigneeRule) ? value.assigneeRule : null,
+    choiceOptions: Array.isArray(value.choiceOptions) ? value.choiceOptions : null,
   };
 }
 
@@ -100,8 +138,19 @@ function parseAssigneeRule(node: ParsedNode): PublishedAssigneeRule {
   if (!rule || !text(rule.type)) {
     invalid('每个审批节点都必须配置办理人规则');
   }
+  return parseAssigneeRuleValue(rule);
+}
+
+function parseAssigneeRuleValue(rule: Record<string, unknown>): PublishedAssigneeRule {
   if (rule.type === 'APPLICANT_DEPARTMENT_MANAGER') {
     return { type: 'APPLICANT_DEPARTMENT_MANAGER' };
+  }
+  if (rule.type === 'DEPARTMENT_MANAGER') {
+    if (text(rule.departmentId)) return { type: 'DEPARTMENT_MANAGER', departmentId: rule.departmentId };
+    if (text(rule.departmentName)) {
+      return { type: 'DEPARTMENT_MANAGER', departmentName: rule.departmentName };
+    }
+    return invalid('指定部门负责人的规则必须包含 departmentId 或 departmentName');
   }
   if (rule.type === 'ROLE' && text(rule.roleCode)) {
     return { type: 'ROLE', roleCode: rule.roleCode };
@@ -109,7 +158,7 @@ function parseAssigneeRule(node: ParsedNode): PublishedAssigneeRule {
   if (rule.type === 'USER' && text(rule.userId)) {
     return { type: 'USER', userId: rule.userId };
   }
-  return invalid('办理人规则仅支持申请人部门负责人、角色或指定用户');
+  return invalid('办理人规则仅支持申请人部门负责人、指定部门负责人、角色或指定用户');
 }
 
 function assertLinearChain(
@@ -133,7 +182,7 @@ function assertLinearChain(
     const validDegree =
       (node.id === startId && inCount === 0 && outCount === 1) ||
       (node.id === endId && inCount === 1 && outCount === 0) ||
-      (node.type === 'USER_TASK' && inCount === 1 && outCount === 1);
+      (executableNodeTypes.has(node.type) && inCount === 1 && outCount === 1);
     if (!validDegree) {
       invalid('当前只允许无分支、无回路的线性审批流程');
     }

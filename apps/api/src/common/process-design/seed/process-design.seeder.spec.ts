@@ -68,6 +68,12 @@ function normalizedRoles(designJson: Record<string, unknown> | undefined): strin
       ? 'DEPARTMENT_MANAGER'
       : task.assigneeRule.type === 'ROLE'
         ? task.assigneeRule.roleCode
-        : `USER:${task.assigneeRule.userId}`,
+        : task.assigneeRule.type === 'DEPARTMENT_MANAGER'
+          ? `DEPT:${
+              'departmentId' in task.assigneeRule
+                ? task.assigneeRule.departmentId
+                : task.assigneeRule.departmentName
+            }`
+          : `USER:${task.assigneeRule.userId}`,
   );
 }

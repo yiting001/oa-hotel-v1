@@ -50,6 +50,13 @@ export class IamOrganizationService {
     return buildDepartmentTree(departments, profiles);
   }
 
+  /** Resolves a department by display name for 人工选择下一步（兄弟部门审核）节点。 */
+  async resolveDepartmentManagerUsersByName(departmentName: string): Promise<CandidateUser[]> {
+    const department = await this.departments.findOneBy({ name: departmentName });
+    if (!department) throw new NotFoundException(`部门「${departmentName}」不存在`);
+    return this.resolveApplicantDepartmentManagerUsers(department.id);
+  }
+
   /** Resolves the manager of the applicant's department without inferring an RBAC role. */
   async resolveApplicantDepartmentManagerUsers(departmentId: string): Promise<CandidateUser[]> {
     const [department, profile] = await Promise.all([

@@ -45,6 +45,7 @@ describe('首批业务模块集成流程', () => {
     app.useGlobalFilters(new ApiExceptionFilter());
     await app.init();
     await seedGenericDocumentUser();
+    await seedLegalAdvisorUser();
     server = app.getHttpServer() as Parameters<typeof request>[0];
     for (const username of [
       'applicant',
@@ -58,6 +59,7 @@ describe('首批业务模块集成流程', () => {
       'execpre',
       'exec',
       'generic',
+      'lawyer',
     ]) {
       const response = await request(server)
         .post('/api/v1/auth/login')
@@ -185,8 +187,10 @@ describe('首批业务模块集成流程', () => {
     await submit('applicant', requestDocument.data.id);
     task = await firstTask('manager');
     await approve('manager', task.id);
-    task = await firstTask('finance');
-    await approve('finance', task.id);
+    task = await firstTask('execpre');
+    await approve('execpre', task.id);
+    task = await firstTask('exec');
+    await approve('exec', task.id);
 
     const contract = await post<Envelope<CreatedDocument>>('applicant', '/contracts', {
       requestId: requestDocument.data.id,
@@ -200,10 +204,21 @@ describe('首批业务模块集成流程', () => {
       attachments: [],
     });
     await submit('applicant', contract.data.id);
-    for (const role of ['adminapprove', 'bizapprove', 'execpre', 'exec']) {
-      task = await firstTask(role);
-      await approve(role, task.id);
-    }
+    task = await firstTask('manager');
+    await approve('manager', task.id);
+
+    // 行政审批人先指派外部律师：分支办结后回到行政，再由行政送主管领导与总经理。
+    task = await firstTask('adminapprove');
+    await approveWithChoices('adminapprove', task.id, ['external-lawyer']);
+    const lawyerTask = await firstTask('lawyer');
+    await approve('lawyer', lawyerTask.id);
+    task = await firstTask('adminapprove');
+    await approve('adminapprove', task.id);
+
+    task = await firstTask('execpre');
+    await approve('execpre', task.id);
+    task = await firstTask('exec');
+    await approve('exec', task.id);
 
     const overflow = await request(server)
       .post('/api/v1/contracts/payments')
@@ -381,6 +396,38 @@ describe('首批业务模块集成流程', () => {
     return response.body as T;
   }
 
+  /** 外部律师：合同审批中由行政办公室指派的分支审核人。 */
+  async function seedLegalAdvisorUser(): Promise<void> {
+    const users = app.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
+    const iam = app.get(IamService);
+    const permissions = await iam.listPermissions();
+    const approvalPermissions = permissions
+      .filter(
+        (item) =>
+          item.code === 'WORKFLOW_APPROVE' ||
+          item.code === 'DOCUMENT_VIEW' ||
+          item.code.startsWith('CONTRACT_'),
+      )
+      .map((item) => item.id);
+    const role =
+      (await iam.listRoles()).find((item) => item.code === 'LEGAL_ADVISOR') ??
+      (await iam.createRole({ code: 'LEGAL_ADVISOR', name: '外部律师' }));
+    await iam.updateRolePermissions(role.id, approvalPermissions);
+    await users.save({
+      id: 'user-lawyer',
+      username: 'lawyer',
+      displayName: '外部律师',
+      passwordHash: await hash('Demo123!'),
+      departmentId: 'dept-office',
+      roleCodes: [],
+      active: true,
+    });
+    await iam.updateUserAssignments('user-lawyer', {
+      memberships: [{ departmentId: 'dept-office', isPrimary: true }],
+      roles: [{ roleId: role.id, dataScope: DataScope.ALL }],
+    });
+  }
+
   async function seedGenericDocumentUser(): Promise<void> {
     const users = app.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
     const iam = app.get(IamService);
@@ -422,6 +469,18 @@ describe('首批业务模块集成流程', () => {
       .post(`/api/v1/workflow/tasks/${taskId}/approve`)
       .auth(token(username), { type: 'bearer' })
       .send({ requestId: crypto.randomUUID(), comment: '同意' })
+      .expect(201);
+  }
+
+  async function approveWithChoices(
+    username: string,
+    taskId: string,
+    choices: string[],
+  ): Promise<void> {
+    await request(server)
+      .post(`/api/v1/workflow/tasks/${taskId}/approve`)
+      .auth(token(username), { type: 'bearer' })
+      .send({ requestId: crypto.randomUUID(), comment: '指派审核', choices })
       .expect(201);
   }
 

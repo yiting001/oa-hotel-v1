@@ -19,13 +19,25 @@ export const CONTRACT_EXPENSE_PROCESS_TEMPLATE = requiredTemplate('CONTRACT_REQU
 export function createBusinessProcessTemplate(
   definition: BusinessWorkflowDefinition,
 ): BuiltInProcessTemplate {
-  const taskNodes = definition.approvalRoles.map((roleCode, index) => ({
-    id: taskNodeId(roleCode, index),
-    type: 'USER_TASK',
-    name: taskNodeName(roleCode),
-    position: { x: 320 + index * 240, y: 180 },
-    assigneeRule: assigneeRule(roleCode),
-  }));
+  const taskNodes = definition.approvalRoles.map((roleCode, index) => {
+    const choice = definition.manualChoice?.roleCode === roleCode ? definition.manualChoice : null;
+    return {
+      id: taskNodeId(roleCode, index),
+      type: choice ? 'MANUAL_CHOICE' : 'USER_TASK',
+      name: choice ? `${taskNodeName(roleCode)}（选择下一步）` : taskNodeName(roleCode),
+      position: { x: 320 + index * 240, y: 180 },
+      assigneeRule: assigneeRule(roleCode),
+      ...(choice
+        ? {
+            choiceOptions: choice.options.map((option) => ({
+              id: option.id,
+              name: option.name,
+              assigneeRule: option.assigneeRule,
+            })),
+          }
+        : {}),
+    };
+  });
   const endId = 'end';
   const orderedNodeIds = ['start', ...taskNodes.map((node) => node.id), endId];
 
@@ -33,7 +45,11 @@ export function createBusinessProcessTemplate(
     code: definition.processCode,
     name: `${definition.name}流程`,
     description: `申请人提交后依次由${definition.approvalRoles
-      .map(approverDescription)
+      .map((roleCode) =>
+        definition.manualChoice?.roleCode === roleCode
+          ? `${approverDescription(roleCode)}（可选择外部律师或兄弟部门先审）`
+          : approverDescription(roleCode),
+      )
       .join('、')}办理。`,
     documentType: definition.documentType,
     changeNote: `系统预置${definition.name}流程`,

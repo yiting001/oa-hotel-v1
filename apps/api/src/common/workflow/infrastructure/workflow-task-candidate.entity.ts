@@ -15,7 +15,7 @@ export class WorkflowTaskCandidateEntity {
   userId!: string;
 
   @Column('text')
-  source!: 'APPLICANT_DEPARTMENT_MANAGER' | 'ROLE' | 'USER';
+  source!: 'APPLICANT_DEPARTMENT_MANAGER' | 'DEPARTMENT_MANAGER' | 'ROLE' | 'USER';
 
   @Column('text', { nullable: true })
   roleCode!: string | null;

@@ -12,6 +12,7 @@ import type {
   BusinessModule,
   DocumentType,
   SessionUser,
+  WorkflowBranchSummary,
   WorkflowOverview,
 } from '@oa/contracts';
 import { requiredBusinessModulePermissions } from '@oa/contracts';
@@ -184,6 +185,7 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     comment: string,
     action: 'APPROVE' | 'RETURN',
     user: SessionUser,
+    choices: string[] = [],
   ): Promise<DocumentIndexEntity> {
     return this.dataSource.transaction(async (manager) => {
       const taskRepository = manager.getRepository(WorkflowTaskEntity);
@@ -223,9 +225,14 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         node,
       });
 
-      if (action === 'RETURN') {
+      if (task.originTaskId) {
+        // 分支任务（外部律师 / 兄弟部门）：办结后回到「人工选择」节点，由行政审批人继续决定去向。
+        await this.settleBranchTask(manager, document, definition, task);
+      } else if (action === 'RETURN') {
         document.status = 'RETURNED';
         document.currentStep = null;
+      } else if (node?.kind === 'CHOICE' && choices.length > 0) {
+        await this.dispatchBranches(manager, document, task, node, choices);
       } else {
         const nextStep = task.stepIndex + 1;
         if (nextStep >= definition.tasks.length) {
@@ -295,10 +302,35 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         steps: definition.tasks.map((task) => task.name),
       },
       currentTask: currentTask
-        ? toTaskSummary(currentTask, document, currentNode?.name ?? null)
+        ? toTaskSummary(currentTask, document, currentNode?.name ?? null, currentNode?.options ?? [])
         : null,
+      pendingBranches: await this.readBranchSummaries(documentId),
       opinions: await this.readOpinions(documentId),
     };
+  }
+
+  /** 「人工选择下一步」派发出的分支任务清单，供审批界面显示进度。 */
+  private async readBranchSummaries(documentId: string): Promise<WorkflowBranchSummary[]> {
+    const branches = await this.tasks.find({
+      where: { documentId },
+      order: { createdAt: 'ASC' },
+    });
+    const scoped = branches.filter((task) => task.originTaskId);
+    if (scoped.length === 0) return [];
+    const completedByIds = [
+      ...new Set(scoped.map((task) => task.completedBy).filter((id): id is string => Boolean(id))),
+    ];
+    const names = new Map(
+      (completedByIds.length > 0 ? await this.iam.listUsers() : [])
+        .filter((user) => completedByIds.includes(user.id))
+        .map((user) => [user.id, user.displayName]),
+    );
+    return scoped.map((task) => ({
+      taskId: task.id,
+      label: task.branchLabel ?? '分支审核',
+      status: task.status === 'PENDING' ? 'PENDING' : 'COMPLETED',
+      completedByName: task.completedBy ? (names.get(task.completedBy) ?? null) : null,
+    }));
   }
 
   async getDocument(documentId: string): Promise<DocumentIndexEntity> {
@@ -376,6 +408,7 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     document: DocumentIndexEntity,
     stepIndex: number,
     node: RuntimeWorkflowTask | undefined,
+    branch?: { originTaskId: string; branchLabel: string; nodeKind: 'APPROVAL' | 'CHOICE' },
   ): Promise<WorkflowTaskEntity> {
     if (!node) throw new DomainError('WORKFLOW_STEP_MISSING', '审批流程缺少办理节点');
     const documentViewPermissions = requiredBusinessModulePermissions(document.module, 'VIEW');
@@ -404,12 +437,19 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         },
       );
     }
+    const assigneeColumns = taskAssigneeColumns(node.assigneeRule);
+    if (resolution.assigneeValue) {
+      assigneeColumns.assigneeValue = resolution.assigneeValue;
+    }
     const task = await manager.getRepository(WorkflowTaskEntity).save({
       id: randomUUID(),
       documentId: document.id,
       stepIndex,
       processNodeId: node.id,
-      ...taskAssigneeColumns(node.assigneeRule),
+      nodeKind: branch?.nodeKind ?? node.kind,
+      originTaskId: branch?.originTaskId ?? null,
+      branchLabel: branch?.branchLabel ?? null,
+      ...assigneeColumns,
       status: 'PENDING',
       completedBy: null,
     });
@@ -433,6 +473,71 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     }
   }
 
+  /**
+   * 「人工选择下一步」：行政审批人勾选审核方后派发分支任务，全部办结后自动回到本节点。
+   */
+  private async dispatchBranches(
+    manager: EntityManager,
+    document: DocumentIndexEntity,
+    task: WorkflowTaskEntity,
+    node: RuntimeWorkflowTask,
+    choices: string[],
+  ): Promise<void> {
+    const selected = node.options.filter((option) => choices.includes(option.id));
+    if (selected.length === 0) {
+      throw new DomainError('WORKFLOW_CHOICE_INVALID', '请选择至少一个后续审核方');
+    }
+    const openBranches = await manager.getRepository(WorkflowTaskEntity).find({
+      where: { originTaskId: task.id, status: 'PENDING' },
+    });
+    const openOptionIds = new Set(openBranches.map((branch) => branch.processNodeId));
+    const newOptions = selected.filter((option) => !openOptionIds.has(option.id));
+    if (newOptions.length === 0) {
+      throw new DomainError('WORKFLOW_CHOICE_DUPLICATED', '所选审核方已在办理中');
+    }
+    for (const option of newOptions) {
+      await this.createPendingTask(
+        manager,
+        document,
+        task.stepIndex,
+        { id: option.id, name: option.name, kind: 'APPROVAL', assigneeRule: option.assigneeRule, options: [] },
+        { originTaskId: task.id, branchLabel: option.name, nodeKind: 'APPROVAL' },
+      );
+    }
+    document.status = 'IN_REVIEW';
+    document.currentStep = task.stepIndex;
+  }
+
+  /** 分支任务办结：等待同一节点派出的其它分支，全部办结后回到选择节点。 */
+  private async settleBranchTask(
+    manager: EntityManager,
+    document: DocumentIndexEntity,
+    definition: RuntimeWorkflowDefinition,
+    task: WorkflowTaskEntity,
+  ): Promise<void> {
+    const branchRepository = manager.getRepository(WorkflowTaskEntity);
+    const openBranches = await branchRepository.count({
+      where: { originTaskId: task.originTaskId ?? '', status: 'PENDING' },
+    });
+    if (openBranches > 0) {
+      document.status = 'IN_REVIEW';
+      return;
+    }
+    const originTask = task.originTaskId
+      ? await branchRepository.findOneBy({ id: task.originTaskId })
+      : null;
+    const chooserStep = originTask?.stepIndex ?? task.stepIndex;
+    const chooserNode = definition.tasks[chooserStep];
+    if (!chooserNode) {
+      document.status = 'APPROVED';
+      document.currentStep = null;
+      return;
+    }
+    await this.createPendingTask(manager, document, chooserStep, chooserNode);
+    document.status = 'IN_REVIEW';
+    document.currentStep = chooserStep;
+  }
+
   private async toTaskSummaries(tasks: WorkflowTaskEntity[]): Promise<ApprovalTaskSummary[]> {
     if (tasks.length === 0) return [];
     const documents = await this.documents.findBy({ id: In(tasks.map((task) => task.documentId)) });
@@ -446,7 +551,8 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         const pending = definitionCache.get(key) ?? this.loadRuntimeDefinition(document);
         definitionCache.set(key, pending);
         const definition = await pending;
-        return toTaskSummary(task, document, definition.tasks[task.stepIndex]?.name ?? null);
+        const node = definition.tasks[task.stepIndex];
+        return toTaskSummary(task, document, node?.name ?? null, node?.options ?? []);
       }),
     );
   }

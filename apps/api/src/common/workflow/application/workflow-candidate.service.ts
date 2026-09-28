@@ -13,6 +13,8 @@ const approvalPermissionCode = 'WORKFLOW_APPROVE';
 export interface ApprovalCandidateResolution {
   candidates: CandidateUser[];
   resolvedCount: number;
+  /** 指定部门负责人按名称配置时，回填解析出的部门 ID 供待办固化。 */
+  assigneeValue?: string | null;
 }
 
 /** Resolves assignee rules and removes users who cannot execute the resulting approval task. */
@@ -39,10 +41,9 @@ export class WorkflowCandidateService {
       departmentId,
       ownerUserId,
     );
-    return {
-      resolvedCount: nonSelfCandidates.length,
-      candidates: eligible,
-    };
+    const base = { resolvedCount: nonSelfCandidates.length, candidates: eligible };
+    if (rule.type !== 'DEPARTMENT_MANAGER' || 'departmentId' in rule) return base;
+    return { ...base, assigneeValue: await this.resolveDepartmentIdByName(rule.departmentName) };
   }
 
   async insertSnapshot(
@@ -79,12 +80,32 @@ export class WorkflowCandidateService {
       return user ? [{ id: user.id, username: user.username, displayName: user.displayName }] : [];
     }
     try {
-      return rule.type === 'APPLICANT_DEPARTMENT_MANAGER'
-        ? await this.iam.resolveApplicantDepartmentManagerUsers(departmentId)
-        : await this.iam.resolveCandidateUsers(rule.roleCode, departmentId);
+      if (rule.type === 'APPLICANT_DEPARTMENT_MANAGER') {
+        return await this.iam.resolveApplicantDepartmentManagerUsers(departmentId);
+      }
+      if (rule.type === 'DEPARTMENT_MANAGER') {
+        return 'departmentId' in rule
+          ? await this.iam.resolveApplicantDepartmentManagerUsers(rule.departmentId)
+          : await this.iam.resolveDepartmentManagerUsersByName(rule.departmentName);
+      }
+      return await this.iam.resolveCandidateUsers(rule.roleCode, departmentId);
     } catch (error) {
       if (error instanceof NotFoundException) return [];
       throw error;
     }
+  }
+
+  private async resolveDepartmentIdByName(departmentName: string): Promise<string | null> {
+    const departments = await this.iam.listDepartments();
+    const flat: Array<{ id: string; name: string; children: unknown[] }> = [];
+    const walk = (nodes: readonly unknown[]): void => {
+      for (const node of nodes) {
+        const typed = node as { id: string; name: string; children?: unknown[] };
+        flat.push({ id: typed.id, name: typed.name, children: [] });
+        if (Array.isArray(typed.children)) walk(typed.children);
+      }
+    };
+    walk(departments);
+    return flat.find((department) => department.name === departmentName)?.id ?? null;
   }
 }

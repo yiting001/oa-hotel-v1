@@ -10,6 +10,20 @@ const ADJUSTED_DOCUMENT_TYPES = [
   'PETTY_PROCUREMENT',
 ] as const;
 
+/** 2026 年流程细化涉及的链路：请示批复、合同审批（人工选择下一步）、零星采买。 */
+const REFINED_DOCUMENT_TYPES = [
+  'CONTRACT_REQUEST',
+  'CONTRACT_APPROVAL',
+  'PETTY_PROCUREMENT',
+] as const;
+
+/** 外部律师角色：由行政办公室在合同审批中选择，属于外部协作岗。 */
+const LEGAL_ADVISOR_ROLE = [
+  'role-legal-advisor',
+  'LEGAL_ADVISOR',
+  '外部律师',
+] as const;
+
 const ROLE_PERMISSION_GRANTS: ReadonlyArray<readonly [string, string]> = [
   ['role-exec-pre-approver', 'permission-seal-view'],
   ['role-exec-approver', 'permission-seal-view'],
@@ -55,33 +69,16 @@ export async function ensureFinanceExecRole(
  * business workflow catalog and aligns executive role display names.
  * Existing running documents stay bound to their retired process versions.
  */
-export async function applyHotelApprovalChainAdjustment(
+async function republishCatalogChains(
   queryRunner: QueryRunner,
   dialect: Dialect,
+  documentTypes: readonly string[],
+  changeNote: string,
 ): Promise<void> {
   const p = (count: number) => placeholders(dialect, count);
   const now = new Date().toISOString();
 
-  for (const [code, name] of ROLE_NAME_UPDATES) {
-    const [namePh, codePh] = p(2);
-    await queryRunner.query(`UPDATE "iam_roles" SET "name" = ${namePh} WHERE "code" = ${codePh}`, [
-      name,
-      code,
-    ]);
-  }
-
-  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
-  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
-  for (const [roleId, permissionId] of ROLE_PERMISSION_GRANTS) {
-    const [rolePh, permissionPh] = p(2);
-    await queryRunner.query(
-      `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
-        VALUES (${rolePh}, ${permissionPh}) ${conflictClause}`,
-      [roleId, permissionId],
-    );
-  }
-
-  for (const documentType of ADJUSTED_DOCUMENT_TYPES) {
+  for (const documentType of documentTypes) {
     const definition = BUSINESS_WORKFLOW_CATALOG.find(
       (candidate) => candidate.documentType === documentType,
     );
@@ -142,11 +139,69 @@ export async function applyHotelApprovalChainAdjustment(
         nextVersion,
         'PUBLISHED',
         targetDesignJson,
-        '2026 酒店审批链路调整',
+        changeNote,
         'system',
         'system',
         now,
       ],
     );
   }
+}
+
+/**
+ * 2026 年流程细化：请示批复链路调整，合同审批引入「人工选择下一步」，
+ * 并确保外部律师角色与零星采买发起人授权到位。
+ */
+export async function applyManualChoiceChainAdjustment(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
+
+  const [roleId, roleCode, roleName] = LEGAL_ADVISOR_ROLE;
+  await queryRunner.query(
+    `${insertVerb} "iam_roles" ("id", "code", "name", "description", "active")
+      VALUES ('${roleId}', '${roleCode}', '${roleName}', '合同审批中由行政办公室指派的外部律师审核人', true) ${conflictClause}`,
+  );
+  await queryRunner.query(
+    `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
+      SELECT '${roleId}', "permissionId" FROM "iam_role_permissions"
+        WHERE "roleId" = 'role-exec-pre-approver' ${conflictClause}`,
+  );
+
+  await republishCatalogChains(queryRunner, dialect, REFINED_DOCUMENT_TYPES, '2026 请示批复与合同审批链路细化');
+}
+
+export async function applyHotelApprovalChainAdjustment(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  const p = (count: number) => placeholders(dialect, count);
+
+  for (const [code, name] of ROLE_NAME_UPDATES) {
+    const [namePh, codePh] = p(2);
+    await queryRunner.query(`UPDATE "iam_roles" SET "name" = ${namePh} WHERE "code" = ${codePh}`, [
+      name,
+      code,
+    ]);
+  }
+
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
+  for (const [roleId, permissionId] of ROLE_PERMISSION_GRANTS) {
+    const [rolePh, permissionPh] = p(2);
+    await queryRunner.query(
+      `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
+        VALUES (${rolePh}, ${permissionPh}) ${conflictClause}`,
+      [roleId, permissionId],
+    );
+  }
+
+  await republishCatalogChains(
+    queryRunner,
+    dialect,
+    ADJUSTED_DOCUMENT_TYPES,
+    '2026 酒店审批链路调整',
+  );
 }

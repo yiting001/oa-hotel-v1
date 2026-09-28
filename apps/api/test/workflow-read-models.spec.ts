@@ -49,7 +49,7 @@ describe('工作流读取模型与单据访问权限', () => {
     candidates = moduleRef.get(getRepositoryToken(WorkflowTaskCandidateEntity));
     server = app.getHttpServer() as Parameters<typeof request>[0];
 
-    for (const username of ['applicant', 'manager', 'finance', 'warehouse']) {
+    for (const username of ['applicant', 'manager', 'finance', 'execpre', 'exec', 'warehouse']) {
       const response = await request(server)
         .post('/api/v1/auth/login')
         .send({ username, password: testPassword })
@@ -68,11 +68,11 @@ describe('工作流读取模型与单据访问权限', () => {
 
     const managerTask = await taskForDocument('manager', document.data.id);
     await approve('manager', managerTask.id);
-    const financeTask = await taskForDocument('finance', document.data.id);
-    await approve('finance', financeTask.id);
+    const execPreTask = await taskForDocument('execpre', document.data.id);
+    await approve('execpre', execPreTask.id);
 
     const managerCompleted = await completedTasks('manager');
-    const financeCompleted = await completedTasks('finance');
+    const execPreCompleted = await completedTasks('execpre');
     const applicantCompleted = await completedTasks('applicant');
 
     expect(managerCompleted).toEqual(
@@ -85,18 +85,18 @@ describe('工作流读取模型与单据访问权限', () => {
         }),
       ]),
     );
-    expect(managerCompleted.map((task) => task.id)).not.toContain(financeTask.id);
-    expect(financeCompleted).toEqual(
+    expect(managerCompleted.map((task) => task.id)).not.toContain(execPreTask.id);
+    expect(execPreCompleted).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: financeTask.id,
+          id: execPreTask.id,
           documentId: document.data.id,
-          assigneeRole: 'FINANCE_REVIEWER',
+          assigneeRole: 'EXEC_PRE_APPROVER',
           status: 'COMPLETED',
         }),
       ]),
     );
-    expect(financeCompleted.map((task) => task.id)).not.toContain(managerTask.id);
+    expect(execPreCompleted.map((task) => task.id)).not.toContain(managerTask.id);
     expect(applicantCompleted.map((task) => task.documentId)).not.toContain(document.data.id);
   });
 
@@ -105,7 +105,7 @@ describe('工作流读取模型与单据访问权限', () => {
     await submit(document.data.id);
     const managerTask = await taskForDocument('manager', document.data.id);
     await approve('manager', managerTask.id);
-    const financeTask = await taskForDocument('finance', document.data.id);
+    const execPreTask = await taskForDocument('execpre', document.data.id);
 
     const response = await request(server)
       .get(`/api/v1/workflow/documents/${document.data.id}/overview`)
@@ -126,19 +126,20 @@ describe('工作流读取模型与单据访问权限', () => {
     expect(overview.document.formVersionId).toEqual(expect.any(String));
     expect(overview.definition).toEqual({
       code: 'CONTRACT_EXPENSE_REQUEST',
-      name: '合同/支出请示流程',
+      name: '请示批复流程',
       version: 1,
       processVersionId: overview.document.processVersionId,
-      steps: ['部门负责人审批', '财务审核'],
+      steps: ['部门负责人审批', '主管领导', '总经理'],
     });
     expect(overview.currentTask).toMatchObject({
-      id: financeTask.id,
+      id: execPreTask.id,
       documentId: document.data.id,
       currentStep: 1,
-      processNodeId: 'finance-review',
-      processNodeName: '财务审核',
-      assigneeRole: 'FINANCE_REVIEWER',
+      processNodeId: 'approval-2',
+      processNodeName: '主管领导',
+      assigneeRole: 'EXEC_PRE_APPROVER',
       status: 'PENDING',
+      nodeKind: 'APPROVAL',
     });
     expect(overview.opinions).toEqual([
       expect.objectContaining({

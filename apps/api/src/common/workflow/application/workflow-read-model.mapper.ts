@@ -4,6 +4,7 @@ import type {
   BusinessModule,
   DocumentSummary,
   DocumentType,
+  WorkflowChoiceOption,
 } from '@oa/contracts';
 import type { DocumentIndexEntity } from '../infrastructure/document-index.entity';
 import type { WorkflowOpinionEntity } from '../infrastructure/workflow-opinion.entity';
@@ -46,7 +47,9 @@ export function toTaskSummary(
   task: WorkflowTaskEntity,
   document: DocumentIndexEntity,
   processNodeName: string | null,
+  choiceOptions: readonly WorkflowChoiceOption[] = [],
 ): ApprovalTaskSummary {
+  const nodeKind = (task.nodeKind ?? 'APPROVAL') as ApprovalTaskSummary['nodeKind'];
   return {
     id: task.id,
     documentId: task.documentId,
@@ -54,9 +57,11 @@ export function toTaskSummary(
     documentTitle: document.title,
     currentStep: task.stepIndex,
     processNodeId: task.processNodeId,
-    processNodeName,
+    processNodeName: task.branchLabel ?? processNodeName,
     assigneeRole: task.assigneeRole,
     status: task.status as ApprovalTaskSummary['status'],
+    nodeKind,
+    choiceOptions: nodeKind === 'CHOICE' ? [...choiceOptions] : [],
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };

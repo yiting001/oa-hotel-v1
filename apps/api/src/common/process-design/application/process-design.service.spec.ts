@@ -40,19 +40,30 @@ describe('ProcessDesignService', () => {
       expect.objectContaining({
         documentType: 'CONTRACT_REQUEST',
         version: 1,
-        approvalPath: ['部门负责人审批', '财务审核'],
+        approvalPath: ['部门负责人审批', '主管领导', '总经理'],
       }),
     ]);
     expect(parsePublishedUserTasks(published.designJson)).toEqual([
       {
         id: 'department-manager',
         name: '部门负责人审批',
+        kind: 'APPROVAL',
         assigneeRule: { type: 'APPLICANT_DEPARTMENT_MANAGER' },
+        options: [],
       },
       {
-        id: 'finance-review',
-        name: '财务审核',
-        assigneeRule: { type: 'ROLE', roleCode: 'FINANCE_REVIEWER' },
+        id: 'approval-2',
+        name: '主管领导',
+        kind: 'APPROVAL',
+        assigneeRule: { type: 'ROLE', roleCode: 'EXEC_PRE_APPROVER' },
+        options: [],
+      },
+      {
+        id: 'approval-3',
+        name: '总经理',
+        kind: 'APPROVAL',
+        assigneeRule: { type: 'ROLE', roleCode: 'EXEC_APPROVER' },
+        options: [],
       },
     ]);
 

@@ -1,4 +1,4 @@
-import { IsString, IsUUID, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class SubmitDocumentDto {
   @IsUUID()
@@ -12,4 +12,11 @@ export class CompleteTaskDto {
   @IsString()
   @MaxLength(1000)
   comment!: string;
+
+  /** 人工选择下一步时勾选的审核方 ID；不传表示直接送下一节点。 */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  choices?: string[];
 }
