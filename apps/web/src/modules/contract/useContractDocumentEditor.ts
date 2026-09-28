@@ -138,7 +138,11 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
   }
 
   function backToList(): void {
-    void router.push({ name: options.listRouteName ?? 'contract-list' });
+    const fallback =
+      options.documentType === 'CONTRACT_REQUEST'
+        ? 'contract-request-list'
+        : 'contract-approval-list';
+    void router.push({ name: options.listRouteName ?? fallback });
   }
 
   return {

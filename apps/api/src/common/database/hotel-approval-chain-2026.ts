@@ -222,6 +222,77 @@ export async function applyPettyRequesterRestriction(
   }
 }
 
+/**
+ * 业务中心菜单重构：请示批复与合同审批拆分为两个入口，印章菜单更名，
+ * 新增公司通知入口，并按新的顺序重排业务中心。
+ */
+export async function applyBusinessMenuRestructure(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(
+    `UPDATE "iam_menus" SET "name" = '印章证照' WHERE "id" = 'menu-seal'`,
+  );
+
+  // 拆分「合同与支出」：保留原有角色授权到两个新入口
+  await queryRunner.query(
+    `DELETE FROM "iam_menus" WHERE "id" IN ('menu-request', 'menu-contract-approval')`,
+  );
+  await queryRunner.query(
+    `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
+      SELECT 'menu-requests', 'menu-business', '请示批复', 'MENU', '/requests', 'DOCUMENT_VIEW,CONTRACT_VIEW', 'EditPen', 1, 1, 1
+      WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-requests')`,
+  );
+  await queryRunner.query(
+    `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
+      SELECT 'menu-contract-approvals', 'menu-business', '合同审批', 'MENU', '/contract-approvals', 'DOCUMENT_VIEW,CONTRACT_VIEW', 'Tickets', 2, 1, 1
+      WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-contract-approvals')`,
+  );
+  await queryRunner.query(
+    `INSERT INTO "iam_role_menus" ("roleId", "menuId")
+      SELECT "roleId", 'menu-requests' FROM "iam_role_menus" WHERE "menuId" = 'menu-contract'
+        AND NOT EXISTS (
+          SELECT 1 FROM "iam_role_menus" existing
+          WHERE existing."roleId" = "iam_role_menus"."roleId" AND existing."menuId" = 'menu-requests'
+        )`,
+  );
+  await queryRunner.query(
+    `INSERT INTO "iam_role_menus" ("roleId", "menuId")
+      SELECT "roleId", 'menu-contract-approvals' FROM "iam_role_menus" WHERE "menuId" = 'menu-contract'
+        AND NOT EXISTS (
+          SELECT 1 FROM "iam_role_menus" existing
+          WHERE existing."roleId" = "iam_role_menus"."roleId" AND existing."menuId" = 'menu-contract-approvals'
+        )`,
+  );
+  await queryRunner.query(`DELETE FROM "iam_role_menus" WHERE "menuId" = 'menu-contract'`);
+  await queryRunner.query(`DELETE FROM "iam_menus" WHERE "id" = 'menu-contract'`);
+
+  // 公司通知：与公司门户相同的可见范围
+  await queryRunner.query(
+    `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
+      SELECT 'menu-notices', 'menu-business', '公司通知', 'MENU', '/notices', 'PORTAL_VIEW,CONTENT_VIEW', 'Bell', 6, 1, 1
+      WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-notices')`,
+  );
+  await queryRunner.query(
+    `INSERT INTO "iam_role_menus" ("roleId", "menuId")
+      SELECT role."id", 'menu-notices' FROM "iam_roles" role
+        WHERE NOT EXISTS (
+          SELECT 1 FROM "iam_role_menus" existing
+          WHERE existing."roleId" = role."id" AND existing."menuId" = 'menu-notices'
+        )`,
+  );
+
+  for (const [menuId, orderNum] of [
+    ['menu-seal', 3],
+    ['menu-purchase', 4],
+    ['menu-petty', 5],
+    ['menu-supply', 7],
+    ['menu-content', 8],
+    ['menu-petty-materials', 9],
+  ] as const) {
+    await queryRunner.query(
+      `UPDATE "iam_menus" SET "orderNum" = ${orderNum} WHERE "id" = '${menuId}'`,
+    );
+  }
+}
+
 export async function applyManualChoiceChainAdjustment(
   queryRunner: QueryRunner,
   dialect: Dialect,

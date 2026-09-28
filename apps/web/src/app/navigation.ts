@@ -1,4 +1,5 @@
 import {
+  Bell,
   Box,
   Checked,
   Connection,
@@ -87,11 +88,25 @@ const navigationGroups: readonly NavigationGroup[] = [
     label: '业务中心',
     items: [
       {
-        id: 'contract',
-        path: '/contract',
-        label: '合同与支出',
+        id: 'requests',
+        path: '/requests',
+        label: '请示批复',
+        icon: EditPen,
+        requiredPermissions: requiredBusinessModulePermissions('CONTRACT', 'VIEW'),
+      },
+      {
+        id: 'contract-approvals',
+        path: '/contract-approvals',
+        label: '合同审批',
         icon: Tickets,
         requiredPermissions: requiredBusinessModulePermissions('CONTRACT', 'VIEW'),
+      },
+      {
+        id: 'seal',
+        path: '/seal',
+        label: '印章证照',
+        icon: Stamp,
+        requiredPermissions: requiredBusinessModulePermissions('SEAL', 'VIEW'),
       },
       {
         id: 'purchase',
@@ -108,11 +123,11 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: requiredBusinessModulePermissions('PETTY', 'VIEW'),
       },
       {
-        id: 'seal',
-        path: '/seal',
-        label: '行政印章',
-        icon: Stamp,
-        requiredPermissions: requiredBusinessModulePermissions('SEAL', 'VIEW'),
+        id: 'notices',
+        path: '/notices',
+        label: '公司通知',
+        icon: Bell,
+        requiredPermissions: [...portalViewPermissions],
       },
       {
         id: 'supply',
@@ -217,6 +232,7 @@ export function visibleNavigationGroups(
 }
 
 const menuIconComponents: Record<string, Component> = {
+  Bell,
   Box,
   Checked,
   Connection,

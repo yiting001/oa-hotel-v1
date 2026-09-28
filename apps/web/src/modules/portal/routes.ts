@@ -9,6 +9,12 @@ export const portalRoutes: RouteRecordRaw[] = [
     meta: { title: '公司门户', requiredPermissions: [...portalViewPermissions] },
   },
   {
+    path: '/notices',
+    name: 'company-notices',
+    component: () => import('./pages/NoticeListPage.vue'),
+    meta: { title: '公司通知', requiredPermissions: [...portalViewPermissions] },
+  },
+  {
     path: '/portal/content-management',
     name: 'portal-content-management',
     component: () => import('./pages/PortalContentManagementPage.vue'),

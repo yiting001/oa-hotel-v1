@@ -1,5 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 import {
+  applyBusinessMenuRestructure,
   applyManualChoiceChainAdjustment,
   applyPettyRequesterRestriction,
 } from '../hotel-approval-chain-2026';
@@ -20,6 +21,7 @@ export class PostgresWorkflowManualChoice1786200000001 implements MigrationInter
     );
     await applyManualChoiceChainAdjustment(queryRunner, 'postgres');
     await applyPettyRequesterRestriction(queryRunner, 'postgres');
+    await applyBusinessMenuRestructure(queryRunner);
   }
 
   async down(): Promise<void> {

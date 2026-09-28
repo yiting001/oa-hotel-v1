@@ -2,6 +2,8 @@ import type { DocumentStatus, DocumentType } from '@oa/contracts';
 
 export const CONTRACT_ROUTE_NAMES = {
   list: 'contract-list',
+  requests: 'contract-request-list',
+  approvals: 'contract-approval-list',
   requestCreate: 'contract-request-create',
   requestEdit: 'contract-request-edit',
   approvalCreate: 'contract-approval-create',
@@ -28,7 +30,7 @@ export const CONTRACT_DOCUMENT_TYPES: DocumentType[] = [
 ];
 
 export const CONTRACT_TYPE_OPTIONS: Array<{ label: string; value: DocumentType }> = [
-  { label: '合同/支出请示', value: 'CONTRACT_REQUEST' },
+  { label: '请示', value: 'CONTRACT_REQUEST' },
   { label: '合同审批', value: 'CONTRACT_APPROVAL' },
   { label: '合同付款', value: 'CONTRACT_PAYMENT' },
 ];

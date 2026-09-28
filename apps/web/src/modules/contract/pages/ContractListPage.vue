@@ -6,7 +6,7 @@ import type { DocumentStatus, DocumentSummary, DocumentType } from '@oa/contract
 import { requiredBusinessModulePermissions } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import StatusTag from '../../../shared/components/StatusTag.vue';
 import { documentDetailPath, documentTypeMeta } from '../../../shared/document';
@@ -22,6 +22,7 @@ import {
   DOCUMENT_STATUS_OPTIONS,
 } from '../contract.config';
 
+const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
 const workflow = useWorkflowStore();
@@ -33,8 +34,29 @@ const documentStatus = ref<DocumentStatus | ''>('');
 const page = ref(1);
 const pageSize = ref(10);
 
+/** 请示批复与合同审批各自独立的列表入口，由路由 meta 指定纳入的单据类型。 */
+const listDocumentTypes = computed<DocumentType[]>(() => {
+  const configured = route.meta.listDocumentTypes;
+  return Array.isArray(configured) && configured.length > 0
+    ? (configured as DocumentType[])
+    : CONTRACT_DOCUMENT_TYPES;
+});
+const isRequestList = computed(() => listDocumentTypes.value.includes('CONTRACT_REQUEST'));
+const pageCopy = computed(() =>
+  isRequestList.value
+    ? {
+        eyebrow: '业务中心',
+        title: '请示批复',
+        description: '部门发起请示，经部门负责人、主管领导审批后由总经理批复。',
+      }
+    : {
+        eyebrow: '业务中心',
+        title: '合同审批',
+        description: '合同签约审批与履约付款，行政办公室可指派外部律师或兄弟部门先行审核。',
+      },
+);
 const contractDocuments = computed(() =>
-  workflow.documents.filter((document) => CONTRACT_DOCUMENT_TYPES.includes(document.documentType)),
+  workflow.documents.filter((document) => listDocumentTypes.value.includes(document.documentType)),
 );
 const filteredDocuments = computed(() => {
   const query = keyword.value.trim().toLocaleLowerCase();
@@ -82,24 +104,33 @@ onMounted(() => { void refresh(); });
 
 <template>
   <div class="ui-page contract-list-page">
-    <AppPageHeader eyebrow="合同管理" title="合同与支出管理" description="合同请示、签约审批与履约付款">
+    <AppPageHeader
+      :description="pageCopy.description"
+      :eyebrow="pageCopy.eyebrow"
+      :title="pageCopy.title"
+    >
       <template #actions>
         <div class="ui-actions">
-          <el-button v-if="canCreate" type="primary" @click="router.push({ name: CONTRACT_ROUTE_NAMES.requestCreate })"><el-icon><Plus /></el-icon>新建请示</el-button>
-          <el-button v-if="canCreate" @click="router.push({ name: CONTRACT_ROUTE_NAMES.approvalCreate })"><el-icon><Plus /></el-icon>合同审批</el-button>
-          <el-button v-if="canCreate" @click="router.push({ name: CONTRACT_ROUTE_NAMES.paymentCreate })"><el-icon><Plus /></el-icon>付款申请</el-button>
+          <el-button v-if="canCreate && isRequestList" type="primary" @click="router.push({ name: CONTRACT_ROUTE_NAMES.requestCreate })"><el-icon><Plus /></el-icon>新建请示</el-button>
+          <el-button v-if="canCreate && !isRequestList" type="primary" @click="router.push({ name: CONTRACT_ROUTE_NAMES.approvalCreate })"><el-icon><Plus /></el-icon>合同审批</el-button>
+          <el-button v-if="canCreate && !isRequestList" @click="router.push({ name: CONTRACT_ROUTE_NAMES.paymentCreate })"><el-icon><Plus /></el-icon>付款申请</el-button>
           <el-button :icon="Refresh" :loading="workflow.loading" aria-label="刷新" title="刷新" @click="refresh" />
         </div>
       </template>
     </AppPageHeader>
     <WorkspaceMetricStrip label="合同单据统计" :items="metricStripItems" />
-    <WorkspaceFilterBar label="合同单据筛选" :result-label="`共 ${filteredDocuments.length} 条`">
+    <WorkspaceFilterBar :label="`${pageCopy.title}筛选`" :result-label="`共 ${filteredDocuments.length} 条`">
       <template #search>
         <el-input v-model="keyword" clearable :prefix-icon="Search" placeholder="搜索单据标题或类型" aria-label="搜索单据" />
       </template>
       <template #filters>
         <el-select v-model="documentType" placeholder="全部类型" aria-label="合同类型" clearable>
-          <el-option v-for="option in CONTRACT_TYPE_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+          <el-option
+            v-for="option in CONTRACT_TYPE_OPTIONS.filter((item) => listDocumentTypes.includes(item.value))"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
         <el-select v-model="documentStatus" placeholder="全部状态" aria-label="合同状态" clearable>
           <el-option v-for="option in DOCUMENT_STATUS_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
@@ -109,7 +140,7 @@ onMounted(() => { void refresh(); });
         <el-button v-if="keyword || documentType || documentStatus" :icon="Close" @click="resetFilters">清空</el-button>
       </template>
     </WorkspaceFilterBar>
-    <UiDataList :rows="visibleDocuments" :columns="columns" :loading="workflow.loading" empty-text="暂无符合条件的合同单据" @row-click="openDocument">
+    <UiDataList :rows="visibleDocuments" :columns="columns" :loading="workflow.loading" :empty-text="`暂无符合条件的${pageCopy.title}单据`" @row-click="openDocument">
       <template #cell-title="{ row }"><span class="contract-list__title">{{ row.title }}</span></template>
       <template #cell-documentType="{ row }">{{ documentTypeMeta[row.documentType].label }}</template>
       <template #cell-status="{ row }"><StatusTag :status="row.status" /></template>

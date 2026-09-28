@@ -16,7 +16,8 @@ describe('application navigation', () => {
     const ids = groups.flatMap((group) => group.items.map((item) => item.id));
 
     expect(ids).toContain('approval');
-    expect(ids).toContain('contract');
+    expect(ids).toContain('requests');
+    expect(ids).toContain('contract-approvals');
     expect(ids).not.toContain('start');
     expect(ids).not.toContain('forms');
   });
@@ -43,7 +44,16 @@ describe('application navigation', () => {
     const ids = groups.flatMap((group) => group.items.map((item) => item.id));
 
     expect(ids).toEqual(
-      expect.arrayContaining(['approval', 'contract', 'seal', 'supply', 'processes', 'forms']),
+      expect.arrayContaining([
+        'approval',
+        'requests',
+        'contract-approvals',
+        'seal',
+        'supply',
+        'notices',
+        'processes',
+        'forms',
+      ]),
     );
     expect(ids).not.toContain('start');
     expect(mobilePrimaryNavigation(groups).map((item) => item.id)).toEqual([
@@ -56,7 +66,8 @@ describe('application navigation', () => {
   it('builds navigation from the served menu tree with permission filtering', () => {
     const grantedIds = new Set([
       'menu-business',
-      'menu-contract',
+      'menu-requests',
+      'menu-contract-approvals',
       'menu-seal',
       'menu-office',
       'menu-workbench',
@@ -69,7 +80,7 @@ describe('application navigation', () => {
     );
     const ids = groups.flatMap((group) => group.items.map((item) => item.id));
 
-    expect(ids).toContain('contract');
+    expect(ids).toContain('requests');
     expect(ids).toContain('workbench');
     // 授权了印章菜单，但用户缺少 SEAL_VIEW 功能权限，仍应过滤
     expect(ids).not.toContain('seal');

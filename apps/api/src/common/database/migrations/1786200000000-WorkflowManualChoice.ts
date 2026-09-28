@@ -1,5 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 import {
+  applyBusinessMenuRestructure,
   applyManualChoiceChainAdjustment,
   applyPettyRequesterRestriction,
 } from '../hotel-approval-chain-2026';
@@ -20,6 +21,7 @@ export class WorkflowManualChoice1786200000000 implements MigrationInterface {
     );
     await applyManualChoiceChainAdjustment(queryRunner, 'sqlite');
     await applyPettyRequesterRestriction(queryRunner, 'sqlite');
+    await applyBusinessMenuRestructure(queryRunner);
   }
 
   async down(): Promise<void> {

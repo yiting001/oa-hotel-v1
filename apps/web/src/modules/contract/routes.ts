@@ -8,9 +8,27 @@ const createPermission = requiredBusinessModulePermissions('CONTRACT', 'CREATE')
 export const contractRoutes: RouteRecordRaw[] = [
   {
     path: '/contract',
-    name: CONTRACT_ROUTE_NAMES.list,
+    redirect: { name: CONTRACT_ROUTE_NAMES.requests },
+  },
+  {
+    path: '/requests',
+    name: CONTRACT_ROUTE_NAMES.requests,
     component: () => import('./pages/ContractListPage.vue'),
-    meta: { title: '合同支出', requiredPermissions: viewPermission },
+    meta: {
+      title: '请示批复',
+      requiredPermissions: viewPermission,
+      listDocumentTypes: ['CONTRACT_REQUEST'],
+    },
+  },
+  {
+    path: '/contract-approvals',
+    name: CONTRACT_ROUTE_NAMES.approvals,
+    component: () => import('./pages/ContractListPage.vue'),
+    meta: {
+      title: '合同审批',
+      requiredPermissions: viewPermission,
+      listDocumentTypes: ['CONTRACT_APPROVAL', 'CONTRACT_PAYMENT'],
+    },
   },
   {
     path: '/contract/requests/new',
