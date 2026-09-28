@@ -9,12 +9,16 @@ export interface ContractRequestData {
   requestedAt: string;
   amountCents: number | null;
   content: string;
+  /** 内部请示的致送单位。 */
+  addressee: string;
+  /** 内部请示的发出部门。 */
+  issuer: string;
   attachments: string[];
 }
 
 export type ContractRequestPayload = Pick<
   ContractRequestData,
-  'title' | 'requestedAt' | 'amountCents' | 'content' | 'attachments'
+  'title' | 'requestedAt' | 'amountCents' | 'content' | 'addressee' | 'issuer' | 'attachments'
 >;
 
 export interface ContractApprovalData {

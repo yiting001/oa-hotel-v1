@@ -68,7 +68,10 @@ describe('FormDesignSeeder', () => {
       expect.objectContaining({
         version: 2,
         status: 'PUBLISHED',
-        schemaJson: expect.objectContaining({ systemTemplateRevision: 2 }),
+        // 与模板当前版本对齐，模板升级后无需改断言
+        schemaJson: expect.objectContaining({
+          systemTemplateRevision: REQUEST_REPORT_TEMPLATE.schemaJson.systemTemplateRevision,
+        }),
       }),
       expect.objectContaining({ version: 1, status: 'RETIRED' }),
     ]);

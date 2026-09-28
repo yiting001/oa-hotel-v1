@@ -21,7 +21,15 @@ const formRef = ref<FormInstance>();
 const session = useSessionStore();
 const directory = useDirectoryStore();
 const { isCompact } = useLayoutMode();
-const form = reactive<ContractRequestPayload>({ title: '', requestedAt: todayIso(), amountCents: null, content: '', attachments: [] });
+const form = reactive<ContractRequestPayload>({
+  title: '',
+  requestedAt: todayIso(),
+  amountCents: null,
+  content: '',
+  addressee: '',
+  issuer: '',
+  attachments: [],
+});
 const rules: FormRules<ContractRequestPayload> = {
   title: [
     { required: true, whitespace: true, message: '请输入请示题目' },
@@ -44,7 +52,15 @@ const editor = useContractDocumentEditor<ContractRequestData, ContractRequestPay
   validate: () => validateDocumentForm(formRef.value),
   payload: () => ({ ...form, requestedAt: form.requestedAt || '', attachments: [...form.attachments] }),
   assign: (data) => {
-    Object.assign(form, { title: data.title, requestedAt: data.requestedAt || '', amountCents: data.amountCents, content: data.content, attachments: [...data.attachments] });
+    Object.assign(form, {
+      title: data.title,
+      requestedAt: data.requestedAt || '',
+      amountCents: data.amountCents,
+      content: data.content,
+      addressee: data.addressee || '',
+      issuer: data.issuer || '',
+      attachments: [...data.attachments],
+    });
   },
 });
 const applicantSummary = computed(() => [
@@ -64,6 +80,12 @@ onMounted(() => { void editor.initialize([session.ensureSession(), directory.loa
           <div class="ui-fields" :class="{ 'is-compact': isCompact }">
             <el-form-item class="ui-field-full" label="请示题目" prop="title">
               <el-input v-model="form.title" :maxlength="200" placeholder="请输入请示题目" show-word-limit />
+            </el-form-item>
+            <el-form-item label="致送" prop="addressee">
+              <el-input v-model="form.addressee" :maxlength="100" placeholder="如：总（办事处/总经理）" />
+            </el-form-item>
+            <el-form-item label="发出" prop="issuer">
+              <el-input v-model="form.issuer" :maxlength="100" placeholder="如：办公室" />
             </el-form-item>
             <el-form-item label="请示日期" prop="requestedAt">
               <el-date-picker :model-value="form.requestedAt" format="YYYY/MM/DD" value-format="YYYY-MM-DD" placeholder="请选择日期" @update:model-value="form.requestedAt = $event || ''" />

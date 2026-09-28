@@ -17,6 +17,14 @@ export class PettyProcurementEntity {
   @Column('text', { nullable: true })
   remark!: string | null;
 
+  /** 餐饮食品原材料请购单的「班组」。 */
+  @Column('text', { default: '' })
+  teamName!: string;
+
+  /** 线下请购单的日期（YYYY-MM-DD）。 */
+  @Column('text', { default: '' })
+  applicationDate!: string;
+
   @Column('text')
   applicantId!: string;
 

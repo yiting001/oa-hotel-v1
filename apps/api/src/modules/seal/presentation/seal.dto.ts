@@ -1,13 +1,26 @@
+import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsInt,
   IsOptional,
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+
+export class SealCategoryDto {
+  @IsString()
+  @MaxLength(100)
+  name!: string;
+
+  @IsInt()
+  @Min(0)
+  copies!: number;
+}
 
 export class SealBorrowDto {
   @IsDateString()
@@ -34,6 +47,25 @@ export class SealBorrowDto {
   @MaxLength(5000)
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  submitTo?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SealCategoryDto)
+  sealCategories?: SealCategoryDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  sealTakeout?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  licenseTakeout?: boolean;
+
   @IsArray()
   @IsString({ each: true })
   attachments!: string[];
@@ -56,6 +88,25 @@ export class SealUseDto {
   @IsString()
   @MaxLength(5000)
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  submitTo?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SealCategoryDto)
+  sealCategories?: SealCategoryDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  sealTakeout?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  licenseTakeout?: boolean;
 
   @IsArray()
   @IsString({ each: true })

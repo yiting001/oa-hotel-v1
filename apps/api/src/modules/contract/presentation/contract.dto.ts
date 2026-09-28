@@ -29,6 +29,16 @@ export class ContractRequestDto {
   @MaxLength(5000)
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  addressee?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  issuer?: string;
+
   @IsArray()
   @IsString({ each: true })
   attachments!: string[];

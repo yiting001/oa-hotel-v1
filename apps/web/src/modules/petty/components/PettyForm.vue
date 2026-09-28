@@ -10,6 +10,7 @@ import WorkflowSidebar from '../../../shared/components/WorkflowSidebar.vue';
 import { useSessionStore } from '../../../shared/session';
 import { useWorkflowStore } from '../../../shared/workflow';
 import { useLayoutMode } from '../../../ui/useLayoutMode';
+import { todayIso } from '../../../shared/format';
 import ContractDocumentActions from '../../contract/components/ContractDocumentActions.vue';
 import type { EditorMode } from '../../contract/contract.types';
 import {
@@ -32,11 +33,17 @@ const workflow = useWorkflowStore();
 const { isCompact } = useLayoutMode();
 
 const materials = ref<PettyMaterial[]>([]);
-const itemDrafts = ref<PettyItemDraft[]>([{ materialId: null, quantity: 1 }]);
+const itemDrafts = ref<PettyItemDraft[]>([
+  { materialId: null, quantity: 1, requirement: '', remark: '' },
+]);
 
-const form = reactive<Pick<PettyProcurementPayload, 'title' | 'remark' | 'attachments'>>({
+const form = reactive<
+  Pick<PettyProcurementPayload, 'title' | 'remark' | 'teamName' | 'applicationDate' | 'attachments'>
+>({
   title: '',
   remark: null,
+  teamName: '',
+  applicationDate: todayIso(),
   attachments: [],
 });
 
@@ -84,7 +91,10 @@ function updateQuantity(draft: PettyItemDraft, value: unknown): void {
 }
 
 function addItem(): void {
-  itemDrafts.value = [...itemDrafts.value, { materialId: null, quantity: 1 }];
+  itemDrafts.value = [
+    ...itemDrafts.value,
+    { materialId: null, quantity: 1, requirement: '', remark: '' },
+  ];
 }
 
 function removeItem(index: number): void {
@@ -114,17 +124,26 @@ const editor = useContractDocumentEditor<PettyProcurementData, PettyProcurementP
       .filter((draft): draft is PettyItemDraft & { materialId: string } =>
         Boolean(draft.materialId),
       )
-      .map((draft) => ({ materialId: draft.materialId, quantity: draft.quantity })),
+      .map((draft) => ({
+        materialId: draft.materialId,
+        quantity: draft.quantity,
+        requirement: draft.requirement,
+        remark: draft.remark,
+      })),
   }),
   assign: (data) => {
     Object.assign(form, {
       title: data.title,
       remark: data.remark,
+      teamName: data.teamName ?? '',
+      applicationDate: data.applicationDate ?? '',
       attachments: [...data.attachments],
     });
     itemDrafts.value = data.items.map((item) => ({
       materialId: item.materialId,
       quantity: item.quantity,
+      requirement: item.requirement ?? '',
+      remark: item.remark ?? '',
     }));
   },
 });
@@ -176,6 +195,18 @@ onMounted(() => {
             <el-form-item label="申请人">
               <div class="contract-readonly-value">{{ session.user?.displayName ?? '-' }}</div>
             </el-form-item>
+            <el-form-item label="班组" prop="teamName">
+              <el-input v-model="form.teamName" :maxlength="50" placeholder="如：中厨房 / 点心房" />
+            </el-form-item>
+            <el-form-item label="日期" prop="applicationDate">
+              <el-date-picker
+                :model-value="form.applicationDate"
+                format="YYYY/MM/DD"
+                placeholder="请选择日期"
+                value-format="YYYY-MM-DD"
+                @update:model-value="form.applicationDate = $event || ''"
+              />
+            </el-form-item>
             <el-form-item class="ui-field-full" label="申请标题" prop="title">
               <el-input
                 v-model="form.title"
@@ -193,7 +224,8 @@ onMounted(() => {
               <div class="petty-items__row petty-items__row--head" aria-hidden="true">
                 <span>物资（品牌 · 单价）</span>
                 <span>数量</span>
-                <span>供货单位</span>
+                <span>要求</span>
+                <span>备注</span>
                 <span class="petty-items__right">小计</span>
                 <span class="petty-items__right">操作</span>
               </div>
@@ -223,7 +255,20 @@ onMounted(() => {
                   aria-label="采购数量"
                   @update:model-value="updateQuantity(draft, $event)"
                 />
-                <span class="petty-items__meta">{{ materialOf(draft)?.supplierName ?? '-' }}</span>
+                <el-input
+                  v-model="draft.requirement"
+                  :disabled="!editor.editable.value"
+                  :maxlength="200"
+                  aria-label="要求"
+                  placeholder="如：新鲜、当日到货"
+                />
+                <el-input
+                  v-model="draft.remark"
+                  :disabled="!editor.editable.value"
+                  :maxlength="200"
+                  aria-label="备注"
+                  placeholder="备注"
+                />
                 <span class="petty-items__subtotal">小计 {{ subtotal(draft) }}</span>
                 <span class="petty-items__row-actions">
                   <el-button
@@ -280,6 +325,22 @@ onMounted(() => {
                       aria-label="采购数量"
                       controls-position="right"
                       @update:model-value="updateQuantity(draft, $event)"
+                    />
+                  </el-form-item>
+                  <el-form-item label="要求">
+                    <el-input
+                      v-model="draft.requirement"
+                      :disabled="!editor.editable.value"
+                      :maxlength="200"
+                      placeholder="如：新鲜、当日到货"
+                    />
+                  </el-form-item>
+                  <el-form-item label="备注">
+                    <el-input
+                      v-model="draft.remark"
+                      :disabled="!editor.editable.value"
+                      :maxlength="200"
+                      placeholder="备注"
                     />
                   </el-form-item>
                   <el-form-item label="供货单位">{{ materialOf(draft)?.supplierName ?? '-' }}</el-form-item>
@@ -357,7 +418,7 @@ onMounted(() => {
 .petty-items__row {
   display: grid;
   min-width: 688px;
-  grid-template-columns: minmax(220px, 1.5fr) 120px minmax(130px, 1fr) 118px 52px;
+  grid-template-columns: minmax(200px, 1.4fr) 96px minmax(120px, 1fr) minmax(120px, 1fr) 118px 52px;
   align-items: center;
   gap: 12px;
   padding: 8px 0;

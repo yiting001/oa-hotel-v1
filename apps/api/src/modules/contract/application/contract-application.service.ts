@@ -25,13 +25,14 @@ export class ContractApplicationService {
   ) {}
 
   async saveRequest(dto: ContractRequestDto, user: SessionUser, id?: string) {
+    const normalized = { addressee: '', issuer: '', ...dto };
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findRequest(id);
       if (!current) {
         throw new NotFoundException('请示单不存在');
       }
-      const saved = await this.repository.saveRequest({ ...current, ...dto });
+      const saved = await this.repository.saveRequest({ ...current, ...normalized });
       await this.workflow.updateDraftTitle(id, dto.title, user);
       return this.withIndex(saved);
     }
@@ -41,7 +42,7 @@ export class ContractApplicationService {
       number: createDocumentNumber('CONTRACT-REQUEST', documentId),
       departmentId: user.departmentId,
       applicantId: user.id,
-      ...dto,
+      ...normalized,
     });
     await this.workflow.registerDraft({
       id: documentId,

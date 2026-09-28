@@ -242,16 +242,26 @@ function buildLegacyModel(
     case 'PETTY_PROCUREMENT':
       return {
         ...base,
-        title: '零星采买申请单',
-        fields: fields(data, [['合计金额', 'totalAmountCents']], references),
+        title: '餐饮食品原材料请购单',
+        fields: fields(
+          data,
+          [
+            ['班组', 'teamName'],
+            ['日期', 'applicationDate'],
+          ],
+          references,
+        ),
         contentBlocks: [block('申请备注', display(data, 'remark'), 'normal')],
-        table: buildTable(data, '采买明细', [
+        table: buildTable(data, '请购明细', [
           ['序号', '$index', '8mm'],
-          ['物资名称', 'name', '28mm'],
-          ['品牌', 'brand', '20mm'],
-          ['单价', 'unitPriceCents', '20mm'],
-          ['采购数量', 'quantity', '18mm'],
-          ['小计', 'subtotalCents', '22mm'],
+          ['品名', 'name', '26mm'],
+          ['品牌', 'brand', '18mm'],
+          ['单价', 'unitPriceCents', '18mm'],
+          ['数量', 'quantity', '14mm'],
+          ['单位', 'unit', '12mm'],
+          ['要求', 'requirement', '30mm'],
+          ['备注', 'remark', '28mm'],
+          ['小计', 'subtotalCents', '20mm'],
         ]),
       };
   }

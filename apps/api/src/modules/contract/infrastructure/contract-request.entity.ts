@@ -26,6 +26,14 @@ export class ContractRequestEntity {
   @Column('text')
   content!: string;
 
+  /** 内部请示的致送单位（线下单子「致送」）。 */
+  @Column('text', { default: '' })
+  addressee!: string;
+
+  /** 内部请示的发出部门（线下单子「发出」）。 */
+  @Column('text', { default: '' })
+  issuer!: string;
+
   @Column('simple-json')
   attachments!: string[];
 }

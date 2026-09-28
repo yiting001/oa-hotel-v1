@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Delete, Plus } from '@element-plus/icons-vue';
 import type { WorkflowOverview } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
@@ -38,6 +39,10 @@ const form = reactive<SealUseInput>({
   purpose: '',
   sealAssetNames: [],
   content: '',
+  submitTo: '',
+  sealCategories: [],
+  sealTakeout: false,
+  licenseTakeout: false,
   attachments: [],
 });
 
@@ -101,8 +106,20 @@ function applyRecord(value: SealUseRecord): void {
     purpose: value.purpose,
     sealAssetNames: [...value.sealAssetNames],
     content: value.content,
+    submitTo: value.submitTo ?? '',
+    sealCategories: (value.sealCategories ?? []).map((entry) => ({ ...entry })),
+    sealTakeout: Boolean(value.sealTakeout),
+    licenseTakeout: Boolean(value.licenseTakeout),
     attachments: [...value.attachments],
   });
+}
+
+function addSealCategory(): void {
+  form.sealCategories = [...form.sealCategories, { name: '饭店章', copies: 1 }];
+}
+
+function removeSealCategory(index: number): void {
+  form.sealCategories = form.sealCategories.filter((_, current) => current !== index);
 }
 
 function toInput(): SealUseInput {
@@ -113,6 +130,12 @@ function toInput(): SealUseInput {
       .map((name) => name.trim())
       .filter((name) => name.length > 0),
     content: form.content.trim(),
+    submitTo: form.submitTo.trim(),
+    sealCategories: form.sealCategories
+      .filter((entry) => entry.name.trim().length > 0)
+      .map((entry) => ({ name: entry.name.trim(), copies: entry.copies })),
+    sealTakeout: form.sealTakeout,
+    licenseTakeout: form.licenseTakeout,
     attachments: [...form.attachments],
   };
 }
@@ -264,6 +287,38 @@ onMounted(async () => {
         </div>
       </FormSection>
 
+      <FormSection title="报送与外带">
+        <div class="ui-fields">
+          <el-form-item label="报送单位" prop="submitTo">
+            <el-input v-model="form.submitTo" :maxlength="200" placeholder="如：市场监督管理局 / 客户单位" />
+          </el-form-item>
+          <el-form-item label="公章外带" prop="sealTakeout">
+            <el-radio-group v-model="form.sealTakeout" :disabled="!canEdit">
+              <el-radio-button :value="false">否</el-radio-button>
+              <el-radio-button :value="true">是</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="证照外带" prop="licenseTakeout">
+            <el-radio-group v-model="form.licenseTakeout" :disabled="!canEdit">
+              <el-radio-button :value="false">否</el-radio-button>
+              <el-radio-button :value="true">是</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+        <div class="seal-categories">
+          <div class="seal-categories__head">
+            <span>用章类别及数量</span>
+            <el-button :disabled="!canEdit" :icon="Plus" text @click="addSealCategory">添加用章类别</el-button>
+          </div>
+          <div v-for="(entry, index) in form.sealCategories" :key="index" class="seal-categories__row">
+            <el-input v-model="entry.name" :disabled="!canEdit" :maxlength="100" placeholder="如：饭店章 / 党委章" aria-label="用章类别" />
+            <el-input-number v-model="entry.copies" :disabled="!canEdit" :min="0" :precision="0" aria-label="盖章数" />
+            <el-button :disabled="!canEdit" :icon="Delete" text type="danger" :aria-label="`删除第 ${index + 1} 项用章类别`" @click="removeSealCategory(index)" />
+          </div>
+          <p v-if="form.sealCategories.length === 0" class="ui-text-muted">如需登记盖章数量，请添加用章类别。</p>
+        </div>
+      </FormSection>
+
       <FormSection title="印章证照">
         <el-form-item label="印章证照名称" prop="sealAssetNames">
           <el-select
@@ -329,6 +384,10 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.seal-categories { display: grid; gap: 10px; margin-top: 8px; }
+.seal-categories__head { display: flex; align-items: center; justify-content: space-between; color: var(--color-text-tertiary); font-size: 13px; }
+.seal-categories__row { display: grid; grid-template-columns: minmax(0, 1fr) 140px 40px; align-items: center; gap: 8px; }
+html[data-layout='compact'] .seal-categories__row { grid-template-columns: minmax(0, 1fr) 110px 40px; }
 .seal-actions {
   display: flex;
   align-items: center;

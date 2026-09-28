@@ -60,13 +60,14 @@ export class SealApplicationService implements OnApplicationBootstrap {
 
   async saveBorrow(dto: SealBorrowDto, user: SessionUser, id?: string) {
     validateBorrowPeriod(dto.useDate, dto.plannedReturnDate);
+    const normalized = normalizeSealSheet(dto);
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findBorrow(id);
       if (!current) {
         throw new NotFoundException('外借申请不存在');
       }
-      const saved = await this.repository.saveBorrow({ ...current, ...dto });
+      const saved = await this.repository.saveBorrow({ ...current, ...normalized });
       await this.workflow.updateDraftTitle(id, `印章证照外借：${dto.destination}`, user);
       return this.withIndex(saved);
     }
@@ -83,7 +84,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
       returnedAt: null,
       returnCondition: null,
       exceptionNote: null,
-      ...dto,
+      ...normalized,
     });
     await this.workflow.registerDraft({
       id: documentId,
@@ -97,13 +98,14 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async saveUse(dto: SealUseDto, user: SessionUser, id?: string) {
+    const normalized = normalizeSealSheet(dto);
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findUse(id);
       if (!current) {
         throw new NotFoundException('用印申请不存在');
       }
-      const saved = await this.repository.saveUse({ ...current, ...dto });
+      const saved = await this.repository.saveUse({ ...current, ...normalized });
       await this.workflow.updateDraftTitle(id, `印章证照使用：${dto.purpose}`, user);
       return this.withIndex(saved);
     }
@@ -119,7 +121,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
       executedAt: null,
       archiveNumber: null,
       executionNote: null,
-      ...dto,
+      ...normalized,
     });
     await this.workflow.registerDraft({
       id: documentId,
@@ -226,4 +228,15 @@ export class SealApplicationService implements OnApplicationBootstrap {
       opinions: await this.workflow.readOpinions(entity.id),
     };
   }
+}
+
+/** 线下《用印及借用证照申请单》新增字段的默认值，保证旧前端载荷仍然可用。 */
+function normalizeSealSheet<T extends SealUseDto | SealBorrowDto>(dto: T) {
+  return {
+    submitTo: '',
+    sealCategories: [],
+    sealTakeout: false,
+    licenseTakeout: false,
+    ...dto,
+  };
 }

@@ -1,18 +1,18 @@
 /** Built-in A4 request report used as both a starter template and print-layout reference. */
 export const REQUEST_REPORT_TEMPLATE = {
   code: 'REQUEST_REPORT',
-  name: '请示报告',
+  name: '内部请示',
   description: '适用于酒店各部门通用事项、预算及支出请示的 A4 审批表单。',
   documentType: 'CONTRACT_REQUEST',
   changeNote: '系统预置 A4 请示报告模板',
   schemaJson: {
-    systemTemplateRevision: 2,
+    systemTemplateRevision: 3,
     schemaVersion: 1,
     layout: 'SECTIONED_FORM',
     title: '请示报告',
     subtitle: '东方饭店办公自动化审批表',
     fields: [
-      { key: 'title', label: '标题', type: 'TEXT', required: true, maxLength: 200 },
+      { key: 'title', label: '主题', type: 'TEXT', required: true, maxLength: 200 },
       { key: 'number', label: '编号', type: 'DOCUMENT_NUMBER', readOnly: true },
       { key: 'departmentId', label: '申请部门', type: 'DEPARTMENT', required: true },
       { key: 'applicantId', label: '申请人', type: 'USER', required: true },
@@ -35,7 +35,7 @@ export const REQUEST_REPORT_TEMPLATE = {
     ],
   },
   printSchemaJson: {
-    systemTemplateRevision: 2,
+    systemTemplateRevision: 3,
     schemaVersion: 1,
     paper: {
       size: 'A4',
@@ -46,24 +46,31 @@ export const REQUEST_REPORT_TEMPLATE = {
     },
     typography: { fontFamily: 'SimSun, Songti SC, serif', baseFontSizePt: 10.5 },
     sections: [
-      { type: 'TITLE', text: '请 示 报 告', fontSizePt: 22, align: 'CENTER' },
+      { type: 'TITLE', text: '北京东方饭店内部请示', fontSizePt: 20, align: 'CENTER' },
       {
         type: 'GRID',
-        columns: [28, 62, 28, 62],
+        columns: [24, 66, 24, 66],
         rows: [
-          [{ label: '请示编号', field: 'number' }],
-          [{ label: '请示题目', field: 'title', colSpan: 3 }],
+          [
+            { label: '编号', field: 'number' },
+            { label: '日期', field: 'requestedAt' },
+          ],
+          [
+            { label: '致送', field: 'addressee' },
+            { label: '发出', field: 'issuer' },
+          ],
+          [{ label: '主题', field: 'title', colSpan: 3 }],
           [
             { label: '申请部门', field: 'departmentId' },
             { label: '申请人', field: 'applicantId' },
           ],
           [
-            { label: '请示时间', field: 'requestedAt' },
             { label: '请示金额', field: 'amountCents' },
+            { label: '办结时间', field: 'requestedAt' },
           ],
         ],
       },
-      { type: 'CONTENT', label: '请示内容', field: 'content', minHeightMm: 92 },
+      { type: 'CONTENT', label: '请示事项（妥否，请批示）', field: 'content', minHeightMm: 92 },
       { type: 'ATTACHMENTS', label: '附件', field: 'attachments', minHeightMm: 18 },
       {
         type: 'APPROVAL_OPINIONS',

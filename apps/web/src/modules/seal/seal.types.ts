@@ -11,6 +11,12 @@ export interface SealAsset {
   validUntil: string | null;
 }
 
+/** 线下《用印及借用证照申请单》的用章类别及数量。 */
+export interface SealCategoryEntry {
+  name: string;
+  copies: number;
+}
+
 export interface SealBorrowInput {
   useDate: string;
   plannedReturnDate: string;
@@ -18,6 +24,10 @@ export interface SealBorrowInput {
   destination: string;
   sealAssetNames: string[];
   content: string;
+  submitTo: string;
+  sealCategories: SealCategoryEntry[];
+  sealTakeout: boolean;
+  licenseTakeout: boolean;
   attachments: string[];
 }
 
@@ -40,6 +50,10 @@ export interface SealUseInput {
   purpose: string;
   sealAssetNames: string[];
   content: string;
+  submitTo: string;
+  sealCategories: SealCategoryEntry[];
+  sealTakeout: boolean;
+  licenseTakeout: boolean;
   attachments: string[];
 }
 

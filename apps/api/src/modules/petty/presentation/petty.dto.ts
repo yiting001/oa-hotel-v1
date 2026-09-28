@@ -62,9 +62,31 @@ export class PettyProcurementItemDto {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  /** 线下请购单的「要求」。 */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  requirement?: string;
+
+  /** 线下请购单的「备注」。 */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  remark?: string;
 }
 
 export class PettyProcurementDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  teamName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  applicationDate?: string;
+
   @IsString()
   @MaxLength(200)
   title!: string;

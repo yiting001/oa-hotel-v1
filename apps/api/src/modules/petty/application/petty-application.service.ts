@@ -80,6 +80,8 @@ export class PettyApplicationService {
         ...current,
         title: dto.title,
         remark: dto.remark,
+        teamName: dto.teamName ?? current.teamName ?? '',
+        applicationDate: dto.applicationDate ?? current.applicationDate ?? '',
         totalAmountCents,
         attachments: dto.attachments,
       });
@@ -94,6 +96,8 @@ export class PettyApplicationService {
       number: createDocumentNumber('PETTY', documentId),
       title: dto.title,
       remark: dto.remark,
+      teamName: dto.teamName ?? '',
+      applicationDate: dto.applicationDate ?? '',
       totalAmountCents,
       applicantId: user.id,
       departmentId: user.departmentId,
@@ -188,6 +192,8 @@ export class PettyApplicationService {
         unitPriceCents: material.unitPriceCents,
         quantity: item.quantity,
         subtotalCents: material.unitPriceCents * item.quantity,
+        requirement: item.requirement ?? '',
+        remark: item.remark ?? '',
       };
     });
     const totalAmountCents = items.reduce((sum, item) => sum + item.subtotalCents, 0);

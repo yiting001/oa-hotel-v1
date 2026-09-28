@@ -32,6 +32,22 @@ export class SealBorrowEntity {
   @Column('simple-json')
   sealAssetNames!: string[];
 
+  /** 线下申请单的「报送单位」。 */
+  @Column('text', { default: '' })
+  submitTo!: string;
+
+  /** 用章类别及数量：[{ name: '饭店章', copies: 2 }]。 */
+  @Column('simple-json', { default: '[]' })
+  sealCategories!: Array<{ name: string; copies: number }>;
+
+  /** 公章外带：是 / 否。 */
+  @Column('boolean', { default: false })
+  sealTakeout!: boolean;
+
+  /** 证照外带：是 / 否。 */
+  @Column('boolean', { default: false })
+  licenseTakeout!: boolean;
+
   @Column('text')
   content!: string;
 

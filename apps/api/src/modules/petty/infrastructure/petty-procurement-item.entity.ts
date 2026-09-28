@@ -28,4 +28,12 @@ export class PettyProcurementItemEntity {
 
   @Column('integer')
   subtotalCents!: number;
+
+  /** 线下请购单的「要求」。 */
+  @Column('text', { default: '' })
+  requirement!: string;
+
+  /** 线下请购单的「备注」。 */
+  @Column('text', { default: '' })
+  remark!: string;
 }

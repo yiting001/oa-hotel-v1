@@ -22,6 +22,10 @@ export interface PettyItem {
   unitPriceCents: number;
   quantity: number;
   subtotalCents: number;
+  /** 线下请购单的「要求」。 */
+  requirement: string;
+  /** 线下请购单的「备注」。 */
+  remark: string;
 }
 
 export interface PettyChangeLog {
@@ -40,6 +44,10 @@ export interface PettyProcurementData {
   title: string;
   totalAmountCents: number;
   remark: string | null;
+  /** 餐饮食品原材料请购单的「班组」。 */
+  teamName: string;
+  /** 线下请购单的日期。 */
+  applicationDate: string;
   applicantId: string;
   departmentId: string;
   attachments: string[];
@@ -51,11 +59,15 @@ export interface PettyProcurementData {
 export interface PettyItemDraft {
   materialId: string | null;
   quantity: number;
+  requirement: string;
+  remark: string;
 }
 
 export interface PettyProcurementPayload {
   title: string;
   remark: string | null;
-  items: Array<{ materialId: string; quantity: number }>;
+  teamName: string;
+  applicationDate: string;
+  items: Array<{ materialId: string; quantity: number; requirement: string; remark: string }>;
   attachments: string[];
 }
