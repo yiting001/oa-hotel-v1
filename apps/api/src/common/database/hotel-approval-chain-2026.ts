@@ -24,6 +24,30 @@ const LEGAL_ADVISOR_ROLE = [
   '外部律师',
 ] as const;
 
+/** 零星采买限定发起人：只有这四位经办人可以发起零星采买单据。 */
+const PETTY_REQUESTER_ROLE = [
+  'role-petty-requester',
+  'PETTY_REQUESTER',
+  '零星采买发起人',
+] as const;
+
+const PETTY_REQUESTER_USER_IDS = [
+  'user-wangchao',
+  'user-linan',
+  'user-zhangpingfei',
+  'user-xizigang',
+] as const;
+
+const PETTY_REQUESTER_PERMISSION_CODES = [
+  'PETTY_CREATE',
+  'PETTY_VIEW',
+  'DOCUMENT_CREATE',
+  'DOCUMENT_VIEW',
+] as const;
+
+/** 收回发起权限的角色：保留系统管理员，避免无人能够维护数据。 */
+const PETTY_CREATE_REVOKED_ROLES = ['role-initiator', 'role-exec-pre-approver'] as const;
+
 const ROLE_PERMISSION_GRANTS: ReadonlyArray<readonly [string, string]> = [
   ['role-exec-pre-approver', 'permission-seal-view'],
   ['role-exec-approver', 'permission-seal-view'],
@@ -152,6 +176,52 @@ async function republishCatalogChains(
  * 2026 年流程细化：请示批复链路调整，合同审批引入「人工选择下一步」，
  * 并确保外部律师角色与零星采买发起人授权到位。
  */
+/**
+ * 零星采买发起人限定：新建发起人角色并授予四位经办人，
+ * 同时从其它角色收回 PETTY_CREATE，确保只有指定人员可以发起。
+ */
+export async function applyPettyRequesterRestriction(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
+  const p = (count: number) => placeholders(dialect, count);
+  const [roleId, roleCode, roleName] = PETTY_REQUESTER_ROLE;
+
+  await queryRunner.query(
+    `${insertVerb} "iam_roles" ("id", "code", "name", "description", "active")
+      VALUES ('${roleId}', '${roleCode}', '${roleName}', '仅限指定经办人发起零星采买', true) ${conflictClause}`,
+  );
+  const permissionList = PETTY_REQUESTER_PERMISSION_CODES.map((code) => `'${code}'`).join(', ');
+  await queryRunner.query(
+    `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
+      SELECT '${roleId}', "id" FROM "iam_permissions"
+        WHERE "code" IN (${permissionList}) ${conflictClause}`,
+  );
+
+  for (const userId of PETTY_REQUESTER_USER_IDS) {
+    const [idPh, userIdPh, roleIdPh, existsPh] = p(4);
+    await queryRunner.query(
+      `INSERT INTO "iam_user_roles" ("id", "userId", "roleId", "dataScope", "scopeDepartmentId")
+        SELECT ${idPh}, ${userIdPh}, ${roleIdPh}, 'SELF', NULL
+        WHERE EXISTS (SELECT 1 FROM "users" WHERE "id" = ${existsPh})
+        ${dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : ''}`,
+      [randomUUID(), userId, roleId, userId],
+    );
+  }
+
+  for (const revokedRoleId of PETTY_CREATE_REVOKED_ROLES) {
+    const [rolePh, permissionPh] = p(2);
+    await queryRunner.query(
+      `DELETE FROM "iam_role_permissions"
+        WHERE "roleId" = ${rolePh}
+          AND "permissionId" IN (SELECT "id" FROM "iam_permissions" WHERE "code" = ${permissionPh})`,
+      [revokedRoleId, 'PETTY_CREATE'],
+    );
+  }
+}
+
 export async function applyManualChoiceChainAdjustment(
   queryRunner: QueryRunner,
   dialect: Dialect,

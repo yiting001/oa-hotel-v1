@@ -1,5 +1,8 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
-import { applyManualChoiceChainAdjustment } from '../hotel-approval-chain-2026';
+import {
+  applyManualChoiceChainAdjustment,
+  applyPettyRequesterRestriction,
+} from '../hotel-approval-chain-2026';
 
 /**
  * 平台新增「人工选择下一步」：待办记录节点类型与分支来源，
@@ -16,6 +19,7 @@ export class WorkflowManualChoice1786200000000 implements MigrationInterface {
       `CREATE INDEX IF NOT EXISTS "IDX_workflow_tasks_originTaskId" ON "workflow_tasks" ("originTaskId")`,
     );
     await applyManualChoiceChainAdjustment(queryRunner, 'sqlite');
+    await applyPettyRequesterRestriction(queryRunner, 'sqlite');
   }
 
   async down(): Promise<void> {
