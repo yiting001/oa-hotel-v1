@@ -1,4 +1,10 @@
-import { createRouter, createWebHistory, type RouteMeta, type RouteRecordRaw } from 'vue-router';
+import {
+  createRouter,
+  createWebHashHistory,
+  createWebHistory,
+  type RouteMeta,
+  type RouteRecordRaw,
+} from 'vue-router';
 import { contractRoutes } from '../modules/contract/routes';
 import {
   accountSecurityRouteName,
@@ -51,8 +57,12 @@ function normalizePermissionMeta(route: RouteRecordRaw): RouteRecordRaw {
 
 const registeredPlatformRoutes = platformRoutes.map(normalizePermissionMeta);
 
+/** 生产部署可通过 VITE_ROUTER_MODE=hash 切成 hash 路由（服务器未配置 SPA 回退时刷新深链接不会 404）。 */
+const routerHistory =
+  import.meta.env.VITE_ROUTER_MODE === 'hash' ? createWebHashHistory() : createWebHistory();
+
 export const router = createRouter({
-  history: createWebHistory(),
+  history: routerHistory,
   routes: [
     {
       path: '/login',

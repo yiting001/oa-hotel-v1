@@ -39,6 +39,7 @@ services:
         VITE_OA_TIME_ZONE: ${VITE_OA_TIME_ZONE:-Asia/Shanghai}
         VITE_OA_COMPANY_NAME: ${VITE_OA_COMPANY_NAME:-东方饭店}
         VITE_OA_PRODUCT_NAME: ${VITE_OA_PRODUCT_NAME:-企业协同办公}
+        VITE_ROUTER_MODE: ${VITE_ROUTER_MODE:-hash}
     depends_on:
       api:
         condition: service_healthy

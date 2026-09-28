@@ -6,13 +6,16 @@ ARG OA_NPM_REGISTRY=https://registry.npmjs.org/
 ARG VITE_OA_TIME_ZONE=Asia/Shanghai
 ARG VITE_OA_COMPANY_NAME=东方饭店
 ARG VITE_OA_PRODUCT_NAME=企业协同办公
+# 部署环境统一使用 hash 路由，避免未配置 SPA 回退时刷新深链接 404
+ARG VITE_ROUTER_MODE=hash
 
 ENV OA_NPM_REGISTRY=${OA_NPM_REGISTRY} \
     npm_config_registry=${OA_NPM_REGISTRY} \
     npm_config_replace_registry_host=always \
     VITE_OA_TIME_ZONE=${VITE_OA_TIME_ZONE} \
     VITE_OA_COMPANY_NAME=${VITE_OA_COMPANY_NAME} \
-    VITE_OA_PRODUCT_NAME=${VITE_OA_PRODUCT_NAME}
+    VITE_OA_PRODUCT_NAME=${VITE_OA_PRODUCT_NAME} \
+    VITE_ROUTER_MODE=${VITE_ROUTER_MODE}
 
 WORKDIR /workspace
 

@@ -114,6 +114,8 @@ dist/
 
 `release-manifest.json` 记录每个部署文件的 SHA-256、Git commit 和构建时工作区状态。`oa-hotel-production.tar.gz.sha256` 用于服务器校验实际上传的压缩包。前端品牌变量只在构建时生效，服务器运行时修改它们不会改变已生成页面。
 
+`package:production` 通过 `build:web:production` 注入 `VITE_ROUTER_MODE=hash`，把前端构建为 **hash 路由**：部署后地址形如 `http://<host>:<port>/#/workbench`，即使站点未配置 `try_files` 回退，刷新深链接也不会 404。本地开发（`npm run dev`、`npm run build`）与 e2e 仍是 history 路由；如需改回 history，去掉该环境变量重新打包，并确保站点保留 `try_files $uri $uri/ /index.html;`。
+
 ## 4. 创建服务器目录
 
 以下命令默认运行用户为宝塔的 `www`。如果宝塔 Node 项目配置了其他用户，目录所有者必须同步替换。

@@ -233,6 +233,7 @@ OA_CORS_ORIGINS=
 - `JWT_SECRET` 必须至少 32 个字符，首次生成后长期保存。更换它会让所有现有登录失效。
 - `.env` 不可提交 Git、不可发到聊天或工单中，建议另做加密备份。
 - `VITE_OA_*` 是前端构建参数，修改后必须重新构建 Web 镜像。
+- `VITE_ROUTER_MODE` 默认 `hash`（Web 镜像构建参数），部署后地址形如 `http://<host>/#/workbench`；若改为 `history`，必须保证 Web 容器 Nginx 保留 `try_files $uri $uri/ /index.html;`。
 - 同域部署时 `OA_CORS_ORIGINS` 留空。
 - 国内网络下载 npm 包缓慢时，可把 `OA_NPM_REGISTRY` 改为可信镜像源，然后重新构建。
 
