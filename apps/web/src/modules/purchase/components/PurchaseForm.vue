@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { Delete, Plus } from '@element-plus/icons-vue';
 import type { FormInstance, FormRules } from 'element-plus';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import AttachmentField from '../../../shared/components/AttachmentField.vue';
 import DocumentFormLayout from '../../../shared/components/DocumentFormLayout.vue';
 import FormSection from '../../../shared/components/FormSection.vue';
 import MoneyInput from '../../../shared/components/MoneyInput.vue';
 import WorkflowSidebar from '../../../shared/components/WorkflowSidebar.vue';
+import { formatMoney } from '../../../shared/format';
 import { useSessionStore } from '../../../shared/session';
 import { useWorkflowStore } from '../../../shared/workflow';
 import { useLayoutMode } from '../../../ui/useLayoutMode';
@@ -16,7 +18,11 @@ import {
   validateDocumentForm,
 } from '../../contract/useContractDocumentEditor';
 import { PURCHASE_API, PURCHASE_ROUTE_NAMES } from '../purchase.config';
-import type { PurchaseData, PurchasePayload } from '../purchase.types';
+import type {
+  PurchaseData,
+  PurchaseItemDraft,
+  PurchasePayload,
+} from '../purchase.types';
 
 const props = defineProps<{ mode: EditorMode; documentId?: string }>();
 const formRef = ref<FormInstance>();
@@ -33,8 +39,55 @@ const form = reactive<PurchasePayload>({
   paymentMethod: null,
   expectedDeliveryDate: null,
   remark: null,
+  itemCategory: 'NON_STOCK',
+  budgetType: 'NONE',
+  subtotalCents: 0,
+  tariffCents: 0,
+  vatCents: 0,
+  otherFeesCents: 0,
+  reason: '',
+  handlerName: '',
+  supplierA: '',
+  supplierB: '',
+  supplierC: '',
+  requiredDate: null,
+  purchaseOrderNo: '',
+  items: [],
   attachments: [],
 });
+
+const itemDrafts = ref<PurchaseItemDraft[]>([
+  { name: '', specification: '', unit: '', quantity: 1, unitPriceCents: 0 },
+]);
+
+const itemSubtotalCents = computed(() =>
+  itemDrafts.value.reduce(
+    (sum, item) => sum + Math.max(0, item.unitPriceCents) * Math.max(1, item.quantity),
+    0,
+  ),
+);
+const computedTotalCents = computed(
+  () =>
+    itemSubtotalCents.value +
+    (form.tariffCents ?? 0) +
+    (form.vatCents ?? 0) +
+    (form.otherFeesCents ?? 0),
+);
+
+function addItem(): void {
+  itemDrafts.value = [
+    ...itemDrafts.value,
+    { name: '', specification: '', unit: '', quantity: 1, unitPriceCents: 0 },
+  ];
+}
+
+function removeItem(index: number): void {
+  itemDrafts.value = itemDrafts.value.filter((_, current) => current !== index);
+}
+
+function syncAmountFromItems(): void {
+  if (itemDrafts.value.length > 0) form.amountCents = computedTotalCents.value;
+}
 
 const rules: FormRules<PurchasePayload> = {
   name: [
@@ -61,7 +114,20 @@ const editor = useContractDocumentEditor<PurchaseData, PurchasePayload>({
   editRouteName: PURCHASE_ROUTE_NAMES.edit,
   listRouteName: PURCHASE_ROUTE_NAMES.list,
   validate: () => validateDocumentForm(formRef.value),
-  payload: () => ({ ...form, attachments: [...form.attachments] }),
+  payload: () => ({
+    ...form,
+    amountCents:
+      itemDrafts.value.length > 0 ? computedTotalCents.value : form.amountCents,
+    items: itemDrafts.value
+      .filter((item) => item.name.trim().length > 0)
+      .map((item) => ({
+        ...item,
+        name: item.name.trim(),
+        specification: item.specification.trim(),
+        unit: item.unit.trim(),
+      })),
+    attachments: [...form.attachments],
+  }),
   assign: (data) => {
     Object.assign(form, {
       name: data.name,
@@ -72,8 +138,28 @@ const editor = useContractDocumentEditor<PurchaseData, PurchasePayload>({
       paymentMethod: data.paymentMethod,
       expectedDeliveryDate: data.expectedDeliveryDate,
       remark: data.remark,
+      itemCategory: data.itemCategory ?? 'NON_STOCK',
+      budgetType: data.budgetType ?? 'NONE',
+      subtotalCents: data.subtotalCents ?? 0,
+      tariffCents: data.tariffCents ?? 0,
+      vatCents: data.vatCents ?? 0,
+      otherFeesCents: data.otherFeesCents ?? 0,
+      reason: data.reason ?? '',
+      handlerName: data.handlerName ?? '',
+      supplierA: data.supplierA ?? '',
+      supplierB: data.supplierB ?? '',
+      supplierC: data.supplierC ?? '',
+      requiredDate: data.requiredDate ?? null,
+      purchaseOrderNo: data.purchaseOrderNo ?? '',
       attachments: [...data.attachments],
     });
+    itemDrafts.value = (data.items ?? []).map((item) => ({
+      name: item.name,
+      specification: item.specification,
+      unit: item.unit,
+      quantity: item.quantity,
+      unitPriceCents: item.unitPriceCents,
+    }));
   },
 });
 
@@ -176,6 +262,87 @@ onMounted(() => {
                 :maxlength="1000"
                 placeholder="可选，补充其他说明"
               />
+            </el-form-item>
+          </div>
+        </FormSection>
+
+        <FormSection title="采购明细" description="按线下采购申请单填写品名、规格、订购数量与单价，总价自动汇总。">
+          <div class="purchase-items">
+            <div class="purchase-items__row purchase-items__row--head" aria-hidden="true">
+              <span>品名</span>
+              <span>规格</span>
+              <span>单位</span>
+              <span>订购数量</span>
+              <span>单价（元）</span>
+              <span class="purchase-items__right">总价</span>
+              <span />
+            </div>
+            <div v-for="(item, index) in itemDrafts" :key="index" class="purchase-items__row">
+              <el-input v-model="item.name" :disabled="!editor.editable.value" :maxlength="200" aria-label="品名" placeholder="如：HP126nw Plus 打印机" />
+              <el-input v-model="item.specification" :disabled="!editor.editable.value" :maxlength="200" aria-label="规格" placeholder="规格型号" />
+              <el-input v-model="item.unit" :disabled="!editor.editable.value" :maxlength="20" aria-label="单位" placeholder="台 / 箱" />
+              <el-input-number v-model="item.quantity" :controls="false" :disabled="!editor.editable.value" :min="1" :precision="0" aria-label="订购数量" @change="syncAmountFromItems" />
+              <el-input-number v-model="item.unitPriceCents" :disabled="!editor.editable.value" :min="0" :precision="0" aria-label="单价分" @change="syncAmountFromItems" />
+              <span class="purchase-items__subtotal">{{ formatMoney(item.unitPriceCents * item.quantity) }}</span>
+              <el-button :aria-label="`删除第 ${index + 1} 行明细`" :disabled="!editor.editable.value" :icon="Delete" text type="danger" @click="removeItem(index)" />
+            </div>
+            <el-button :disabled="!editor.editable.value" :icon="Plus" text @click="addItem">添加明细行</el-button>
+          </div>
+        </FormSection>
+
+        <FormSection title="类别与费用">
+          <div class="ui-fields" :class="{ 'is-compact': isCompact }">
+            <el-form-item label="采购类别" prop="itemCategory">
+              <el-select v-model="form.itemCategory">
+                <el-option label="非库存品" value="NON_STOCK" />
+                <el-option label="库存用品" value="STOCK" />
+                <el-option label="工程用品" value="ENGINEERING" />
+                <el-option label="固定资产" value="FIXED_ASSET" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="预算" prop="budgetType">
+              <el-radio-group v-model="form.budgetType">
+                <el-radio-button value="NONE">无预算</el-radio-button>
+                <el-radio-button value="BUDGET">有预算</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="关税" prop="tariffCents">
+              <MoneyInput v-model="form.tariffCents" aria-label="关税" @update:model-value="syncAmountFromItems" />
+            </el-form-item>
+            <el-form-item label="增值税" prop="vatCents">
+              <MoneyInput v-model="form.vatCents" aria-label="增值税" @update:model-value="syncAmountFromItems" />
+            </el-form-item>
+            <el-form-item label="其它费用" prop="otherFeesCents">
+              <MoneyInput v-model="form.otherFeesCents" aria-label="其它费用" @update:model-value="syncAmountFromItems" />
+            </el-form-item>
+            <el-form-item label="总价">
+              <div class="contract-readonly-value">{{ formatMoney(form.amountCents) }}</div>
+            </el-form-item>
+          </div>
+        </FormSection>
+
+        <FormSection title="理由与供应商">
+          <div class="ui-fields" :class="{ 'is-compact': isCompact }">
+            <el-form-item class="ui-field-full" label="申请理由及用途" prop="reason">
+              <el-input v-model="form.reason" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" :maxlength="1000" placeholder="如：打印、复印、扫描文件资料用" show-word-limit />
+            </el-form-item>
+            <el-form-item label="需用日期" prop="requiredDate">
+              <el-date-picker :model-value="form.requiredDate" format="YYYY/MM/DD" placeholder="请选择需用日期" value-format="YYYY-MM-DD" @update:model-value="form.requiredDate = $event || null" />
+            </el-form-item>
+            <el-form-item label="经办人" prop="handlerName">
+              <el-input v-model="form.handlerName" :maxlength="100" placeholder="填写经办人姓名" />
+            </el-form-item>
+            <el-form-item label="供应商 A" prop="supplierA">
+              <el-input v-model="form.supplierA" :maxlength="200" />
+            </el-form-item>
+            <el-form-item label="供应商 B" prop="supplierB">
+              <el-input v-model="form.supplierB" :maxlength="200" />
+            </el-form-item>
+            <el-form-item label="供应商 C" prop="supplierC">
+              <el-input v-model="form.supplierC" :maxlength="200" />
+            </el-form-item>
+            <el-form-item label="采购订单号" prop="purchaseOrderNo">
+              <el-input v-model="form.purchaseOrderNo" :maxlength="100" placeholder="采购部回填" />
             </el-form-item>
           </div>
         </FormSection>

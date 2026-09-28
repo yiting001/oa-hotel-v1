@@ -223,21 +223,47 @@ function buildLegacyModel(
     case 'PURCHASE_APPROVAL':
       return {
         ...base,
-        title: '采购审批单',
+        title: '采购申请单',
         fields: fields(
           data,
           [
+            ['申请部门', 'departmentId'],
+            ['采购部编号', 'number'],
             ['采购名称', 'name', 2],
-            ['采购金额', 'amountCents'],
+            ['采购类别', 'itemCategory'],
+            ['预算', 'budgetType'],
+            ['暂计（明细合计）', 'subtotalCents'],
+            ['关税', 'tariffCents'],
+            ['增值税', 'vatCents'],
+            ['其它费用', 'otherFeesCents'],
+            ['总价', 'amountCents'],
+            ['供应商 A', 'supplierA'],
+            ['供应商 B', 'supplierB'],
+            ['供应商 C', 'supplierC'],
+            ['需用日期', 'requiredDate'],
+            ['预计到货期', 'expectedDeliveryDate'],
+            ['采购订单号', 'purchaseOrderNo'],
+            ['经办人', 'handlerName'],
             ['乙方单位', 'counterpartyName'],
             ['乙方联系人', 'counterpartyContact'],
             ['联系电话', 'counterpartyPhone'],
             ['付款方式', 'paymentMethod'],
-            ['期望到货时间', 'expectedDeliveryDate'],
           ],
           references,
         ),
-        contentBlocks: [block('备注', display(data, 'remark'), 'normal')],
+        contentBlocks: [
+          block('申请理由及用途', display(data, 'reason') || display(data, 'remark'), 'normal'),
+          block('备注', display(data, 'remark'), 'normal'),
+        ],
+        table: buildTable(data, '采购明细', [
+          ['序号', '$index', '8mm'],
+          ['品名', 'name', '34mm'],
+          ['规格', 'specification', '30mm'],
+          ['单位', 'unit', '14mm'],
+          ['订购数量', 'quantity', '16mm'],
+          ['单价', 'unitPriceCents', '20mm'],
+          ['总价', 'subtotalCents', '22mm'],
+        ]),
       };
     case 'PETTY_PROCUREMENT':
       return {
