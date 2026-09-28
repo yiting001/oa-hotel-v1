@@ -24,6 +24,13 @@ const LEGAL_ADVISOR_ROLE = [
   '外部律师',
 ] as const;
 
+/** 外部律师的最小权限：能办合同审批、能看到单据，不参与其它模块。 */
+const LEGAL_ADVISOR_PERMISSION_CODES = [
+  'WORKFLOW_APPROVE',
+  'DOCUMENT_VIEW',
+  'CONTRACT_VIEW',
+] as const;
+
 /** 零星采买限定发起人：只有这四位经办人可以发起零星采买单据。 */
 const PETTY_REQUESTER_ROLE = [
   'role-petty-requester',
@@ -226,7 +233,12 @@ export async function applyPettyRequesterRestriction(
  * 业务中心菜单重构：请示批复与合同审批拆分为两个入口，印章菜单更名，
  * 新增公司通知入口，并按新的顺序重排业务中心。
  */
-export async function applyBusinessMenuRestructure(queryRunner: QueryRunner): Promise<void> {
+export async function applyBusinessMenuRestructure(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  // iam_menus.visible/active 在 PostgreSQL 是 boolean，在 SQLite 是 0/1 整数
+  const bool = dialect === 'postgres' ? 'true' : '1';
   await queryRunner.query(
     `UPDATE "iam_menus" SET "name" = '印章证照' WHERE "id" = 'menu-seal'`,
   );
@@ -237,12 +249,12 @@ export async function applyBusinessMenuRestructure(queryRunner: QueryRunner): Pr
   );
   await queryRunner.query(
     `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
-      SELECT 'menu-requests', 'menu-business', '请示批复', 'MENU', '/requests', 'DOCUMENT_VIEW,CONTRACT_VIEW', 'EditPen', 1, 1, 1
+      SELECT 'menu-requests', 'menu-business', '请示批复', 'MENU', '/requests', 'DOCUMENT_VIEW,CONTRACT_VIEW', 'EditPen', 1, ${bool}, ${bool}
       WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-requests')`,
   );
   await queryRunner.query(
     `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
-      SELECT 'menu-contract-approvals', 'menu-business', '合同审批', 'MENU', '/contract-approvals', 'DOCUMENT_VIEW,CONTRACT_VIEW', 'Tickets', 2, 1, 1
+      SELECT 'menu-contract-approvals', 'menu-business', '合同审批', 'MENU', '/contract-approvals', 'DOCUMENT_VIEW,CONTRACT_VIEW', 'Tickets', 2, ${bool}, ${bool}
       WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-contract-approvals')`,
   );
   await queryRunner.query(
@@ -267,7 +279,7 @@ export async function applyBusinessMenuRestructure(queryRunner: QueryRunner): Pr
   // 公司通知：与公司门户相同的可见范围
   await queryRunner.query(
     `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
-      SELECT 'menu-notices', 'menu-business', '公司通知', 'MENU', '/notices', 'PORTAL_VIEW,CONTENT_VIEW', 'Bell', 6, 1, 1
+      SELECT 'menu-notices', 'menu-business', '公司通知', 'MENU', '/notices', 'PORTAL_VIEW,CONTENT_VIEW', 'Bell', 6, ${bool}, ${bool}
       WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-notices')`,
   );
   await queryRunner.query(
@@ -305,13 +317,44 @@ export async function applyManualChoiceChainAdjustment(
     `${insertVerb} "iam_roles" ("id", "code", "name", "description", "active")
       VALUES ('${roleId}', '${roleCode}', '${roleName}', '合同审批中由行政办公室指派的外部律师审核人', true) ${conflictClause}`,
   );
+  // 外部律师只需审批合同并查看单据，不继承主管领导的全套权限
+  const legalPermissionList = LEGAL_ADVISOR_PERMISSION_CODES.map((code) => `'${code}'`).join(', ');
+  await queryRunner.query(
+    `DELETE FROM "iam_role_permissions"
+      WHERE "roleId" = '${roleId}'
+        AND "permissionId" NOT IN (SELECT "id" FROM "iam_permissions" WHERE "code" IN (${legalPermissionList}))`,
+  );
   await queryRunner.query(
     `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
-      SELECT '${roleId}', "permissionId" FROM "iam_role_permissions"
-        WHERE "roleId" = 'role-exec-pre-approver' ${conflictClause}`,
+      SELECT '${roleId}', "id" FROM "iam_permissions"
+        WHERE "code" IN (${legalPermissionList}) ${conflictClause}`,
   );
 
   await republishCatalogChains(queryRunner, dialect, REFINED_DOCUMENT_TYPES, '2026 请示批复与合同审批链路细化');
+}
+
+/**
+ * 收紧外部律师权限：移除误继承的主管领导权限，只保留审批与合同查看。
+ * 该迁移同时适用于已执行过链路细化的环境。
+ */
+export async function applyLegalAdvisorPermissionNarrowing(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
+  const [roleId] = LEGAL_ADVISOR_ROLE;
+  const permissionList = LEGAL_ADVISOR_PERMISSION_CODES.map((code) => `'${code}'`).join(', ');
+  await queryRunner.query(
+    `DELETE FROM "iam_role_permissions"
+      WHERE "roleId" = '${roleId}'
+        AND "permissionId" NOT IN (SELECT "id" FROM "iam_permissions" WHERE "code" IN (${permissionList}))`,
+  );
+  await queryRunner.query(
+    `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
+      SELECT '${roleId}', "id" FROM "iam_permissions"
+        WHERE "code" IN (${permissionList}) ${conflictClause}`,
+  );
 }
 
 export async function applyHotelApprovalChainAdjustment(

@@ -21,7 +21,7 @@ export class WorkflowManualChoice1786200000000 implements MigrationInterface {
     );
     await applyManualChoiceChainAdjustment(queryRunner, 'sqlite');
     await applyPettyRequesterRestriction(queryRunner, 'sqlite');
-    await applyBusinessMenuRestructure(queryRunner);
+    await applyBusinessMenuRestructure(queryRunner, 'sqlite');
   }
 
   async down(): Promise<void> {

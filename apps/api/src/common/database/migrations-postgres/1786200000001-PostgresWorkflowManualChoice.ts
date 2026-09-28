@@ -21,7 +21,7 @@ export class PostgresWorkflowManualChoice1786200000001 implements MigrationInter
     );
     await applyManualChoiceChainAdjustment(queryRunner, 'postgres');
     await applyPettyRequesterRestriction(queryRunner, 'postgres');
-    await applyBusinessMenuRestructure(queryRunner);
+    await applyBusinessMenuRestructure(queryRunner, 'postgres');
   }
 
   async down(): Promise<void> {
