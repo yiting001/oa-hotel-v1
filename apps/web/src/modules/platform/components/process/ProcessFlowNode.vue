@@ -15,10 +15,10 @@ defineProps<{
   >
     <Handle v-if="data.nodeType !== 'START'" :position="Position.Left" type="target" />
     <span class="process-flow-node__type">
-      {{ { START: '开始', USER_TASK: '审批', END: '结束' }[data.nodeType] }}
+      {{ { START: '开始', USER_TASK: '审批', MANUAL_CHOICE: '选择下一步', END: '结束' }[data.nodeType] }}
     </span>
     <strong>{{ data.name }}</strong>
-    <small v-if="data.nodeType === 'USER_TASK'">{{ data.assignee }}</small>
+    <small v-if="data.nodeType === 'USER_TASK' || data.nodeType === 'MANUAL_CHOICE'">{{ data.assignee }}</small>
     <Handle v-if="data.nodeType !== 'END'" :position="Position.Right" type="source" />
   </div>
 </template>

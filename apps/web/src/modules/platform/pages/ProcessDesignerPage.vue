@@ -4,6 +4,7 @@ import {
   Delete,
   DocumentChecked,
   Plus,
+  Share,
   UserFilled,
   VideoPlay,
 } from '@element-plus/icons-vue';
@@ -201,15 +202,19 @@ function updateNode(node: ProcessNodeModel): void {
 
 function addNode(type: ProcessNodeType): void {
   if (readonly.value) return;
-  if (type !== 'USER_TASK' && design.value.nodes.some((node) => node.type === type)) {
+  if (
+    type !== 'USER_TASK' &&
+    type !== 'MANUAL_CHOICE' &&
+    design.value.nodes.some((node) => node.type === type)
+  ) {
     ElMessage.warning(type === 'START' ? '流程只能有一个开始节点' : '流程只能有一个结束节点');
     return;
   }
-  const tasks = design.value.nodes.filter((node) => node.type === 'USER_TASK');
+  const tasks = design.value.nodes.filter((node) => node.type !== 'START' && node.type !== 'END');
   const node = createProcessNode(type, 220 + tasks.length * 180, 180 + (tasks.length % 2) * 120);
   const next = cloneProcessDesign(design.value);
   next.nodes.push(node);
-  if (type === 'USER_TASK') insertBeforeEnd(next, node);
+  if (type === 'USER_TASK' || type === 'MANUAL_CHOICE') insertBeforeEnd(next, node);
   updateDesign(next);
   selectedNodeId.value = node.id;
   selectedEdgeId.value = null;
@@ -263,7 +268,9 @@ function moveNode(id: string, direction: -1 | 1): void {
   const index = ordered.findIndex((node) => node.id === id);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= ordered.length) return;
-  if (ordered[index]?.type !== 'USER_TASK' || ordered[target]?.type !== 'USER_TASK') return;
+  const movable = (node: { type: string } | undefined): boolean =>
+    node?.type === 'USER_TASK' || node?.type === 'MANUAL_CHOICE';
+  if (!movable(ordered[index]) || !movable(ordered[target])) return;
   [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
   updateDesign({
     ...design.value,
@@ -445,6 +452,9 @@ async function reload(definitionId?: string, versionId?: string): Promise<void> 
               <ElButtonGroup>
                 <ElButton :disabled="readonly" title="添加开始节点" @click="addNode('START')">
                   <ElIcon><VideoPlay /></ElIcon>开始
+                </ElButton>
+                <ElButton :disabled="readonly" title="添加选择下一步节点" @click="addNode('MANUAL_CHOICE')">
+                  <ElIcon><Share /></ElIcon>选择下一步
                 </ElButton>
                 <ElButton :disabled="readonly" title="添加审批节点" @click="addNode('USER_TASK')">
                   <ElIcon><UserFilled /></ElIcon>审批

@@ -291,13 +291,34 @@ export async function applyBusinessMenuRestructure(
         )`,
   );
 
+  // 公司文件制度：与公司门户同一可见范围
+  await queryRunner.query(
+    `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
+      SELECT 'menu-documents', 'menu-business', '公司文件制度', 'MENU', '/documents', 'LIBRARY_VIEW', 'Folder', 6, ${bool}, ${bool}
+      WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-documents')`,
+  );
+  await queryRunner.query(
+    `INSERT INTO "iam_role_menus" ("roleId", "menuId")
+      SELECT role."id", 'menu-documents' FROM "iam_roles" role
+        WHERE EXISTS (
+          SELECT 1 FROM "iam_role_permissions" rp
+            JOIN "iam_permissions" p ON p."id" = rp."permissionId"
+           WHERE rp."roleId" = role."id" AND p."code" = 'LIBRARY_VIEW'
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM "iam_role_menus" existing
+          WHERE existing."roleId" = role."id" AND existing."menuId" = 'menu-documents'
+        )`,
+  );
+
   for (const [menuId, orderNum] of [
     ['menu-seal', 3],
     ['menu-purchase', 4],
     ['menu-petty', 5],
-    ['menu-supply', 7],
-    ['menu-content', 8],
-    ['menu-petty-materials', 9],
+    ['menu-notices', 7],
+    ['menu-supply', 8],
+    ['menu-content', 9],
+    ['menu-petty-materials', 10],
   ] as const) {
     await queryRunner.query(
       `UPDATE "iam_menus" SET "orderNum" = ${orderNum} WHERE "id" = '${menuId}'`,

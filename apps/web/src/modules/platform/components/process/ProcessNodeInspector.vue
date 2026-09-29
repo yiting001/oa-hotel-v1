@@ -14,6 +14,7 @@ import {
   ElTag,
 } from 'element-plus';
 import { computed } from 'vue';
+import { randomId } from '../../../../shared/random-id';
 import { useLayoutMode } from '../../../../ui/useLayoutMode';
 import type { IamUser, RoleSummary } from '../../types/iam';
 import type { AssigneeRule, ProcessNodeModel, ProcessNodeType } from '../../types/designer';
@@ -39,23 +40,93 @@ const { isCompact } = useLayoutMode();
 
 const ruleType = computed({
   get: () => props.node?.assigneeRule?.type ?? 'APPLICANT_DEPARTMENT_MANAGER',
-  set: (type: AssigneeRule['type']) => {
+  set: (type: string) => {
     if (!props.node) return;
     const assigneeRule: AssigneeRule =
-      type === 'ROLE' ? { type, roleCode: '' } : type === 'USER' ? { type, userId: '' } : { type };
+      type === 'ROLE'
+        ? { type: 'ROLE', roleCode: '' }
+        : type === 'USER'
+          ? { type: 'USER', userId: '' }
+          : type === 'DEPARTMENT_MANAGER'
+            ? { type: 'DEPARTMENT_MANAGER', departmentName: '' }
+            : { type: 'APPLICANT_DEPARTMENT_MANAGER' };
     emit('update', { ...props.node, assigneeRule });
   },
 });
 const nodeTypeLabels: Record<ProcessNodeType, string> = {
   START: '开始节点',
   USER_TASK: '审批节点',
+  MANUAL_CHOICE: '选择下一步节点',
   END: '结束节点',
 };
 const nodeTypeShortLabels: Record<ProcessNodeType, string> = {
   START: '开始',
   USER_TASK: '审批',
+  MANUAL_CHOICE: '选择下一步',
   END: '结束',
 };
+
+function updateChoiceOptions(options: ProcessNodeModel['choiceOptions']): void {
+  if (props.node) emit('update', { ...props.node, choiceOptions: options });
+}
+
+function addChoiceOption(): void {
+  const options = [...(props.node?.choiceOptions ?? [])];
+  options.push({
+    id: randomId(),
+    name: '外部律师审核',
+    assigneeRule: { type: 'ROLE', roleCode: 'LEGAL_ADVISOR' },
+  });
+  updateChoiceOptions(options);
+}
+
+function removeChoiceOption(index: number): void {
+  updateChoiceOptions((props.node?.choiceOptions ?? []).filter((_, current) => current !== index));
+}
+
+function updateChoiceName(index: number, name: string): void {
+  const options = [...(props.node?.choiceOptions ?? [])];
+  const target = options[index];
+  if (!target) return;
+  options[index] = { ...target, name };
+  updateChoiceOptions(options);
+}
+
+function updateChoiceRuleType(index: number, type: string): void {
+  const options = [...(props.node?.choiceOptions ?? [])];
+  const target = options[index];
+  if (!target) return;
+  const assigneeRule: AssigneeRule =
+    type === 'ROLE'
+      ? { type: 'ROLE', roleCode: '' }
+      : type === 'USER'
+        ? { type: 'USER', userId: '' }
+        : type === 'DEPARTMENT_MANAGER'
+          ? { type: 'DEPARTMENT_MANAGER', departmentName: '' }
+          : { type: 'APPLICANT_DEPARTMENT_MANAGER' };
+  options[index] = { ...target, assigneeRule };
+  updateChoiceOptions(options);
+}
+
+function updateChoiceRole(index: number, roleCode: string): void {
+  updateChoiceRule(index, { type: 'ROLE', roleCode });
+}
+
+function updateChoiceUser(index: number, userId: string): void {
+  updateChoiceRule(index, { type: 'USER', userId });
+}
+
+function updateChoiceDepartment(index: number, departmentName: string): void {
+  updateChoiceRule(index, { type: 'DEPARTMENT_MANAGER', departmentName });
+}
+
+function updateChoiceRule(index: number, assigneeRule: AssigneeRule): void {
+  const options = [...(props.node?.choiceOptions ?? [])];
+  const target = options[index];
+  if (!target) return;
+  options[index] = { ...target, assigneeRule };
+  updateChoiceOptions(options);
+}
 
 function assigneeLabel(node: ProcessNodeModel): string {
   const rule = node.assigneeRule;
@@ -167,7 +238,7 @@ function updateUser(userId: string): void {
       <ElFormItem label="节点名称">
         <ElInput :model-value="node.name" maxlength="80" @update:model-value="updateName" />
       </ElFormItem>
-      <template v-if="node.type === 'USER_TASK'">
+      <template v-if="node.type === 'USER_TASK' || node.type === 'MANUAL_CHOICE'">
         <ElFormItem label="办理人规则">
           <ElRadioGroup v-model="ruleType" class="rule-options">
             <ElRadio value="APPLICANT_DEPARTMENT_MANAGER">发起人部门负责人</ElRadio>
@@ -204,6 +275,84 @@ function updateUser(userId: string): void {
               :value="user.id"
             />
           </ElSelect>
+        </ElFormItem>
+      </template>
+      <template v-if="node.type === 'MANUAL_CHOICE'">
+        <ElFormItem label="可指派的审核方">
+          <div class="choice-options">
+            <div
+              v-for="(option, index) in node.choiceOptions ?? []"
+              :key="option.id"
+              class="choice-option"
+            >
+              <ElInput
+                :model-value="option.name"
+                maxlength="40"
+                placeholder="如：外部律师审核 / 工程部审核"
+                @update:model-value="updateChoiceName(index, $event)"
+              />
+              <ElSelect
+                :model-value="option.assigneeRule?.type ?? 'ROLE'"
+                class="choice-option__type"
+                @update:model-value="updateChoiceRuleType(index, $event)"
+              >
+                <ElOption label="指定角色" value="ROLE" />
+                <ElOption label="指定用户" value="USER" />
+                <ElOption label="指定部门负责人" value="DEPARTMENT_MANAGER" />
+                <ElOption label="发起人部门负责人" value="APPLICANT_DEPARTMENT_MANAGER" />
+              </ElSelect>
+              <ElSelect
+                v-if="option.assigneeRule?.type === 'ROLE'"
+                :model-value="option.assigneeRule.roleCode"
+                class="choice-option__value"
+                filterable
+                placeholder="选择角色"
+                @update:model-value="updateChoiceRole(index, $event)"
+              >
+                <ElOption
+                  v-for="role in roles.filter((item) => item.active)"
+                  :key="role.id"
+                  :label="`${role.name}（${role.code}）`"
+                  :value="role.code"
+                />
+              </ElSelect>
+              <ElSelect
+                v-else-if="option.assigneeRule?.type === 'USER'"
+                :model-value="option.assigneeRule.userId"
+                class="choice-option__value"
+                filterable
+                placeholder="选择用户"
+                @update:model-value="updateChoiceUser(index, $event)"
+              >
+                <ElOption
+                  v-for="user in users.filter((item) => item.active)"
+                  :key="user.id"
+                  :label="`${user.displayName}（${user.username}）`"
+                  :value="user.id"
+                />
+              </ElSelect>
+              <ElInput
+                v-else-if="option.assigneeRule?.type === 'DEPARTMENT_MANAGER'"
+                :model-value="option.assigneeRule.departmentName"
+                class="choice-option__value"
+                maxlength="40"
+                placeholder="部门名称，如：工程部"
+                @update:model-value="updateChoiceDepartment(index, $event)"
+              />
+              <ElButton
+                :aria-label="`删除第 ${index + 1} 个审核方`"
+                text
+                type="danger"
+                @click="removeChoiceOption(index)"
+              >
+                删除
+              </ElButton>
+            </div>
+            <ElButton text type="primary" @click="addChoiceOption">添加审核方</ElButton>
+            <small class="choice-options__hint">
+              办理人勾选后，被指派的审核方依次办理；全部办结后回到本节点，由办理人继续指派或送下一节点。
+            </small>
+          </div>
         </ElFormItem>
       </template>
     </ElForm>
@@ -359,5 +508,25 @@ function updateUser(userId: string): void {
 html[data-layout='compact'] .process-inspector {
   padding: 16px;
   border-left: 0;
+}
+.choice-options {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.choice-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.choice-option__value {
+  grid-column: 1 / -1;
+}
+.choice-options__hint {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 </style>

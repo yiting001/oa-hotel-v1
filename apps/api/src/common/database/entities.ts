@@ -32,6 +32,7 @@ import { PurchaseItemEntity } from '../../modules/purchase/infrastructure/purcha
 import { PettyChangeLogEntity } from '../../modules/petty/infrastructure/petty-change-log.entity';
 import { PettyMaterialEntity } from '../../modules/petty/infrastructure/petty-material.entity';
 import { PettyProcurementItemEntity } from '../../modules/petty/infrastructure/petty-procurement-item.entity';
+import { LibraryDocumentEntity } from '../../modules/library/infrastructure/library-document.entity';
 import { PettyProcurementEntity } from '../../modules/petty/infrastructure/petty-procurement.entity';
 
 export const databaseEntities = [
@@ -62,6 +63,7 @@ export const databaseEntities = [
   PurchaseItemEntity,
   PettyMaterialEntity,
   PettyProcurementEntity,
+  LibraryDocumentEntity,
   PettyProcurementItemEntity,
   PettyChangeLogEntity,
   SealAssetEntity,

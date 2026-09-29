@@ -1,6 +1,7 @@
 import {
   Bell,
   Box,
+  Folder,
   Checked,
   Connection,
   DataBoard,
@@ -123,6 +124,13 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: requiredBusinessModulePermissions('PETTY', 'VIEW'),
       },
       {
+        id: 'documents',
+        path: '/documents',
+        label: '公司文件制度',
+        icon: Folder,
+        requiredPermissions: ['LIBRARY_VIEW'],
+      },
+      {
         id: 'notices',
         path: '/notices',
         label: '公司通知',
@@ -234,6 +242,7 @@ export function visibleNavigationGroups(
 const menuIconComponents: Record<string, Component> = {
   Bell,
   Box,
+  Folder,
   Checked,
   Connection,
   DataBoard,

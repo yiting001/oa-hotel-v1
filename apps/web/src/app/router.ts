@@ -12,6 +12,7 @@ import {
 } from '../modules/account/account-security.policy';
 import { accountRoutes } from '../modules/account/routes';
 import { insightRoutes } from '../modules/insight/routes';
+import { libraryRoutes } from '../modules/library/routes';
 import { pettyRoutes } from '../modules/petty/routes';
 import { portalRoutes } from '../modules/portal/routes';
 import { platformRoutes } from '../modules/platform/routes';
@@ -76,6 +77,7 @@ export const router = createRouter({
     ...contractRoutes,
     ...purchaseRoutes,
     ...pettyRoutes,
+    ...libraryRoutes,
     ...insightRoutes,
     ...sealRoutes,
     ...supplyRoutes,

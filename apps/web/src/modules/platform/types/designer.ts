@@ -26,17 +26,27 @@ export interface VersionBase {
   updatedAt: string;
 }
 
-export type ProcessNodeType = 'START' | 'USER_TASK' | 'END';
+export type ProcessNodeType = 'START' | 'USER_TASK' | 'MANUAL_CHOICE' | 'END';
 export type AssigneeRule =
   | { type: 'APPLICANT_DEPARTMENT_MANAGER' }
+  | { type: 'DEPARTMENT_MANAGER'; departmentName: string }
   | { type: 'ROLE'; roleCode: string }
   | { type: 'USER'; userId: string };
+
+/** 「人工选择下一步」可指派的审核方。 */
+export interface ChoiceOptionModel {
+  id: string;
+  name: string;
+  assigneeRule: AssigneeRule;
+}
 
 export interface ProcessNodeModel {
   id: string;
   type: ProcessNodeType;
   name: string;
   assigneeRule?: AssigneeRule;
+  /** 仅 MANUAL_CHOICE：办理人可勾选的后续审核方。 */
+  choiceOptions?: ChoiceOptionModel[];
   position: { x: number; y: number };
   config?: Record<string, unknown>;
 }

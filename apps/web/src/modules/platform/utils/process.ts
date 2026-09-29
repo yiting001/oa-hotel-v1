@@ -22,7 +22,28 @@ export function createProcessNode(
   x: number,
   y: number,
 ): ProcessNodeModel {
-  const names = { START: '发起', USER_TASK: '部门负责人审批', END: '结束' } as const;
+  const names = {
+    START: '发起',
+    USER_TASK: '部门负责人审批',
+    MANUAL_CHOICE: '行政审批（选择下一步）',
+    END: '结束',
+  } as const;
+  if (type === 'MANUAL_CHOICE') {
+    return {
+      id: randomId(),
+      type,
+      name: names.MANUAL_CHOICE,
+      position: { x, y },
+      assigneeRule: { type: 'ROLE', roleCode: 'ADMIN_APPROVER' } as AssigneeRule,
+      choiceOptions: [
+        {
+          id: randomId(),
+          name: '外部律师审核',
+          assigneeRule: { type: 'ROLE', roleCode: 'LEGAL_ADVISOR' } as AssigneeRule,
+        },
+      ],
+    };
+  }
   return {
     id: randomId(),
     type,
@@ -38,12 +59,32 @@ export function validateProcessDesign(design: ProcessDesign): string[] {
   const errors: string[] = [];
   const starts = design.nodes.filter((node) => node.type === 'START');
   const ends = design.nodes.filter((node) => node.type === 'END');
-  const tasks = design.nodes.filter((node) => node.type === 'USER_TASK');
+  const tasks = design.nodes.filter(
+    (node) => node.type === 'USER_TASK' || node.type === 'MANUAL_CHOICE',
+  );
   if (starts.length !== 1) errors.push('流程必须且只能有一个开始节点');
   if (ends.length !== 1) errors.push('流程必须且只能有一个结束节点');
   if (tasks.length === 0) errors.push('流程至少需要一个审批节点');
   if (design.nodes.some((node) => !node.name.trim())) errors.push('所有节点都必须填写名称');
   if (tasks.some((node) => !node.assigneeRule)) errors.push('所有审批节点都必须配置办理人');
+  if (
+    design.nodes.some(
+      (node) =>
+        node.type === 'MANUAL_CHOICE' &&
+        (node.choiceOptions ?? []).filter((option) => option.name.trim()).length === 0,
+    )
+  ) {
+    errors.push('「选择下一步」节点必须配置至少一个可选审核方');
+  }
+  if (
+    design.nodes.some((node) =>
+      (node.choiceOptions ?? []).some(
+        (option) => option.name.trim() && !option.assigneeRule?.type,
+      ),
+    )
+  ) {
+    errors.push('每个可选审核方都必须配置办理人规则');
+  }
 
   const nodeIds = new Set(design.nodes.map((node) => node.id));
   if (design.edges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) {

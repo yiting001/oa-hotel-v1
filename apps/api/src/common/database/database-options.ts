@@ -35,6 +35,7 @@ import { PostgresPurchaseFinanceExecStep1786000000001 } from './migrations-postg
 import { SealAssetNamesFreeText1786100000000 } from './migrations/1786100000000-SealAssetNamesFreeText';
 import { ContractRequestAddressee1786400000000 } from './migrations/1786400000000-ContractRequestAddressee';
 import { PettyRequisitionSheet1786500000000 } from './migrations/1786500000000-PettyRequisitionSheet';
+import { LibraryDocuments1786800000000 } from './migrations/1786800000000-LibraryDocuments';
 import { PurchaseRequisitionSheet1786700000000 } from './migrations/1786700000000-PurchaseRequisitionSheet';
 import { SealRequisitionSheet1786600000000 } from './migrations/1786600000000-SealRequisitionSheet';
 import { LegalAdvisorPermissions1786300000000 } from './migrations/1786300000000-LegalAdvisorPermissions';
@@ -42,6 +43,7 @@ import { WorkflowManualChoice1786200000000 } from './migrations/1786200000000-Wo
 import { PostgresSealAssetNamesFreeText1786100000001 } from './migrations-postgres/1786100000001-PostgresSealAssetNamesFreeText';
 import { PostgresContractRequestAddressee1786400000001 } from './migrations-postgres/1786400000001-PostgresContractRequestAddressee';
 import { PostgresPettyRequisitionSheet1786500000001 } from './migrations-postgres/1786500000001-PostgresPettyRequisitionSheet';
+import { PostgresLibraryDocuments1786800000001 } from './migrations-postgres/1786800000001-PostgresLibraryDocuments';
 import { PostgresPurchaseRequisitionSheet1786700000001 } from './migrations-postgres/1786700000001-PostgresPurchaseRequisitionSheet';
 import { PostgresSealRequisitionSheet1786600000001 } from './migrations-postgres/1786600000001-PostgresSealRequisitionSheet';
 import { PostgresLegalAdvisorPermissions1786300000001 } from './migrations-postgres/1786300000001-PostgresLegalAdvisorPermissions';
@@ -73,6 +75,7 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
         PostgresPettyRequisitionSheet1786500000001,
         PostgresSealRequisitionSheet1786600000001,
         PostgresPurchaseRequisitionSheet1786700000001,
+        PostgresLibraryDocuments1786800000001,
       ],
       migrationsRun: overrides.migrationsRun ?? true,
       synchronize: false,
@@ -121,6 +124,7 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
       PettyRequisitionSheet1786500000000,
       SealRequisitionSheet1786600000000,
       PurchaseRequisitionSheet1786700000000,
+      LibraryDocuments1786800000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

@@ -94,6 +94,35 @@ export async function apiRequest<T>(path: string, init: JsonRequestInit = {}): P
   return payload as T;
 }
 
+/** 需要二进制响应的请求（文件下载/预览）。 */
+export async function apiRequestBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getToken();
+  const requestGeneration = getAuthGeneration();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(`/api/v1${path}`, { headers });
+  if (!response.ok) {
+    const text = await response.text();
+    let payload: ErrorPayload = {};
+    try {
+      payload = text ? (JSON.parse(text) as ErrorPayload) : {};
+    } catch {
+      payload = {};
+    }
+    if (response.status === 401 && requestGeneration === getAuthGeneration() && token === getToken()) {
+      clearToken();
+    }
+    throw new ApiRequestError(
+      normalizeMessage(payload.message),
+      response.status,
+      payload.code ?? null,
+      payload.traceId ?? null,
+      payload.details ?? {},
+    );
+  }
+  return response.blob();
+}
+
 export async function login(username: string, password: string): Promise<SessionUser> {
   const requestGeneration = getAuthGeneration();
   const result = await apiRequest<{ accessToken: string; user: SessionUser }>('/auth/login', {

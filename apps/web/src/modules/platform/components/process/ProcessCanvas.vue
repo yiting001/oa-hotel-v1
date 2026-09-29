@@ -55,7 +55,12 @@ async function fitDesign(): Promise<void> {
 function assigneeLabel(node: ProcessNodeModel): string {
   const rule = node.assigneeRule;
   if (!rule) return '未配置办理人';
+  if (node.type === 'MANUAL_CHOICE') {
+    const count = (node.choiceOptions ?? []).filter((option) => option.name.trim()).length;
+    return `可指派 ${count} 个审核方`;
+  }
   if (rule.type === 'APPLICANT_DEPARTMENT_MANAGER') return '发起人部门负责人';
+  if (rule.type === 'DEPARTMENT_MANAGER') return `部门负责人：${rule.departmentName || '未选择'}`;
   if (rule.type === 'ROLE') return `角色：${rule.roleCode || '未选择'}`;
   return '指定用户';
 }
