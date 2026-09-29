@@ -28,13 +28,13 @@ export const documentTypeMeta: Record<DocumentType, DocumentTypeMeta> = {
   },
   SEAL_BORROW: {
     label: '印章证照外借',
-    moduleLabel: '行政印章',
+    moduleLabel: '印章证照',
     createPath: '/seal/borrow/new',
     apiPath: (id) => `/seals/borrow-requests/${id}`,
   },
   SEAL_USE: {
     label: '印章证照使用',
-    moduleLabel: '行政印章',
+    moduleLabel: '印章证照',
     createPath: '/seal/use/new',
     apiPath: (id) => `/seals/use-requests/${id}`,
   },

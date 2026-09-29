@@ -87,7 +87,7 @@ const allMenuIds = computed(() => {
 });
 const moduleLabels: Record<string, string> = {
   PORTAL: '公司门户', CONTENT: '内容管理', CONTRACT: '合同与支出', PURCHASE: '采购审批',
-  PETTY: '零星采买', SEAL: '行政印章', SUPPLY: '物资管理', DOCUMENT: '单据中心',
+  PETTY: '零星采买', SEAL: '印章证照', SUPPLY: '物资管理', DOCUMENT: '单据中心',
   WORKFLOW: '审批中心', FINANCE: '财务审核', FORM_DESIGN: '表单设计',
   PROCESS_DESIGN: '流程设计', IAM: '组织与权限',
 };

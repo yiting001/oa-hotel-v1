@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { expectNoPageOverflow, loginThroughUi } from './advanced-fixtures';
 
-const keyNavigationLabels = ['审批中心', '合同与支出', '行政印章', '物资管理'] as const;
+const keyNavigationLabels = ['审批中心', '请示批复', '印章证照', '公司文件制度'] as const;
 
 const processStartLabels = [
   '合同/支出请示',
@@ -14,9 +14,12 @@ const processStartLabels = [
 ] as const;
 
 const mobileBusinessPages = [
-  { path: '/contract', heading: '合同与支出管理' },
-  { path: '/seal', heading: '行政印章' },
+  { path: '/requests', heading: '请示批复' },
+  { path: '/contract-approvals', heading: '合同审批' },
+  { path: '/seal', heading: '印章证照' },
   { path: '/supply', heading: '物资申购与领用' },
+  { path: '/documents', heading: '公司文件制度' },
+  { path: '/notices', heading: '公司通知' },
 ] as const;
 
 test.describe('enterprise navigation and responsive process entry', () => {

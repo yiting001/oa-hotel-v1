@@ -173,7 +173,7 @@ onMounted(loadData);
     <AppPageHeader
       description="统一查看用印、外借申请和印章证照台账。"
       eyebrow="行政管理"
-      title="行政印章"
+      title="印章证照"
     >
       <template #actions>
         <div class="ui-actions">

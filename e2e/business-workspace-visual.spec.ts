@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 import { expectNoPageOverflow, loginThroughUi } from './advanced-fixtures';
 
 const workspaces = [
-  { path: '/contract', title: '合同与支出管理' },
-  { path: '/seal', title: '行政印章' },
+  { path: '/requests', title: '请示批复' },
+  { path: '/contract-approvals', title: '合同审批' },
+  { path: '/seal', title: '印章证照' },
   { path: '/supply', title: '物资申购与领用' },
 ] as const;
 

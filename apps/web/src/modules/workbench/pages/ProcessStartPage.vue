@@ -47,7 +47,7 @@ const documentIcons: Record<DocumentType, Component> = {
 };
 const groupIcons: Record<string, Component> = {
   合同支出: Tickets,
-  行政印章: Stamp,
+  印章证照: Stamp,
   物资管理: Box,
   采购审批: Tickets,
   零星采买: Box,
@@ -62,7 +62,7 @@ const groups = computed<ProcessStartGroup[]>(() => {
       .toLocaleLowerCase();
     return !normalizedKeyword.value || searchText.includes(normalizedKeyword.value);
   });
-  return ['合同支出', '行政印章', '物资管理']
+  return ['合同支出', '印章证照', '物资管理']
     .map((moduleLabel) => ({
       key: moduleLabel,
       label: moduleLabel,
