@@ -29,6 +29,13 @@ export default [
     },
   },
   {
+    // 浏览器 Service Worker 使用 self/caches/fetch 等专用全局变量
+    files: ['apps/web/public/sw.js'],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
+  {
     files: ['apps/web/**/*.{ts,vue}'],
     languageOptions: {
       globals: globals.browser,
