@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 
 @Entity('workflow_opinions')
 export class WorkflowOpinionEntity {
@@ -42,6 +43,6 @@ export class WorkflowOpinionEntity {
   @Column('text', { default: '' })
   comment!: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 }

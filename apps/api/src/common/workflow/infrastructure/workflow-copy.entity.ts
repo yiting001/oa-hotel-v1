@@ -27,6 +27,6 @@ export class WorkflowCopyEntity {
   @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   readAt!: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 }

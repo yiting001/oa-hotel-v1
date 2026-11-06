@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 import type { ProcessDefinition } from '../domain/process-design.types';
 
 @Entity('process_definitions')
@@ -24,9 +25,9 @@ export class ProcessDefinitionEntity implements ProcessDefinition {
   @Column('text')
   createdBy!: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: DATETIME_COLUMN_TYPE })
   updatedAt!: Date;
 }
