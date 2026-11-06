@@ -46,6 +46,7 @@ export const SEAL_FORM_TEMPLATES: CreateFormDefinitionInput[] = [
       field('departmentId', '部门', 'DEPARTMENT', true),
       field('applicationDate', '日期', 'DATE', true),
       field('useDate', '使用日期', 'DATE', true),
+      field('plannedReturnDate', '归还日期', 'DATE'),
       field('purpose', '用途', 'LONG_TEXT', true),
       field('sealAssetNames', '印章证照名称', 'TEXT_LIST', true),
       field('submitTo', '报送单位', 'TEXT'),
@@ -59,6 +60,7 @@ export const SEAL_FORM_TEMPLATES: CreateFormDefinitionInput[] = [
     rows: [
       [cell('申请部门', 'departmentId'), cell('经办人', 'applicantId')],
       [cell('日期', 'applicationDate'), cell('使用日期', 'useDate')],
+      [cell('归还日期', 'plannedReturnDate'), cell('公章外带', 'sealTakeout')],
       [cell('用途', 'purpose', 3)],
       [cell('印章证照名称', 'sealAssetNames', 3)],
       [cell('报送单位', 'submitTo', 3)],
@@ -89,7 +91,7 @@ function sealTemplate(input: SealTemplateInput): CreateFormDefinitionInput {
     documentType: input.documentType,
     changeNote: `系统预置 A4 ${input.name}`,
     schemaJson: {
-      systemTemplateRevision: 3,
+      systemTemplateRevision: 4,
       schemaVersion: 1,
       layout: 'SECTIONED_FORM',
       title: input.name,
@@ -97,7 +99,7 @@ function sealTemplate(input: SealTemplateInput): CreateFormDefinitionInput {
       fields: input.fields,
     },
     printSchemaJson: {
-      systemTemplateRevision: 3,
+      systemTemplateRevision: 4,
       schemaVersion: 1,
       paper: {
         size: 'A4',

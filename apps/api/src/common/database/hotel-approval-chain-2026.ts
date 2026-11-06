@@ -100,7 +100,7 @@ export async function ensureFinanceExecRole(
  * business workflow catalog and aligns executive role display names.
  * Existing running documents stay bound to their retired process versions.
  */
-async function republishCatalogChains(
+export async function republishCatalogChains(
   queryRunner: QueryRunner,
   dialect: Dialect,
   documentTypes: readonly string[],
@@ -409,4 +409,105 @@ export async function applyHotelApprovalChainAdjustment(
     ADJUSTED_DOCUMENT_TYPES,
     '2026 酒店审批链路调整',
   );
+}
+
+/**
+ * 业务中心菜单细化：印章证照拆分为印章申请与证照申请两个入口，
+ * 零星采买并入采购审批，取消公司文件制度与公司通知。
+ * 同时给零星采买发起人补采购查看权限，保证合并后仍能看到自己的零星单据。
+ */
+export async function applyBusinessCenterMenuRefinement(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  // iam_menus.visible/active 在 PostgreSQL 是 boolean，在 SQLite 是 0/1 整数
+  const bool = dialect === 'postgres' ? 'true' : '1';
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+
+  await queryRunner.query(`UPDATE "iam_menus" SET "name" = '印章申请' WHERE "id" = 'menu-seal'`);
+  await queryRunner.query(
+    `INSERT INTO "iam_menus" ("id", "parentId", "name", "type", "path", "permissionCode", "icon", "orderNum", "visible", "active")
+      SELECT 'menu-seal-licenses', 'menu-business', '证照申请', 'MENU', '/seal/licenses', 'DOCUMENT_VIEW,SEAL_VIEW', 'Tickets', 4, ${bool}, ${bool}
+      WHERE NOT EXISTS (SELECT 1 FROM "iam_menus" WHERE "id" = 'menu-seal-licenses')`,
+  );
+  // 原本能看到印章证照的角色同步获得证照申请入口
+  await queryRunner.query(
+    `INSERT INTO "iam_role_menus" ("roleId", "menuId")
+      SELECT "roleId", 'menu-seal-licenses' FROM "iam_role_menus" WHERE "menuId" = 'menu-seal'
+        AND NOT EXISTS (
+          SELECT 1 FROM "iam_role_menus" existing
+          WHERE existing."roleId" = "iam_role_menus"."roleId" AND existing."menuId" = 'menu-seal-licenses'
+        )`,
+  );
+
+  for (const menuId of [
+    'menu-petty',
+    'menu-petty-materials',
+    'menu-documents',
+    'menu-notices',
+  ] as const) {
+    await queryRunner.query(`DELETE FROM "iam_role_menus" WHERE "menuId" = '${menuId}'`);
+    await queryRunner.query(`DELETE FROM "iam_menus" WHERE "id" = '${menuId}'`);
+  }
+
+  for (const [menuId, orderNum] of [
+    ['menu-seal', 3],
+    ['menu-seal-licenses', 4],
+    ['menu-purchase', 5],
+    ['menu-supply', 6],
+    ['menu-content', 7],
+  ] as const) {
+    await queryRunner.query(
+      `UPDATE "iam_menus" SET "orderNum" = ${orderNum} WHERE "id" = '${menuId}'`,
+    );
+  }
+
+  await queryRunner.query(
+    `INSERT INTO "iam_role_permissions" ("roleId", "permissionId")
+      SELECT '${PETTY_REQUESTER_ROLE[0]}', 'permission-purchase-view'
+      WHERE EXISTS (SELECT 1 FROM "iam_roles" WHERE "id" = '${PETTY_REQUESTER_ROLE[0]}')
+        AND EXISTS (SELECT 1 FROM "iam_permissions" WHERE "id" = 'permission-purchase-view')
+      ${conflictClause}`,
+  );
+}
+
+/**
+ * 审批链路权限基线：链路角色必须同时具备「办理审批 + 查看单据 + 模块查看」权限，
+ * 否则提交时会因候选人不满足权限而中断（如领导角色被改后缺少 CONTRACT_VIEW）。
+ */
+const APPROVAL_CHAIN_ROLE_PERMISSIONS: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['role-department-manager', ['CONTRACT_VIEW', 'SEAL_VIEW', 'SUPPLY_VIEW']],
+  ['role-admin-approver', ['CONTRACT_VIEW']],
+  ['role-business-approver', ['CONTRACT_VIEW']],
+  ['role-catering-approver', ['PETTY_VIEW']],
+  ['role-exec-pre-approver', ['CONTRACT_VIEW', 'SEAL_VIEW', 'PURCHASE_VIEW']],
+  ['role-exec-approver', ['CONTRACT_VIEW', 'SEAL_VIEW', 'PURCHASE_VIEW']],
+  ['role-finance-reviewer', ['CONTRACT_VIEW', 'PURCHASE_VIEW', 'PETTY_VIEW', 'SUPPLY_VIEW']],
+  ['role-finance-exec', ['PURCHASE_VIEW']],
+  ['role-office-reviewer', ['SEAL_VIEW']],
+  ['role-procurement', ['PURCHASE_VIEW', 'PETTY_VIEW', 'SUPPLY_VIEW']],
+  ['role-warehouse-manager', ['SUPPLY_VIEW']],
+  ['role-legal-advisor', ['CONTRACT_VIEW']],
+];
+
+const APPROVAL_CHAIN_BASE_PERMISSIONS = ['DOCUMENT_VIEW', 'WORKFLOW_APPROVE'] as const;
+
+export async function applyApprovalChainPermissionBaseline(
+  queryRunner: QueryRunner,
+  dialect: Dialect,
+): Promise<void> {
+  const insertVerb = dialect === 'postgres' ? 'INSERT INTO' : 'INSERT OR IGNORE INTO';
+  const conflictClause = dialect === 'postgres' ? 'ON CONFLICT DO NOTHING' : '';
+  for (const [roleId, modulePermissionCodes] of APPROVAL_CHAIN_ROLE_PERMISSIONS) {
+    const codes = [...new Set([...APPROVAL_CHAIN_BASE_PERMISSIONS, ...modulePermissionCodes])];
+    const placeholders = codes.map((_, index) => (dialect === 'postgres' ? `$${index + 1}` : '?'));
+    await queryRunner.query(
+      `${insertVerb} "iam_role_permissions" ("roleId", "permissionId")
+        SELECT '${roleId}', "id" FROM "iam_permissions"
+         WHERE "code" IN (${placeholders.join(', ')})
+           AND EXISTS (SELECT 1 FROM "iam_roles" WHERE "id" = '${roleId}')
+        ${conflictClause}`,
+      codes,
+    );
+  }
 }

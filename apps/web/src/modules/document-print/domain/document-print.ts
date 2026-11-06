@@ -7,7 +7,9 @@ import type {
 import { approvalActionLabels, documentStatusMeta } from '../../../shared/document';
 import { formatDateTime } from '../../../shared/format';
 import {
+  attachmentFileNames,
   datePeriod,
+  resolveDocumentPrintValue,
   displayDocumentValue as display,
   isRecord,
   referenceName,
@@ -145,10 +147,9 @@ function buildLegacyModel(
             ['合同/协议名称', 'name', 2],
             ['合同/协议对方单位全称', 'counterpartyFullName', 2],
             ['金额', 'amountCents'],
-            ['需要用印', 'needsSeal'],
+            ['用印', 'sealType'],
             ['乙方联系人', 'counterpartyContact'],
             ['联系电话', 'counterpartyPhone'],
-            ['付款方式', 'paymentMethod'],
             ['合同有效期开始', 'validFrom'],
             ['合同有效期结束', 'validTo'],
           ],
@@ -230,24 +231,7 @@ function buildLegacyModel(
             ['申请部门', 'departmentId'],
             ['采购部编号', 'number'],
             ['采购名称', 'name', 2],
-            ['采购类别', 'itemCategory'],
-            ['预算', 'budgetType'],
-            ['暂计（明细合计）', 'subtotalCents'],
-            ['关税', 'tariffCents'],
-            ['增值税', 'vatCents'],
-            ['其它费用', 'otherFeesCents'],
-            ['总价', 'amountCents'],
-            ['供应商 A', 'supplierA'],
-            ['供应商 B', 'supplierB'],
-            ['供应商 C', 'supplierC'],
-            ['需用日期', 'requiredDate'],
             ['预计到货期', 'expectedDeliveryDate'],
-            ['采购订单号', 'purchaseOrderNo'],
-            ['经办人', 'handlerName'],
-            ['乙方单位', 'counterpartyName'],
-            ['乙方联系人', 'counterpartyContact'],
-            ['联系电话', 'counterpartyPhone'],
-            ['付款方式', 'paymentMethod'],
           ],
           references,
         ),
@@ -256,13 +240,10 @@ function buildLegacyModel(
           block('备注', display(data, 'remark'), 'normal'),
         ],
         table: buildTable(data, '采购明细', [
-          ['序号', '$index', '8mm'],
-          ['品名', 'name', '34mm'],
-          ['规格', 'specification', '30mm'],
-          ['单位', 'unit', '14mm'],
-          ['订购数量', 'quantity', '16mm'],
-          ['单价', 'unitPriceCents', '20mm'],
-          ['总价', 'subtotalCents', '22mm'],
+          ['序号', '$index', '10mm'],
+          ['品名', 'name', '70mm'],
+          ['订购数量', 'quantity', '24mm'],
+          ['单位', 'unit', '24mm'],
         ]),
       };
     case 'PETTY_PROCUREMENT':
@@ -290,6 +271,58 @@ function buildLegacyModel(
           ['小计', 'subtotalCents', '20mm'],
         ]),
       };
+    case 'FOOD_PURCHASE':
+      return {
+        ...base,
+        title: '餐饮食品原材料请购单',
+        fields: [
+          field('班组', display(data, 'teamName')),
+          field('日期', display(data, 'applicationDate')),
+          field('申请部门', referenceName(references.departments, data.departmentId)),
+          field('申请人', referenceName(references.users, data.applicantId)),
+        ],
+        // 与线下请购单一致：品名 / 数量 / 单位 / 要求 / 备注
+        table: {
+          ...buildTable(data, '请购明细', [
+            ['品名', 'name', '60mm'],
+            ['数量', 'quantity', '24mm'],
+            ['单位', 'unit', '18mm'],
+            ['要求', 'requirement', '45mm'],
+            ['备注', 'remark'],
+          ]),
+          minRows: 12,
+        },
+      };
+    case 'MATERIAL_LOSS':
+      return {
+        ...base,
+        title: '物资报损单',
+        fields: applicantFields(data, references, [
+          ['报损日期', 'applicationDate'],
+          ['合计金额', 'totalAmountCents'],
+        ]),
+        contentBlocks: [block('报损原因及说明', display(data, 'reason'), 'large')],
+        table: buildTable(data, '报损明细', [
+          ['序号', '$index', '8mm'],
+          ['品名', 'name', '32mm'],
+          ['规格', 'specification', '26mm'],
+          ['数量', 'quantity', '14mm'],
+          ['单位', 'unit', '12mm'],
+          ['单价', 'unitPriceCents', '20mm'],
+          ['金额', 'subtotalCents', '20mm'],
+          ['备注', 'remark'],
+        ]),
+      };
+    case 'ORDER_CIRCULATION':
+      return {
+        ...base,
+        title: '订单流转单',
+        fields: [
+          ...applicantFields(data, references, [['申请日期', 'applicationDate']]),
+          field('抄送人', ccRecipientNames(data.ccRecipients), 2),
+        ],
+        contentBlocks: [block('主要内容', display(data, 'content'), 'large')],
+      };
   }
 }
 
@@ -302,7 +335,7 @@ function createBaseModel(envelope: DocumentPrintEnvelope): BusinessDocumentPrint
     fields: [],
     contentBlocks: [],
     table: null,
-    attachments: stringArray(envelope.data.attachments),
+    attachments: attachmentFileNames(envelope.data.attachments),
     attachmentsLabel: '附件',
     opinions: envelope.opinions.map(toPrintOpinion),
     opinionsLabel: '审批意见',
@@ -450,6 +483,7 @@ function sealUseFields(
     ...applicantFields(data, references, [
       ['申请日期', 'applicationDate'],
       ['使用日期', 'useDate'],
+      ['归还日期', 'plannedReturnDate'],
       ['用途', 'purpose', 2],
     ]),
     field('使用印章/证照', stringArray(data.sealAssetNames).join('、') || '-', 2),
@@ -485,8 +519,12 @@ function fields(
   references?: DocumentPrintReferences,
 ): PrintField[] {
   return definitions.map(([label, key, span]) => {
-    if (key === 'signingDepartmentId' && references) {
-      return field(label, referenceName(references.departments, data[key]), span);
+    // 有参考数据时统一走解析器：部门、人员等 ID 会映射成名称
+    if (references) {
+      return field(label, resolveDocumentPrintValue(data, key, references), span);
+    }
+    if (key === 'signingDepartmentId') {
+      return field(label, display(data, key), span);
     }
     if (key === '$contractPeriod') {
       return field(label, datePeriod(data.contractStartDate, data.contractEndDate), span);
@@ -504,6 +542,14 @@ function field(label: string, value: string, span: 1 | 2 = 1): PrintField {
 
 function block(label: string, value: string, size: PrintContentBlock['size']): PrintContentBlock {
   return { label, value, size };
+}
+
+function ccRecipientNames(value: unknown): string {
+  if (!Array.isArray(value)) return '-';
+  const names = value
+    .map((entry) => (isRecord(entry) && typeof entry.name === 'string' ? entry.name : ''))
+    .filter((name) => name.length > 0);
+  return names.join('、') || '-';
 }
 
 function buildTable(

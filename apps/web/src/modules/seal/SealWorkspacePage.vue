@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DocumentAdd, Refresh, Search, Stamp } from '@element-plus/icons-vue';
+import { DocumentAdd, Refresh, Search } from '@element-plus/icons-vue';
 import type { DocumentSummary } from '@oa/contracts';
 import { requiredBusinessModulePermissions } from '@oa/contracts';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -18,12 +18,11 @@ import {
   getAssetStatusMeta,
   sealAssetStatusOptions,
   sealAssetTypeLabels,
-  sealAssetTypeOptions,
   sealDocumentStatusOptions,
-  sealDocumentTypeOptions,
 } from './seal.constants';
 import { useSealResources } from './useSealResources';
 
+const props = withDefaults(defineProps<{ scope?: 'seal' | 'license' }>(), { scope: 'seal' });
 const router = useRouter();
 const session = useSessionStore();
 const workflow = useWorkflowStore();
@@ -33,77 +32,99 @@ const loading = ref(false);
 const errorMessage = ref('');
 interface WorkspaceFilters {
   keyword: string;
-  type: string | undefined;
   status: string | undefined;
 }
 
+/** 印章申请与证照申请共用本页：每个入口只保留本页自己的新建按钮。 */
+const scopeCopy = computed(() =>
+  props.scope === 'license'
+    ? {
+        title: '证照申请',
+        description: '统一查看证照借用申请和证照台账。',
+        entryLabel: '证照编号或名称',
+        documentTypes: ['SEAL_BORROW'],
+        assetType: 'LICENSE',
+        assetLabel: '证照',
+        createPath: '/seal/borrow/new',
+        createLabel: '新建借用申请',
+      }
+    : {
+        title: '印章申请',
+        description: '统一查看印章申请和印章台账。',
+        entryLabel: '印章名称',
+        documentTypes: ['SEAL_USE'],
+        assetType: 'SEAL',
+        assetLabel: '印章',
+        createPath: '/seal/use/new',
+        createLabel: '新建申请',
+      },
+);
+
 const documentFilters = reactive<WorkspaceFilters>({
   keyword: '',
-  type: undefined,
   status: undefined,
 });
 const assetFilters = reactive<WorkspaceFilters>({
   keyword: '',
-  type: undefined,
   status: undefined,
 });
 const createPermissions = requiredBusinessModulePermissions('SEAL', 'CREATE');
 const canCreate = computed(() => createPermissions.every((code) => session.can(code)));
 
-const sealDocuments = computed(() =>
-  workflow.documents.filter((item) => ['SEAL_BORROW', 'SEAL_USE'].includes(item.documentType)),
+const scopedDocuments = computed(() =>
+  workflow.documents.filter((item) => scopeCopy.value.documentTypes.includes(item.documentType)),
 );
 
 const filteredDocuments = computed(() => {
   const keyword = documentFilters.keyword.trim().toLocaleLowerCase();
-  return sealDocuments.value.filter((item) => {
+  return scopedDocuments.value.filter((item) => {
     const matchesKeyword = !keyword || item.title.toLocaleLowerCase().includes(keyword);
-    const matchesType = !documentFilters.type || item.documentType === documentFilters.type;
     const matchesStatus = !documentFilters.status || item.status === documentFilters.status;
-    return matchesKeyword && matchesType && matchesStatus;
+    return matchesKeyword && matchesStatus;
   });
 });
 
+const scopedAssets = computed(() =>
+  resources.assets.value.filter((asset) => asset.type === scopeCopy.value.assetType),
+);
 const filteredAssets = computed(() => {
   const keyword = assetFilters.keyword.trim().toLocaleLowerCase();
-  return resources.assets.value.filter((asset) => {
+  return scopedAssets.value.filter((asset) => {
     const custodian = resources.userName(asset.custodianUserId);
     const text = `${asset.code} ${asset.name} ${custodian}`.toLocaleLowerCase();
     const matchesKeyword = !keyword || text.includes(keyword);
-    const matchesType = !assetFilters.type || asset.type === assetFilters.type;
     const matchesStatus = !assetFilters.status || asset.status === assetFilters.status;
-    return matchesKeyword && matchesType && matchesStatus;
+    return matchesKeyword && matchesStatus;
   });
 });
 const metricItems = computed(() => [
-  { key: 'documents', label: '申请单据', value: sealDocuments.value.length },
+  { key: 'documents', label: '申请单据', value: scopedDocuments.value.length },
   {
     key: 'reviewing',
     label: '审批中',
-    value: sealDocuments.value.filter((item) => item.status === 'IN_REVIEW').length,
+    value: scopedDocuments.value.filter((item) => item.status === 'IN_REVIEW').length,
   },
   {
     key: 'approved',
     label: '已通过申请',
-    value: sealDocuments.value.filter((item) => item.status === 'APPROVED').length,
+    value: scopedDocuments.value.filter((item) => item.status === 'APPROVED').length,
   },
-  { key: 'assets', label: '在册资产', value: resources.assets.value.length },
+  { key: 'assets', label: `在册${scopeCopy.value.assetLabel}`, value: scopedAssets.value.length },
 ]);
 const hasDocumentFilters = computed(
-  () =>
-    documentFilters.keyword.trim().length > 0 || !!documentFilters.type || !!documentFilters.status,
+  () => documentFilters.keyword.trim().length > 0 || !!documentFilters.status,
 );
 const hasAssetFilters = computed(
-  () => assetFilters.keyword.trim().length > 0 || !!assetFilters.type || !!assetFilters.status,
+  () => assetFilters.keyword.trim().length > 0 || !!assetFilters.status,
 );
 
-const assetColumns = [
-  { key: 'asset', label: '印章证照', minWidth: 260 },
+const assetColumns = computed(() => [
+  { key: 'asset', label: scopeCopy.value.assetLabel, minWidth: 260 },
   { key: 'type', label: '类型', width: 100 },
   { key: 'custodian', label: '保管人', width: 140 },
   { key: 'status', label: '状态', width: 100 },
   { key: 'validUntil', label: '有效期', width: 130 },
-];
+]);
 const assetPage = ref(1);
 const assetPageSize = ref(10);
 const pagedAssets = computed(() =>
@@ -143,11 +164,11 @@ async function loadData(): Promise<void> {
 }
 
 function resetDocumentFilters(): void {
-  Object.assign(documentFilters, { keyword: '', type: undefined, status: undefined });
+  Object.assign(documentFilters, { keyword: '', status: undefined });
 }
 
 function resetAssetFilters(): void {
-  Object.assign(assetFilters, { keyword: '', type: undefined, status: undefined });
+  Object.assign(assetFilters, { keyword: '', status: undefined });
 }
 
 function openDocument(document: DocumentSummary): void {
@@ -171,9 +192,9 @@ onMounted(loadData);
 <template>
   <div class="ui-page seal-workspace">
     <AppPageHeader
-      description="统一查看用印、外借申请和印章证照台账。"
+      :description="scopeCopy.description"
       eyebrow="行政管理"
-      title="印章证照"
+      :title="scopeCopy.title"
     >
       <template #actions>
         <div class="ui-actions">
@@ -181,12 +202,9 @@ onMounted(loadData);
             v-if="canCreate"
             type="primary"
             :icon="DocumentAdd"
-            @click="router.push('/seal/use/new')"
+            @click="router.push(scopeCopy.createPath)"
           >
-            新建用印申请
-          </el-button>
-          <el-button v-if="canCreate" :icon="Stamp" @click="router.push('/seal/borrow/new')">
-            新建外借申请
+            {{ scopeCopy.createLabel }}
           </el-button>
           <el-button
             aria-label="刷新"
@@ -202,12 +220,12 @@ onMounted(loadData);
 
     <el-alert v-if="errorMessage" :closable="false" :title="errorMessage" show-icon type="error" />
 
-    <WorkspaceMetricStrip :items="metricItems" label="印章业务统计" />
+    <WorkspaceMetricStrip :items="metricItems" :label="`${scopeCopy.title}统计`" />
 
     <el-tabs v-model="activeTab" class="seal-workspace__tabs">
       <el-tab-pane label="申请单据" name="documents">
         <WorkspaceFilterBar
-          label="印章申请筛选"
+          :label="`${scopeCopy.title}筛选`"
           :result-label="`共 ${filteredDocuments.length} 条`"
         >
           <template #search>
@@ -220,19 +238,6 @@ onMounted(loadData);
             />
           </template>
           <template #filters>
-            <el-select
-              v-model="documentFilters.type"
-              aria-label="申请类型"
-              clearable
-              placeholder="全部申请类型"
-            >
-              <el-option
-                v-for="option in sealDocumentTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
             <el-select
               v-model="documentFilters.status"
               aria-label="审批状态"
@@ -259,31 +264,21 @@ onMounted(loadData);
         />
       </el-tab-pane>
 
-      <el-tab-pane label="印章证照台账" name="assets">
-        <WorkspaceFilterBar label="印章证照筛选" :result-label="`共 ${filteredAssets.length} 条`">
+      <el-tab-pane :label="`${scopeCopy.assetLabel}台账`" name="assets">
+        <WorkspaceFilterBar
+          :label="`${scopeCopy.assetLabel}筛选`"
+          :result-label="`共 ${filteredAssets.length} 条`"
+        >
           <template #search>
             <el-input
               v-model="assetFilters.keyword"
-              aria-label="搜索印章证照"
+              :aria-label="`搜索${scopeCopy.assetLabel}`"
               clearable
               placeholder="搜索名称、编号或保管人"
               :prefix-icon="Search"
             />
           </template>
           <template #filters>
-            <el-select
-              v-model="assetFilters.type"
-              aria-label="资产类型"
-              clearable
-              placeholder="全部资产类型"
-            >
-              <el-option
-                v-for="option in sealAssetTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
             <el-select
               v-model="assetFilters.status"
               aria-label="资产状态"
@@ -305,7 +300,7 @@ onMounted(loadData);
 
         <UiDataList
           :columns="assetColumns"
-          empty-text="暂无符合条件的印章证照"
+          :empty-text="`暂无符合条件的${scopeCopy.assetLabel}`"
           :loading="loading || resources.loading.value"
           :rows="pagedAssets"
         >

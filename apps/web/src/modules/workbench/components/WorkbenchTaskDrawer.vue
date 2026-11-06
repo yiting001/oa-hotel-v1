@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import UiDataList, { type DataColumn } from '../../../ui/UiDataList.vue';
-import { Paperclip, Share, View } from '@element-plus/icons-vue';
-import type { WorkbenchItem, WorkflowOverview } from '@oa/contracts';
+import { Printer, Share, View } from '@element-plus/icons-vue';
+import type { DocumentAttachmentItem, WorkbenchItem, WorkflowOverview } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -12,10 +12,20 @@ import {
   documentTypeMeta,
   workflowNodeLabel,
 } from '../../../shared/document';
-import { fieldLabels, formatFieldValue, hiddenDetailFields } from '../../../shared/field';
+import {
+  fieldLabels,
+  formatFieldValue,
+  hiddenDetailFields,
+  hiddenItemFields,
+} from '../../../shared/field';
 import { formatDateTime } from '../../../shared/format';
 import { useWorkflowStore } from '../../../shared/workflow';
 import { useSessionStore } from '../../../shared/session';
+import AttachmentUploadField from '../../../shared/components/AttachmentUploadField.vue';
+import FoodPurchaseItemsEditor from '../../food-purchase/components/FoodPurchaseItemsEditor.vue';
+import type { FoodPurchaseItem } from '../../food-purchase/food-purchase.types';
+import PurchaseApprovalEditor from '../../purchase/components/PurchaseApprovalEditor.vue';
+import type { PurchaseItem } from '../../purchase/purchase.types';
 import DocumentFollowButton from './DocumentFollowButton.vue';
 import WorkflowCopyDialog from './WorkflowCopyDialog.vue';
 
@@ -62,12 +72,37 @@ const itemColumns = computed<DataColumn[]>(() =>
 
 const itemKeys = computed(() =>
   [...new Set(items.value.flatMap((item) => Object.keys(item)))].filter(
-    (key) => key !== 'materialItemId',
+    (key) => !hiddenItemFields.has(key),
   ),
 );
-const attachments = computed(() =>
+/** 食材采购：当前审批领导可直接删减、修改明细。 */
+const canModerateFood = computed(
+  () => props.task?.documentType === 'FOOD_PURCHASE' && data.value?.canModerate === true,
+);
+const foodItems = computed<FoodPurchaseItem[]>(() =>
+  Array.isArray(data.value?.items) ? (data.value.items as FoodPurchaseItem[]) : [],
+);
+/** 采购审批：当前采购经办可补充单价和附件。 */
+const canModeratePurchase = computed(
+  () => props.task?.documentType === 'PURCHASE_APPROVAL' && data.value?.canModerate === true,
+);
+const purchaseItems = computed<PurchaseItem[]>(() =>
+  Array.isArray(data.value?.items) ? (data.value.items as PurchaseItem[]) : [],
+);
+const choiceHint = computed(() =>
+  props.task?.documentType === 'CONTRACT_REQUEST'
+    ? '勾选下一步审核的部门（可多选），该部门审核完成后自动送主管领导审批。'
+    : '可先指派外部律师或兄弟部门先行审核，审核完成后回到本人继续办理。',
+);
+/** 请示的办公室节点必须勾选部门，否则“同意”按钮不可用。 */
+const choiceRequired = computed(
+  () => props.task?.documentType === 'CONTRACT_REQUEST' && isChoiceTask.value,
+);
+const attachments = computed<DocumentAttachmentItem[]>(() =>
   Array.isArray(data.value?.attachments)
-    ? data.value.attachments.filter((value): value is string => typeof value === 'string')
+    ? (data.value.attachments as DocumentAttachmentItem[]).filter((item) =>
+        typeof item === 'string' ? item.length > 0 : Boolean(item && item.fileName),
+      )
     : [],
 );
 const currentStep = computed(() => {
@@ -145,6 +180,11 @@ async function load(task: WorkbenchItem, sequence: number): Promise<void> {
   }
 }
 
+/** 审批领导保存明细调整后刷新单据数据与审批概览。 */
+function reloadDocument(): void {
+  if (props.task) void load(props.task, ++loadSequence);
+}
+
 function requestAction(nextAction: 'approve' | 'return'): void {
   action.value = nextAction;
   comment.value = '';
@@ -156,6 +196,15 @@ function openFullDocument(): void {
   if (!props.task) return;
   emit('update:open', false);
   void router.push(documentDetailPath(props.task.documentType, props.task.documentId));
+}
+
+/** A4 打印页包含完整审批意见，可直接作为“审批结果”打印或导出 PDF。 */
+function printApprovalResult(): void {
+  if (!props.task) return;
+  const url = router.resolve(
+    `/documents/${props.task.documentType}/${props.task.documentId}/print`,
+  ).href;
+  window.open(url, '_blank', 'noopener');
 }
 
 function syncMobileLayout(event: MediaQueryList | MediaQueryListEvent): void {
@@ -182,7 +231,7 @@ async function submitAction(): Promise<void> {
     );
     ElMessage.success(
       action.value === 'return'
-        ? '单据已退回发起人'
+        ? '单据已退回上一步'
         : choices.length > 0
           ? '已指派后续审核'
           : '审批已提交',
@@ -199,7 +248,7 @@ async function submitAction(): Promise<void> {
 }
 
 function isObjectValue(value: unknown): boolean {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function clearCommandIntent(): void {
@@ -236,6 +285,7 @@ function clearCommandIntent(): void {
             @click="copyDialogOpen = true"
             >抄送</el-button
           >
+          <el-button :icon="Printer" link @click="printApprovalResult">打印审批结果</el-button>
           <el-button :icon="View" link type="primary" @click="openFullDocument"
             >查看完整单据</el-button
           >
@@ -248,8 +298,15 @@ function clearCommandIntent(): void {
             field.value
           }}</el-descriptions-item>
         </el-descriptions>
+        <FoodPurchaseItemsEditor
+          v-if="canModerateFood && items.length"
+          class="workbench-task-detail__items"
+          :document-id="task.documentId"
+          :items="foodItems"
+          @saved="reloadDocument"
+        />
         <UiDataList
-          v-if="items.length"
+          v-if="items.length && !canModerateFood && !canModeratePurchase"
           class="workbench-task-detail__items"
           :columns="itemColumns"
           empty-text="暂无明细"
@@ -262,13 +319,18 @@ function clearCommandIntent(): void {
           >{{ formatFieldValue(key, (row as Record<string, unknown>)[key]) }}</template>
         </UiDataList>
       </section>
-      <section>
+      <section v-if="canModeratePurchase && items.length">
+        <h3>补充单价与附件</h3>
+        <PurchaseApprovalEditor
+          :document-id="task.documentId"
+          :items="purchaseItems"
+          :attachments="attachments"
+          @saved="reloadDocument"
+        />
+      </section>
+      <section v-if="!canModeratePurchase">
         <h3>附件材料（{{ attachments.length }}）</h3>
-        <div v-if="attachments.length" class="workbench-task-detail__attachments">
-          <span v-for="attachment in attachments" :key="attachment">
-            <el-icon><Paperclip /></el-icon>{{ attachment }}
-          </span>
-        </div>
+        <AttachmentUploadField v-if="attachments.length" :model-value="attachments" readonly />
         <el-empty v-else description="无附件" :image-size="52" />
       </section>
       <section>
@@ -290,9 +352,7 @@ function clearCommandIntent(): void {
       </section>
       <section v-if="isChoiceTask || pendingBranches.length > 0">
         <h3>下一步审核方</h3>
-        <p class="workbench-task-detail__version">
-          可先指派外部律师或兄弟部门先行审核，审核完成后回到本人继续办理。
-        </p>
+        <p class="workbench-task-detail__version">{{ choiceHint }}</p>
         <el-checkbox-group v-if="isChoiceTask" v-model="selectedChoices" class="workbench-task-detail__choices">
           <el-checkbox v-for="option in currentChoiceOptions" :key="option.id" :value="option.id">
             {{ option.name }}
@@ -333,7 +393,11 @@ function clearCommandIntent(): void {
     >
       <div class="workbench-task-detail__actions">
         <el-button type="danger" plain @click="requestAction('return')">退回</el-button
-        ><el-button type="primary" @click="requestAction('approve')">
+        ><el-button
+          :disabled="choiceRequired && selectedChoices.length === 0"
+          type="primary"
+          @click="requestAction('approve')"
+        >
           {{ selectedChoices.length > 0 ? '指派并继续' : '同意' }}
         </el-button>
       </div>
@@ -387,9 +451,6 @@ function clearCommandIntent(): void {
 .workbench-task-detail h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
 .workbench-task-detail__version { margin: 0 0 16px; color: var(--color-text-tertiary); font-size: 12px; }
 .workbench-task-detail__items { margin-top: 12px; }
-.workbench-task-detail__attachments { display: grid; gap: 8px; }
-.workbench-task-detail__attachments span { display: flex; min-width: 0; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: 13px; overflow-wrap: anywhere; }
-.workbench-task-detail__attachments :deep(.el-icon) { flex: 0 0 auto; color: var(--color-text-tertiary); }
 .workbench-task-detail :deep(.el-timeline-item__content) { display: grid; gap: 2px; }
 .workbench-task-detail :deep(.el-timeline-item__content p) { margin: 6px 0 0; color: var(--color-text-secondary); }
 .workbench-task-detail :deep(.el-timeline-item__content span) { color: var(--color-text-tertiary); font-size: 12px; }

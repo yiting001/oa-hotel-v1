@@ -24,6 +24,8 @@ interface EditorOptions<TEntity extends DocumentEntity, TPayload extends object>
   validate: () => Promise<void>;
   payload: () => TPayload;
   assign: (entity: TEntity) => void;
+  /** 提交成功后的附加动作（如订单流转抄送），失败不影响已完成的提交。 */
+  afterSubmit?: (id: string) => Promise<void>;
 }
 
 export function useContractDocumentEditor<TEntity extends DocumentEntity, TPayload extends object>(
@@ -103,6 +105,7 @@ export function useContractDocumentEditor<TEntity extends DocumentEntity, TPaylo
         method: 'POST',
         body: { requestId: requestId() },
       });
+      await options.afterSubmit?.(id);
       await workflow.refresh();
       ElMessage.success('单据已提交审批');
       await router.push(documentDetailPath(options.documentType, id));

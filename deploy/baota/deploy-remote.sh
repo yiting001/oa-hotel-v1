@@ -9,6 +9,8 @@ DEPLOY_DIR="$SITE_ROOT/oa-hotel-production"
 PACKAGE=/tmp/oa-hotel-production.tar.gz
 CONTAINER=oa-hotel-api
 API_PORT=${API_PORT:-52176}
+# 附件与文件库的持久化目录：放在发布目录之外，发版替换时不会丢文件
+STORAGE_DIR=${STORAGE_DIR:-$SITE_ROOT/oa-hotel-storage}
 # 服务器上已有 node:20-bookworm 镜像；国内拉取新镜像很慢，默认复用本地镜像
 NODE_IMAGE=${NODE_IMAGE:-node:20-bookworm}
 NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmmirror.com}
@@ -20,6 +22,8 @@ STAGING=$(mktemp -d /tmp/oa-hotel-deploy.XXXXXX)
 tar -xzf "$PACKAGE" -C "$STAGING"
 
 mkdir -p "$DEPLOY_DIR"
+mkdir -p "$STORAGE_DIR"
+chown -R www:www "$STORAGE_DIR" 2>/dev/null || true
 # 保留旧 SQLite 数据文件（仅作为历史备份，运行时已使用 PostgreSQL）
 mkdir -p "$STAGING/api"
 for f in "$DEPLOY_DIR"/api/*.sqlite*; do
@@ -57,12 +61,14 @@ docker run -d --name "$CONTAINER" \
   --network host \
   --restart unless-stopped \
   -v "$DEPLOY_DIR/api":/app \
+  -v "$STORAGE_DIR":/app/storage \
   -v oa-hotel-api-node-modules:/app/node_modules \
   -w /app \
   -e NODE_ENV=production \
   -e HOST=0.0.0.0 \
   -e PORT="$API_PORT" \
   -e OA_DATABASE_URL="$OA_DATABASE_URL" \
+  -e OA_STORAGE_PATH=/app/storage \
   -e JWT_SECRET="$JWT_SECRET" \
   -e OA_TIME_ZONE=Asia/Shanghai \
   -e OA_DEMO_SEED=false \

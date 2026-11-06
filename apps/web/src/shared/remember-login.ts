@@ -1,3 +1,5 @@
+import { readStorage, removeStorage, writeStorage } from './browser-storage';
+
 const rememberKey = 'oa-remember-login';
 
 export interface RememberedLogin {
@@ -7,7 +9,7 @@ export interface RememberedLogin {
 
 export function loadRememberedLogin(): RememberedLogin {
   try {
-    const raw = localStorage.getItem(rememberKey);
+    const raw = readStorage(rememberKey);
     if (!raw) return { remember: false, username: '' };
     const parsed = JSON.parse(raw) as Partial<RememberedLogin>;
     if (parsed.remember !== true || typeof parsed.username !== 'string') {
@@ -21,8 +23,8 @@ export function loadRememberedLogin(): RememberedLogin {
 
 export function saveRememberedLogin(remember: boolean, username: string): void {
   if (remember && username) {
-    localStorage.setItem(rememberKey, JSON.stringify({ remember: true, username }));
+    writeStorage(rememberKey, JSON.stringify({ remember: true, username }));
   } else {
-    localStorage.removeItem(rememberKey);
+    removeStorage(rememberKey);
   }
 }

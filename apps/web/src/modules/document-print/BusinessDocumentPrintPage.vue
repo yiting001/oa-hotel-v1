@@ -59,7 +59,8 @@ async function load(): Promise<void> {
     model.value = buildBusinessDocumentPrintModel(
       envelope,
       createReferences(users, departments),
-      template,
+      // 未绑定 A4 模板（如采购审批）时接口返回空响应，按无模板处理并使用内置打印模型
+      template?.printSchemaJson ? template : null,
     );
   } catch (error) {
     if (sequence === loadSequence) {

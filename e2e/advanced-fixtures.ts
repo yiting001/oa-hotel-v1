@@ -86,15 +86,11 @@ export async function createOfficeSealUseFixture(
       },
     );
     const documentId = created.data.id;
-    documents.push({ id: documentId, title: `印章证照使用：${purpose}` });
+    documents.push({ id: documentId, title: `印章使用：${purpose}` });
 
+    // 用印申请链路首节点是办公室审核，提交后办公室即可办理
     await authorizedPost(request, applicant, `/workflow/documents/${documentId}/submit`, {
       requestId: randomUUID(),
-    });
-    const managerTask = await taskForDocument(request, manager, documentId);
-    await authorizedPost(request, manager, `/workflow/tasks/${managerTask.id}/approve`, {
-      requestId: randomUUID(),
-      comment: `E2E ${runId} 部门审核同意`,
     });
   }
 
@@ -161,18 +157,6 @@ async function workflowTasks(
     headers: authorization(session),
   });
   return expectJson<WorkflowTaskReference[]>(response, 200, 'GET /workflow/tasks');
-}
-
-async function taskForDocument(
-  request: APIRequestContext,
-  session: ApiSession,
-  documentId: string,
-): Promise<WorkflowTaskReference> {
-  const task = (await workflowTasks(request, session)).find(
-    (candidate) => candidate.documentId === documentId,
-  );
-  expect(task, `workflow task for ${documentId}`).toBeTruthy();
-  return task!;
 }
 
 function shanghaiBusinessDate(daysAhead: number): string {

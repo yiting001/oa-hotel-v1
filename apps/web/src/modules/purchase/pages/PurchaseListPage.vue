@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Plus, Refresh, Search, Close } from '@element-plus/icons-vue';
-import type { DocumentStatus, DocumentSummary } from '@oa/contracts';
+import type { DocumentStatus, DocumentSummary, DocumentType } from '@oa/contracts';
 import { requiredBusinessModulePermissions } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import { computed, onMounted, ref, watch } from 'vue';
@@ -8,7 +8,7 @@ import { useRouter } from 'vue-router';
 import AppPageHeader from '../../../shared/components/AppPageHeader.vue';
 import StatusTag from '../../../shared/components/StatusTag.vue';
 import WorkspaceFilterBar from '../../../shared/components/WorkspaceFilterBar.vue';
-import { documentDetailPath } from '../../../shared/document';
+import { documentDetailPath, documentTypeMeta } from '../../../shared/document';
 import { formatDateTime } from '../../../shared/format';
 import { useSessionStore } from '../../../shared/session';
 import { useWorkflowStore } from '../../../shared/workflow';
@@ -24,19 +24,31 @@ const workflow = useWorkflowStore();
 const { isCompact } = useLayoutMode();
 const createPermissions = requiredBusinessModulePermissions('PURCHASE', 'CREATE');
 const canCreate = computed(() => createPermissions.every((code) => session.can(code)));
+/** 零星采买已并入采购审批：有零星查看权限的账号在同一入口看到两类单据。 */
+const canViewPetty = computed(() => session.can('PETTY_VIEW'));
 const keyword = ref('');
+const documentType = ref<DocumentType | ''>('');
 const documentStatus = ref<DocumentStatus | ''>('');
 const page = ref(1);
 const pageSize = ref(10);
-const documents = computed(() => workflow.documents.filter((document) => document.documentType === 'PURCHASE_APPROVAL'));
+const listDocumentTypes = computed<DocumentType[]>(() =>
+  canViewPetty.value ? ['PURCHASE_APPROVAL', 'PETTY_PROCUREMENT'] : ['PURCHASE_APPROVAL'],
+);
+const typeOptions = computed(() =>
+  listDocumentTypes.value.map((value) => ({ value, label: documentTypeMeta[value].label })),
+);
+const documents = computed(() =>
+  workflow.documents.filter((document) => listDocumentTypes.value.includes(document.documentType)),
+);
 const filteredDocuments = computed(() => {
   const query = keyword.value.trim().toLocaleLowerCase();
   return documents.value.filter((document) =>
     (!query || document.title.toLocaleLowerCase().includes(query)) &&
+    (!documentType.value || document.documentType === documentType.value) &&
     (!documentStatus.value || document.status === documentStatus.value),
   );
 });
-watch([keyword, documentStatus], () => { page.value = 1; });
+watch([keyword, documentType, documentStatus], () => { page.value = 1; });
 watch(filteredDocuments, (rows) => { page.value = Math.min(page.value, Math.max(1, Math.ceil(rows.length / pageSize.value))); });
 const visibleDocuments = computed(() => filteredDocuments.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
 const metrics = computed(() => [
@@ -47,6 +59,7 @@ const metrics = computed(() => [
 ]);
 const columns = [
   { key: 'title', label: '采购事项', minWidth: 280 },
+  { key: 'documentType', label: '类型', width: 130 },
   { key: 'documentNo', label: '单据编号', width: 180 },
   { key: 'status', label: '状态', width: 110 },
   { key: 'revision', label: '修订', width: 76 },
@@ -60,6 +73,7 @@ async function refresh(): Promise<void> {
 function openDocument(document: DocumentSummary): void { void router.push(documentDetailPath(document.documentType, document.id)); }
 function resetFilters(): void {
   keyword.value = '';
+  documentType.value = '';
   documentStatus.value = '';
 }
 onMounted(() => { void refresh(); });
@@ -67,7 +81,7 @@ onMounted(() => { void refresh(); });
 
 <template>
   <div class="ui-page purchase-list-page">
-    <AppPageHeader description="采购事项的发起与审批" eyebrow="采购管理" title="采购审批">
+    <AppPageHeader description="采购事项的发起与审批，含零星采买单据" eyebrow="采购管理" title="采购审批">
       <template #actions><div class="ui-actions">
         <el-button v-if="canCreate" type="primary" @click="router.push({ name: PURCHASE_ROUTE_NAMES.create })"><el-icon><Plus /></el-icon>新建采购审批</el-button>
         <el-button :icon="Refresh" :loading="workflow.loading" aria-label="刷新" title="刷新" @click="refresh" />
@@ -81,20 +95,24 @@ onMounted(() => { void refresh(); });
         <el-input v-model="keyword" clearable :prefix-icon="Search" placeholder="搜索采购事项" aria-label="搜索单据" />
       </template>
       <template #filters>
+        <el-select v-if="typeOptions.length > 1" v-model="documentType" clearable placeholder="全部类型" aria-label="单据类型">
+          <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
+        </el-select>
         <el-select v-model="documentStatus" clearable placeholder="全部状态" aria-label="单据状态">
           <el-option v-for="option in DOCUMENT_STATUS_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
         </el-select>
       </template>
       <template #actions>
-        <el-button v-if="keyword || documentStatus" :icon="Close" @click="resetFilters">清空</el-button>
+        <el-button v-if="keyword || documentType || documentStatus" :icon="Close" @click="resetFilters">清空</el-button>
       </template>
     </WorkspaceFilterBar>
     <UiDataList :rows="visibleDocuments" :columns="columns" :loading="workflow.loading" empty-text="暂无符合条件的采购单据" @row-click="openDocument">
       <template #cell-title="{ row }"><strong>{{ row.title }}</strong></template>
+      <template #cell-documentType="{ row }">{{ documentTypeMeta[row.documentType].label }}</template>
       <template #cell-status="{ row }"><StatusTag :status="row.status" /></template>
       <template #cell-updatedAt="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
       <template #mobile-title="{ row }"><button class="purchase-list__link" type="button" @click="openDocument(row)">{{ row.title }}</button><StatusTag :status="row.status" /></template>
-      <template #mobile-summary="{ row }"><div class="purchase-list__summary">{{ row.documentNo || '未编号' }} · {{ formatDateTime(row.updatedAt) }} · 修订 {{ row.revision }}</div></template>
+      <template #mobile-summary="{ row }"><div class="purchase-list__summary">{{ documentTypeMeta[row.documentType].label }} · {{ row.documentNo || '未编号' }} · {{ formatDateTime(row.updatedAt) }} · 修订 {{ row.revision }}</div></template>
       <template #actions="{ row }"><el-button link type="primary" @click="openDocument(row)">查看</el-button></template>
     </UiDataList>
     <UiPagination v-model:page="page" v-model:page-size="pageSize" :total="filteredDocuments.length" />

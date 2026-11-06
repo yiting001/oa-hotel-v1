@@ -3,6 +3,8 @@ set -eu
 
 database_path=${OA_DATABASE_PATH:-/app/data/oa.sqlite}
 database_directory=$(dirname "$database_path")
+# 附件与文件库的落盘目录，必须位于可写的持久卷内（容器文件系统为只读）
+storage_path=${OA_STORAGE_PATH:-/app/data/storage}
 jwt_secret=${JWT_SECRET:-}
 demo_seed=$(printf '%s' "${OA_DEMO_SEED:-false}" | tr '[:upper:]' '[:lower:]')
 node_environment=$(printf '%s' "${NODE_ENV:-production}" | tr '[:upper:]' '[:lower:]')
@@ -37,5 +39,12 @@ if [ ! -w "$database_directory" ]; then
   echo "Database directory is not writable by container UID $(id -u): $database_directory" >&2
   exit 1
 fi
+
+mkdir -p "$storage_path"
+if [ ! -w "$storage_path" ]; then
+  echo "OA_STORAGE_PATH is not writable by container UID $(id -u): $storage_path" >&2
+  exit 1
+fi
+export OA_STORAGE_PATH="$storage_path"
 
 exec "$@"

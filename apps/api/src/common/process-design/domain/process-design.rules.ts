@@ -64,7 +64,14 @@ export function parsePublishedUserTasks(designJson: Record<string, unknown>): Pu
       if (options.length === 0) {
         invalid('人工选择节点必须配置至少一个可选审核方');
       }
-      return { id: node.id, name: node.name, kind: 'CHOICE' as const, assigneeRule, options };
+      return {
+        id: node.id,
+        name: node.name,
+        kind: 'CHOICE' as const,
+        assigneeRule,
+        options,
+        ...(node.advanceAfterBranches ? { advanceAfterBranches: true } : {}),
+      };
     }
     return { id: node.id, name: node.name, kind: 'APPROVAL' as const, assigneeRule, options: [] };
   });
@@ -106,6 +113,7 @@ interface ParsedNode {
   type: string;
   assigneeRule: Record<string, unknown> | null;
   choiceOptions: unknown[] | null;
+  advanceAfterBranches: boolean;
 }
 
 interface ParsedEdge {
@@ -123,6 +131,7 @@ function parseNode(value: unknown): ParsedNode {
     type: value.type as string,
     assigneeRule: isRecord(value.assigneeRule) ? value.assigneeRule : null,
     choiceOptions: Array.isArray(value.choiceOptions) ? value.choiceOptions : null,
+    advanceAfterBranches: value.advanceAfterBranches === true,
   };
 }
 

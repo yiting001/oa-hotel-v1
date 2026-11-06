@@ -68,7 +68,7 @@ flowchart LR
   STARTS --> START_PAGE["制单中心<br/>/start"]
   START_PAGE --> BUSINESS["合同 / 印章 / 物资制单"]
   BUSINESS --> RUNTIME["工作流运行时"]
-  CATALOG["七类业务审批目录"] --> RUNTIME
+  CATALOG["十类业务审批目录"] --> RUNTIME
   CATALOG --> DESIGN_SEED["可视化流程模板"]
   RUNTIME --> PENDING["审批中心<br/>/workbench?tab=pending"]
 ```
@@ -97,7 +97,7 @@ apps/web/src/
     └── responsive.css                  全局响应式与打印规则
 
 apps/api/src/common/
-├── workflow/domain/business-workflow.catalog.ts       七类业务审批顺序单一来源
+├── workflow/domain/business-workflow.catalog.ts       十类业务审批顺序单一来源
 └── process-design/seed/business-process.templates.ts  由业务目录生成可视化流程
 ```
 
@@ -176,6 +176,6 @@ sequenceDiagram
 ## 9. 验证范围
 
 - 导航单元测试覆盖菜单 all-of 权限、无制单能力时隐藏入口、审批中心高亮和手机主导航顺序。
-- 制单目录测试覆盖七类单据按业务权限过滤。
+- 制单目录测试覆盖十类单据按业务权限过滤。
 - 人工响应式验收覆盖桌面、`390 x 844` 和 `320 x 740` 手机视口，检查导航、制单、待办审批、前三个业务首页、流程设计和 A4 适应宽度。
 - 手机验收需确认页面级无横向溢出、底部导航不遮挡表单操作，且无权菜单在抽屉和底部导航中均不可见。

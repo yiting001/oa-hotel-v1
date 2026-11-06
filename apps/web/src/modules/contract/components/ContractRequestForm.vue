@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
-import AttachmentField from '../../../shared/components/AttachmentField.vue';
+import AttachmentUploadField from '../../../shared/components/AttachmentUploadField.vue';
 import DocumentFormLayout from '../../../shared/components/DocumentFormLayout.vue';
 import FormSection from '../../../shared/components/FormSection.vue';
 import KeyValueSummary from '../../../shared/components/KeyValueSummary.vue';
 import MoneyInput from '../../../shared/components/MoneyInput.vue';
 import WorkflowSidebar from '../../../shared/components/WorkflowSidebar.vue';
 import { useDirectoryStore } from '../../../shared/directory';
-import { todayIso } from '../../../shared/format';
+import { formatDate, todayIso } from '../../../shared/format';
 import { useSessionStore } from '../../../shared/session';
 import { useLayoutMode } from '../../../ui/useLayoutMode';
 import { CONTRACT_API, CONTRACT_ROUTE_NAMES } from '../contract.config';
@@ -50,11 +50,11 @@ const editor = useContractDocumentEditor<ContractRequestData, ContractRequestPay
   itemPath: CONTRACT_API.request,
   editRouteName: CONTRACT_ROUTE_NAMES.requestEdit,
   validate: () => validateDocumentForm(formRef.value),
-  payload: () => ({ ...form, requestedAt: form.requestedAt || '', attachments: [...form.attachments] }),
+  payload: () => ({ ...form, requestedAt: form.requestedAt || todayIso(), attachments: [...form.attachments] }),
   assign: (data) => {
     Object.assign(form, {
       title: data.title,
-      requestedAt: data.requestedAt || '',
+      requestedAt: data.requestedAt || todayIso(),
       amountCents: data.amountCents,
       content: data.content,
       addressee: data.addressee || '',
@@ -73,7 +73,7 @@ onMounted(() => { void editor.initialize([session.ensureSession(), directory.loa
 
 <template>
   <div class="contract-document-form">
-    <DocumentFormLayout :document-number="editor.documentNumber.value" :loading="editor.loading.value" :revision="editor.revision.value" :status="editor.status.value" eyebrow="合同管理" :title="props.mode === 'create' ? '新建合同/支出请示' : '合同/支出请示'">
+    <DocumentFormLayout :document-number="editor.documentNumber.value" :loading="editor.loading.value" :revision="editor.revision.value" :status="editor.status.value" eyebrow="合同管理" title="">
       <el-alert v-if="!editor.editable.value" class="form-note" title="当前单据已进入流程，不可继续编辑。" show-icon type="info" :closable="false" />
       <el-form ref="formRef" :disabled="!editor.editable.value" :model="form" :rules="rules" label-position="top" @submit.prevent>
         <FormSection title="请示事项">
@@ -88,7 +88,8 @@ onMounted(() => { void editor.initialize([session.ensureSession(), directory.loa
               <el-input v-model="form.issuer" :maxlength="100" placeholder="如：办公室" />
             </el-form-item>
             <el-form-item label="请示日期" prop="requestedAt">
-              <el-date-picker :model-value="form.requestedAt" format="YYYY/MM/DD" value-format="YYYY-MM-DD" placeholder="请选择日期" @update:model-value="form.requestedAt = $event || ''" />
+              <el-input :model-value="formatDate(form.requestedAt)" aria-label="请示日期" readonly />
+              <span class="contract-field-note">由系统按提交当天自动生成</span>
             </el-form-item>
             <el-form-item label="请示金额" prop="amountCents">
               <MoneyInput v-model="form.amountCents" aria-label="请示金额" />
@@ -100,7 +101,7 @@ onMounted(() => { void editor.initialize([session.ensureSession(), directory.loa
           </div>
         </FormSection>
         <FormSection title="附件材料">
-          <el-form-item prop="attachments"><AttachmentField v-model="form.attachments" :readonly="!editor.editable.value" /></el-form-item>
+          <el-form-item prop="attachments"><AttachmentUploadField v-model="form.attachments" :readonly="!editor.editable.value" /></el-form-item>
         </FormSection>
         <FormSection title="申请信息"><KeyValueSummary :items="applicantSummary" :columns="isCompact ? 1 : 3" /></FormSection>
       </el-form>

@@ -3,7 +3,7 @@ import { Delete, Plus } from '@element-plus/icons-vue';
 import type { WorkflowOverview } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentFormLayout from '../../shared/components/DocumentFormLayout.vue';
 import FormSection from '../../shared/components/FormSection.vue';
@@ -13,7 +13,7 @@ import { useSessionStore } from '../../shared/session';
 import { useWorkflowStore } from '../../shared/workflow';
 import { useLayoutMode } from '../../ui/useLayoutMode';
 import SealApplicantSection from './SealApplicantSection.vue';
-import SealAttachmentsField from './SealAttachmentsField.vue';
+import AttachmentUploadField from '../../shared/components/AttachmentUploadField.vue';
 import { getSealUse, saveSealUse, submitSealDocument } from './seal.api';
 import type { SealUseInput, SealUseRecord } from './seal.types';
 import { useSealResources } from './useSealResources';
@@ -36,6 +36,7 @@ const errorMessage = ref('');
 
 const form = reactive<SealUseInput>({
   useDate: '',
+  plannedReturnDate: '',
   purpose: '',
   sealAssetNames: [],
   content: '',
@@ -45,6 +46,14 @@ const form = reactive<SealUseInput>({
   licenseTakeout: false,
   attachments: [],
 });
+
+// 不外带时清空归还日期，避免残留到提交载荷
+watch(
+  () => form.sealTakeout,
+  (takeout) => {
+    if (!takeout) form.plannedReturnDate = '';
+  },
+);
 
 const documentStatus = computed(
   () => overview.value?.document.status ?? responseDocument.value?.status ?? null,
@@ -74,27 +83,31 @@ const departmentName = computed(
 );
 const applicationDate = computed(() => record.value?.applicationDate ?? todayIso());
 
+/** 用章类别固定四选一：公章 / 合同章 / 部门章 / 党支部章。 */
+const sealCategoryOptions = ['公章', '合同章', '部门章', '党支部章'] as const;
+
 const rules: FormRules<SealUseInput> = {
   useDate: [{ required: true, message: '请选择使用日期' }],
   purpose: [
     { required: true, whitespace: true, message: '请输入用途' },
     { max: 1000, message: '用途不能超过 1000 个字符' },
   ],
-  sealAssetNames: [
-    { required: true, type: 'array', min: 1, message: '请至少填写一项印章或证照名称' },
+  sealCategories: [{ required: true, type: 'array', min: 1, message: '请至少选择一项用章类别' }],
+  content: [
+    { required: true, whitespace: true, message: '请输入申请内容' },
+    { max: 5000, message: '申请内容不能超过 5000 个字符' },
+  ],
+  plannedReturnDate: [
     {
       validator: (_rule, _value, callback) => {
-        if (form.sealAssetNames.some((name) => name.trim().length > 200)) {
-          callback(new Error('单项名称不能超过 200 个字符'));
-          return;
+        if (!form.sealTakeout) return callback();
+        if (!form.plannedReturnDate) return callback(new Error('公章外带时必须填写归还日期'));
+        if (form.useDate && form.plannedReturnDate < form.useDate) {
+          return callback(new Error('归还日期不能早于使用日期'));
         }
         callback();
       },
     },
-  ],
-  content: [
-    { required: true, whitespace: true, message: '请输入申请内容' },
-    { max: 5000, message: '申请内容不能超过 5000 个字符' },
   ],
   attachments: [],
 };
@@ -103,6 +116,7 @@ function applyRecord(value: SealUseRecord): void {
   record.value = value;
   Object.assign(form, {
     useDate: value.useDate,
+    plannedReturnDate: value.plannedReturnDate ?? '',
     purpose: value.purpose,
     sealAssetNames: [...value.sealAssetNames],
     content: value.content,
@@ -115,7 +129,7 @@ function applyRecord(value: SealUseRecord): void {
 }
 
 function addSealCategory(): void {
-  form.sealCategories = [...form.sealCategories, { name: '饭店章', copies: 1 }];
+  form.sealCategories = [...form.sealCategories, { name: '公章', copies: 1 }];
 }
 
 function removeSealCategory(index: number): void {
@@ -123,12 +137,15 @@ function removeSealCategory(index: number): void {
 }
 
 function toInput(): SealUseInput {
+  const categoryNames = form.sealCategories
+    .map((entry) => entry.name.trim())
+    .filter((name) => name.length > 0);
   return {
     useDate: form.useDate,
+    plannedReturnDate: form.sealTakeout ? form.plannedReturnDate || null : null,
     purpose: form.purpose.trim(),
-    sealAssetNames: form.sealAssetNames
-      .map((name) => name.trim())
-      .filter((name) => name.length > 0),
+    // 印章名称由用章类别带出，避免重复填写
+    sealAssetNames: [...new Set(categoryNames)],
     content: form.content.trim(),
     submitTo: form.submitTo.trim(),
     sealCategories: form.sealCategories
@@ -138,12 +155,6 @@ function toInput(): SealUseInput {
     licenseTakeout: form.licenseTakeout,
     attachments: [...form.attachments],
   };
-}
-
-// 输入框内以「，」「,」「、」分隔的名称按多项保存，与标签输入的历史行为一致。
-function normalizeAssetNames(): void {
-  const names = form.sealAssetNames.flatMap((name) => name.split(/[，,、]/));
-  form.sealAssetNames = [...new Set(names)];
 }
 
 function setError(error: unknown): void {
@@ -175,8 +186,17 @@ async function refreshDocumentList(): Promise<void> {
   }
 }
 
+/** 用章类别行不在 el-form-item 上，保存前单独校验，避免后端返回原始字段错误。 */
+function validateSealCategories(): void {
+  const rows = form.sealCategories.filter((entry) => entry.name.trim().length > 0);
+  if (rows.length === 0) {
+    throw new Error('请至少选择一项用章类别（公章 / 合同章 / 部门章 / 党支部章）');
+  }
+}
+
 async function persist(): Promise<{ id: string; created: boolean }> {
   await formRef.value?.validate();
+  validateSealCategories();
   const created = !currentId.value;
   const response = await saveSealUse(toInput(), currentId.value || undefined);
   currentId.value = response.data.id;
@@ -243,7 +263,7 @@ onMounted(async () => {
     :revision="revision"
     :status="documentStatus"
     eyebrow="行政管理"
-    title="印章证照使用申请"
+    title="印章使用申请"
   >
     <template #headerActions>
       <el-button @click="router.push('/seal')">返回台账</el-button>
@@ -298,42 +318,30 @@ onMounted(async () => {
               <el-radio-button :value="true">是</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item label="证照外带" prop="licenseTakeout">
-            <el-radio-group v-model="form.licenseTakeout" :disabled="!canEdit">
-              <el-radio-button :value="false">否</el-radio-button>
-              <el-radio-button :value="true">是</el-radio-button>
-            </el-radio-group>
+          <el-form-item v-if="form.sealTakeout" label="归还日期" prop="plannedReturnDate">
+            <el-date-picker
+              v-model="form.plannedReturnDate"
+              format="YYYY-MM-DD"
+              placeholder="请选择归还日期"
+              type="date"
+              value-format="YYYY-MM-DD"
+            />
           </el-form-item>
         </div>
         <div class="seal-categories">
           <div class="seal-categories__head">
-            <span>用章类别及数量</span>
+            <span class="seal-categories__title">用章类别及数量</span>
             <el-button :disabled="!canEdit" :icon="Plus" text @click="addSealCategory">添加用章类别</el-button>
           </div>
           <div v-for="(entry, index) in form.sealCategories" :key="index" class="seal-categories__row">
-            <el-input v-model="entry.name" :disabled="!canEdit" :maxlength="100" placeholder="如：饭店章 / 党委章" aria-label="用章类别" />
+            <el-select v-model="entry.name" :disabled="!canEdit" filterable placeholder="选择用章类别" aria-label="用章类别">
+              <el-option v-for="option in sealCategoryOptions" :key="option" :label="option" :value="option" />
+            </el-select>
             <el-input-number v-model="entry.copies" :disabled="!canEdit" :min="0" :precision="0" aria-label="盖章数" />
             <el-button :disabled="!canEdit" :icon="Delete" text type="danger" :aria-label="`删除第 ${index + 1} 项用章类别`" @click="removeSealCategory(index)" />
           </div>
-          <p v-if="form.sealCategories.length === 0" class="ui-text-muted">如需登记盖章数量，请添加用章类别。</p>
+          <p v-if="form.sealCategories.length === 0" class="ui-text-muted">请添加用章类别并填写盖章数量。</p>
         </div>
-      </FormSection>
-
-      <FormSection title="印章证照">
-        <el-form-item label="印章证照名称" prop="sealAssetNames">
-          <el-select
-            v-model="form.sealAssetNames"
-            allow-create
-            clearable
-            default-first-option
-            filterable
-            multiple
-            no-data-text="输入印章或证照名称后回车添加"
-            placeholder="输入印章或证照名称，回车添加"
-            :reserve-keyword="false"
-            @change="normalizeAssetNames"
-          />
-        </el-form-item>
       </FormSection>
 
       <FormSection title="申请内容">
@@ -351,7 +359,7 @@ onMounted(async () => {
 
       <FormSection title="相关附件">
         <el-form-item prop="attachments">
-          <SealAttachmentsField v-model="form.attachments" :editable="canEdit && !busy" />
+          <AttachmentUploadField v-model="form.attachments" :readonly="!canEdit || busy" />
         </el-form-item>
       </FormSection>
     </el-form>
@@ -384,6 +392,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.seal-categories__title::before { content: '*'; margin-right: 4px; color: var(--el-color-danger); }
 .seal-categories { display: grid; gap: 10px; margin-top: 8px; }
 .seal-categories__head { display: flex; align-items: center; justify-content: space-between; color: var(--color-text-tertiary); font-size: 13px; }
 .seal-categories__row { display: grid; grid-template-columns: minmax(0, 1fr) 140px 40px; align-items: center; gap: 8px; }

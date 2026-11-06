@@ -13,7 +13,7 @@ import { useSessionStore } from '../../shared/session';
 import { useWorkflowStore } from '../../shared/workflow';
 import { useLayoutMode } from '../../ui/useLayoutMode';
 import SealApplicantSection from './SealApplicantSection.vue';
-import SealAttachmentsField from './SealAttachmentsField.vue';
+import AttachmentUploadField from '../../shared/components/AttachmentUploadField.vue';
 import {
   checkoutSealBorrow,
   executeSealUse,
@@ -357,7 +357,7 @@ onMounted(async () => {
       </FormSection>
 
       <FormSection title="相关附件">
-        <SealAttachmentsField :editable="false" :model-value="record.attachments" />
+        <AttachmentUploadField :model-value="record.attachments" readonly />
       </FormSection>
 
       <FormSection title="执行状态">

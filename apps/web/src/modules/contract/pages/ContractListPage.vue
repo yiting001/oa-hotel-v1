@@ -42,16 +42,19 @@ const listDocumentTypes = computed<DocumentType[]>(() => {
     : CONTRACT_DOCUMENT_TYPES;
 });
 const isRequestList = computed(() => listDocumentTypes.value.includes('CONTRACT_REQUEST'));
+/** 请示批复按需求隐藏大标题，仅保留所属业务与说明。 */
 const pageCopy = computed(() =>
   isRequestList.value
     ? {
         eyebrow: '业务中心',
-        title: '请示批复',
-        description: '部门发起请示，经部门负责人、主管领导审批后由总经理批复。',
+        title: '',
+        filterTitle: '请示批复',
+        description: '部门发起请示，部门负责人审核后由办公室勾选下一步部门，再报主管领导审批。',
       }
     : {
         eyebrow: '业务中心',
         title: '合同审批',
+        filterTitle: '合同审批',
         description: '合同签约审批与履约付款，行政办公室可指派外部律师或兄弟部门先行审核。',
       },
 );
@@ -119,7 +122,7 @@ onMounted(() => { void refresh(); });
       </template>
     </AppPageHeader>
     <WorkspaceMetricStrip label="合同单据统计" :items="metricStripItems" />
-    <WorkspaceFilterBar :label="`${pageCopy.title}筛选`" :result-label="`共 ${filteredDocuments.length} 条`">
+    <WorkspaceFilterBar :label="`${pageCopy.filterTitle}筛选`" :result-label="`共 ${filteredDocuments.length} 条`">
       <template #search>
         <el-input v-model="keyword" clearable :prefix-icon="Search" placeholder="搜索单据标题或类型" aria-label="搜索单据" />
       </template>
@@ -140,7 +143,7 @@ onMounted(() => { void refresh(); });
         <el-button v-if="keyword || documentType || documentStatus" :icon="Close" @click="resetFilters">清空</el-button>
       </template>
     </WorkspaceFilterBar>
-    <UiDataList :rows="visibleDocuments" :columns="columns" :loading="workflow.loading" :empty-text="`暂无符合条件的${pageCopy.title}单据`" @row-click="openDocument">
+    <UiDataList :rows="visibleDocuments" :columns="columns" :loading="workflow.loading" :empty-text="`暂无符合条件的${pageCopy.filterTitle}单据`" @row-click="openDocument">
       <template #cell-title="{ row }"><span class="contract-list__title">{{ row.title }}</span></template>
       <template #cell-documentType="{ row }">{{ documentTypeMeta[row.documentType].label }}</template>
       <template #cell-status="{ row }"><StatusTag :status="row.status" /></template>

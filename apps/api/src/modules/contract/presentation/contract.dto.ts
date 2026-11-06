@@ -1,7 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
-  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
@@ -11,6 +10,8 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { IsDocumentAttachmentList } from '../../../common/validation/document-attachment.decorator';
+import type { DocumentAttachmentItem } from '@oa/contracts';
 
 export class ContractRequestDto {
   @IsString()
@@ -39,9 +40,8 @@ export class ContractRequestDto {
   @MaxLength(100)
   issuer?: string;
 
-  @IsArray()
-  @IsString({ each: true })
-  attachments!: string[];
+  @IsDocumentAttachmentList()
+  attachments!: DocumentAttachmentItem[];
 }
 
 export class ContractApprovalDto {
@@ -52,8 +52,11 @@ export class ContractApprovalDto {
   @IsString()
   signingDepartmentId!: string;
 
+  /** 签约日期非必填；空字符串按未填写处理。 */
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsOptional()
   @IsDateString()
-  signingDate!: string;
+  signingDate?: string | null;
 
   @IsString()
   @MaxLength(200)
@@ -78,11 +81,6 @@ export class ContractApprovalDto {
   counterpartyPhone!: string | null;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  paymentMethod!: string | null;
-
-  @IsOptional()
   @IsDateString()
   validFrom!: string | null;
 
@@ -99,12 +97,13 @@ export class ContractApprovalDto {
   @MaxLength(1000)
   remark!: string | null;
 
-  @IsBoolean()
-  needsSeal!: boolean;
+  /** 用印类型：合同章或公章，留空表示不需要用印。 */
+  @IsOptional()
+  @IsIn(['CONTRACT_SEAL', 'OFFICIAL_SEAL'])
+  sealType!: string | null;
 
-  @IsArray()
-  @IsString({ each: true })
-  attachments!: string[];
+  @IsDocumentAttachmentList()
+  attachments!: DocumentAttachmentItem[];
 }
 
 export class ContractPaymentDto {

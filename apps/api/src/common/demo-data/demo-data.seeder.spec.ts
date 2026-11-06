@@ -99,7 +99,7 @@ describe('DemoDataSeeder', () => {
       expect.arrayContaining(titles),
     );
     expect((await workflow.listTasks(office)).map((item) => item.documentTitle)).toContain(
-      '印章证照使用：[演示] 暑期招聘材料盖章',
+      '印章使用：[演示] 暑期招聘材料盖章',
     );
     expect((await workflow.listCompletedTasks(office)).length).toBeGreaterThan(0);
     expect((await workflow.listTasks(procurement)).map((item) => item.documentTitle)).toContain(

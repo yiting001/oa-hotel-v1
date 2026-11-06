@@ -6,9 +6,9 @@ const CONTRACT_APPROVAL_TEMPLATE = {
   name: '合同/协议审批表',
   description: '合同签订前的部门、金额、相对方、合同内容及用印审批凭证。',
   documentType: 'CONTRACT_APPROVAL',
-  changeNote: '系统预置 A4 合同/协议审批表',
+  changeNote: '合同审批「是否需要用印」改为「用印」选择（合同章/公章）',
   schemaJson: {
-    systemTemplateRevision: 1,
+    systemTemplateRevision: 2,
     schemaVersion: 1,
     layout: 'SECTIONED_FORM',
     title: '合同/协议审批表',
@@ -24,7 +24,7 @@ const CONTRACT_APPROVAL_TEMPLATE = {
         required: true,
       },
       { key: 'amountCents', label: '金额', type: 'MONEY', required: true },
-      { key: 'needsSeal', label: '需要用印', type: 'BOOLEAN', required: true },
+      { key: 'sealType', label: '用印', type: 'SELECT', options: ['合同章', '公章'] },
       {
         key: 'contentReason',
         label: '合同/协议内容及理由',
@@ -36,7 +36,7 @@ const CONTRACT_APPROVAL_TEMPLATE = {
     ],
   },
   printSchemaJson: {
-    systemTemplateRevision: 1,
+    systemTemplateRevision: 2,
     schemaVersion: 1,
     paper: a4Paper(),
     typography: printTypography(),
@@ -46,7 +46,7 @@ const CONTRACT_APPROVAL_TEMPLATE = {
         [cell('签约部门', 'signingDepartmentId'), cell('签约时间', 'signingDate')],
         [cell('合同/协议名称', 'name', 3)],
         [cell('合同/协议对方单位全称', 'counterpartyFullName', 3)],
-        [cell('金额', 'amountCents'), cell('需要用印', 'needsSeal')],
+        [cell('金额', 'amountCents'), cell('用印', 'sealType')],
       ]),
       content('合同/协议内容及理由', 'contentReason', 78),
       attachments(),

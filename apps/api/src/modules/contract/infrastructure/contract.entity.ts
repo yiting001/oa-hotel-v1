@@ -1,3 +1,4 @@
+import type { DocumentAttachmentItem } from '@oa/contracts';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('contracts')
@@ -33,9 +34,6 @@ export class ContractEntity {
   counterpartyPhone!: string | null;
 
   @Column('text', { nullable: true })
-  paymentMethod!: string | null;
-
-  @Column('text', { nullable: true })
   validFrom!: string | null;
 
   @Column('text', { nullable: true })
@@ -47,12 +45,18 @@ export class ContractEntity {
   @Column('text', { nullable: true })
   remark!: string | null;
 
+  /** 遗留下单开关：新数据由 sealType 推导，保留用于历史 A4 版本重放。 */
   @Column('boolean', { default: false })
   needsSeal!: boolean;
+
+  /** 用印类型：CONTRACT_SEAL=合同章，OFFICIAL_SEAL=公章，空表示不需要用印。 */
+  @Column('text', { nullable: true })
+  sealType!: string | null;
 
   @Column('text')
   applicantId!: string;
 
+  /** 上传附件（{ id, fileName }）与历史文件名（字符串）混排。 */
   @Column('simple-json')
-  attachments!: string[];
+  attachments!: DocumentAttachmentItem[];
 }

@@ -127,6 +127,7 @@ install -d -o www -g www -m 750 "$OA_ROOT/releases"
 install -d -o www -g www -m 750 "$OA_ROOT/shared/data"
 install -d -o www -g www -m 750 "$OA_ROOT/shared/backups"
 install -d -o www -g www -m 750 "$OA_ROOT/shared/logs"
+install -d -o www -g www -m 750 "$OA_ROOT/shared/storage"
 install -d -o www -g www -m 750 "$OA_ROOT/uploads"
 ```
 
@@ -141,13 +142,14 @@ install -d -o www -g www -m 750 "$OA_ROOT/uploads"
 ├── shared/
 │   ├── api.env
 │   ├── data/oa.sqlite
+│   ├── storage/
 │   ├── backups/
 │   └── logs/
 ├── uploads/
 └── ecosystem.config.cjs
 ```
 
-`shared` 不随版本切换，数据库、密钥、日志和备份不会被新版本覆盖。
+`shared` 不随版本切换，数据库、密钥、附件、日志和备份不会被新版本覆盖。
 
 ## 5. 上传并安装版本
 
@@ -198,6 +200,7 @@ NODE_ENV=production
 HOST=127.0.0.1
 PORT=3000
 OA_DATABASE_PATH=/www/wwwroot/oa-hotel/shared/data/oa.sqlite
+OA_STORAGE_PATH=/www/wwwroot/oa-hotel/shared/storage
 JWT_SECRET=这里填写至少 32 个字符的固定随机密钥
 OA_TIME_ZONE=Asia/Shanghai
 OA_DEMO_SEED=false
@@ -211,6 +214,7 @@ OA_CORS_ORIGINS=
 | `HOST`                        | 宝塔反代部署固定为 `127.0.0.1`                    |
 | `PORT`                        | API 内部端口，默认 `3000`                         |
 | `OA_DATABASE_PATH`            | 必须使用 `shared/data` 下的绝对路径               |
+| `OA_STORAGE_PATH`             | 附件与文件库落盘目录，必须使用 `shared` 下的绝对路径（不能指向会被发版替换的 `releases`/`current`） |
 | `JWT_SECRET`                  | 必须固定；更换会让所有现有登录失效                |
 | `OA_TIME_ZONE`                | 酒店业务时区，默认 `Asia/Shanghai`                |
 | `OA_DEMO_SEED`                | 正式运行必须为 `false`                            |

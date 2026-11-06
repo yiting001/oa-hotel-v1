@@ -1,11 +1,14 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { SessionUser } from '@oa/contracts';
 import { randomUUID } from 'node:crypto';
+import { DataSource } from 'typeorm';
 import { createDocumentNumber } from '../../../common/domain/document-number';
 import { DomainError } from '../../../common/errors/domain-error';
 import { IamService } from '../../../common/iam/application/iam.service';
+import { DocumentNumberService } from '../../../common/workflow/application/document-number.service';
 import { DocumentWorkflowService } from '../../../common/workflow/application/document-workflow.service';
 import { calculateContractPayment } from '../domain/contract-payment';
+import { normalizeAttachments } from '../../../common/storage/attachment-items';
 import { CONTRACT_REPOSITORY, type ContractRepository } from '../domain/contract.repository';
 import type {
   ContractApprovalDto,
@@ -20,12 +23,21 @@ export class ContractApplicationService {
     private readonly repository: ContractRepository,
     @Inject(DocumentWorkflowService)
     private readonly workflow: DocumentWorkflowService,
+    @Inject(DocumentNumberService)
+    private readonly documentNumbers: DocumentNumberService,
+    @Inject(DataSource)
+    private readonly dataSource: DataSource,
     @Inject(IamService)
     private readonly iam: IamService,
   ) {}
 
   async saveRequest(dto: ContractRequestDto, user: SessionUser, id?: string) {
-    const normalized = { addressee: '', issuer: '', ...dto };
+    const normalized = {
+      addressee: '',
+      issuer: '',
+      ...dto,
+      attachments: normalizeAttachments(dto.attachments),
+    };
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findRequest(id);
@@ -39,7 +51,10 @@ export class ContractApplicationService {
     const documentId = randomUUID();
     const saved = await this.repository.saveRequest({
       id: documentId,
-      number: createDocumentNumber('CONTRACT-REQUEST', documentId),
+      number: await this.documentNumbers.generateForDepartment(
+        this.dataSource.manager,
+        user.departmentName,
+      ),
       departmentId: user.departmentId,
       applicantId: user.id,
       ...normalized,
@@ -57,22 +72,35 @@ export class ContractApplicationService {
 
   async saveContract(dto: ContractApprovalDto, user: SessionUser, id?: string) {
     await this.validateRequestLink(dto.requestId, user);
+    // needsSeal 为遗留开关，按新的用印选择同步，供历史 A4 版本重放
+    const sealFields = { sealType: dto.sealType ?? null, needsSeal: Boolean(dto.sealType) };
+    const contractFields = {
+      ...dto,
+      ...sealFields,
+      // 签约日期非必填，数据库列保持非空，未填写时存空字符串
+      signingDate: dto.signingDate ?? '',
+      attachments: normalizeAttachments(dto.attachments),
+    };
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findContract(id);
       if (!current) {
         throw new NotFoundException('合同审批单不存在');
       }
-      const saved = await this.repository.saveContract({ ...current, ...dto });
+      const saved = await this.repository.saveContract({ ...current, ...contractFields });
       await this.workflow.updateDraftTitle(id, dto.name, user);
       return this.withIndex(saved);
     }
     const documentId = randomUUID();
     const saved = await this.repository.saveContract({
       id: documentId,
-      number: createDocumentNumber('CONTRACT', documentId),
+      // 合同编号与请示一致：签约部门简称 + 日期 + 序号，例如 GCB20261011-001
+      number: await this.documentNumbers.generateForDepartment(
+        this.dataSource.manager,
+        (await this.departmentName(dto.signingDepartmentId)) ?? user.departmentName,
+      ),
       applicantId: user.id,
-      ...dto,
+      ...contractFields,
     });
     await this.workflow.registerDraft({
       id: documentId,
@@ -199,6 +227,7 @@ export class ContractApplicationService {
     return results.filter((result) => result !== null);
   }
 
+  /** 关联请示不限审批状态（草稿、审批中也可关联），但必须由本人发起。 */
   private async validateRequestLink(requestId: string | null, user: SessionUser): Promise<void> {
     if (!requestId) {
       return;
@@ -208,9 +237,24 @@ export class ContractApplicationService {
       throw new NotFoundException('关联请示不存在');
     }
     const document = await this.workflow.getDocument(requestId);
-    if (document.applicantId !== user.id || document.status !== 'APPROVED') {
-      throw new DomainError('CONTRACT_REQUEST_NOT_APPROVED', '只能关联本人已审批通过的请示');
+    if (document.applicantId !== user.id) {
+      throw new DomainError('CONTRACT_REQUEST_NOT_OWNED', '只能关联本人发起的请示');
     }
+  }
+
+  /** 编号用的部门名称：按部门 ID 解析，找不到时回退到申请人部门。 */
+  private async departmentName(departmentId: string): Promise<string | null> {
+    const departments = await this.iam.listDepartments();
+    const flat: Array<{ id: string; name: string; children?: unknown[] }> = [];
+    const walk = (nodes: readonly unknown[]): void => {
+      for (const node of nodes) {
+        const typed = node as { id: string; name: string; children?: unknown[] };
+        flat.push(typed);
+        if (Array.isArray(typed.children)) walk(typed.children);
+      }
+    };
+    walk(departments);
+    return flat.find((department) => department.id === departmentId)?.name ?? null;
   }
 
   private async withIndex<T extends { id: string }>(entity: T) {

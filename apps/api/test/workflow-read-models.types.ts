@@ -8,6 +8,7 @@ export interface Envelope<T> {
 
 export interface CreatedDocument {
   id: string;
+  number: string;
 }
 
 export interface Task {
@@ -20,6 +21,8 @@ export interface Task {
   processNodeName: string | null;
   assigneeRole: string;
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  nodeKind: 'APPROVAL' | 'CHOICE';
+  choiceOptions: Array<{ id: string; name: string }>;
   createdAt: string;
   updatedAt: string;
 }

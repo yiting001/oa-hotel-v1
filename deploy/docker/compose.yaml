@@ -13,6 +13,8 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       OA_DATABASE_PATH: /app/data/oa.sqlite
+      # 附件与文件库都落在数据卷内，容器只读文件系统下依然可持久化
+      OA_STORAGE_PATH: /app/data/storage
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be configured in deploy/docker/.env}
     volumes:
       - ${OA_DATA_DIR:?OA_DATA_DIR must be configured}:/app/data:Z

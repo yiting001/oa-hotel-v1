@@ -9,6 +9,8 @@ const deploymentRoot = process.env.OA_DEPLOY_ROOT || '/www/wwwroot/oa-hotel';
 const apiDirectory = resolve(deploymentRoot, 'current/api');
 const environmentFile = resolve(deploymentRoot, 'shared/api.env');
 const logDirectory = resolve(deploymentRoot, 'shared/logs');
+// 附件与文件库落在 shared 下；current 目录每次发版都会被替换，不能作为存储位置
+const storageDirectory = resolve(deploymentRoot, 'shared/storage');
 
 if (!existsSync(environmentFile)) {
   throw new Error(`Missing API environment file: ${environmentFile}`);
@@ -46,6 +48,7 @@ module.exports = {
         PORT: deploymentEnvironment.PORT || '3000',
         JWT_SECRET: jwtSecret,
         OA_DATABASE_PATH: deploymentEnvironment.OA_DATABASE_PATH,
+        OA_STORAGE_PATH: deploymentEnvironment.OA_STORAGE_PATH || storageDirectory,
         OA_TIME_ZONE: deploymentEnvironment.OA_TIME_ZONE || 'Asia/Shanghai',
         OA_DEMO_SEED: 'false',
         OA_BOOTSTRAP_ADMIN_USERNAME: deploymentEnvironment.OA_BOOTSTRAP_ADMIN_USERNAME || '',

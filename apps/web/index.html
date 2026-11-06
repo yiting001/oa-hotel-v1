@@ -4,10 +4,73 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
-    <title>企业协同办公</title>
+    <meta
+      name="description"
+      content="东方饭店企业协同办公系统：请示、合同、采购、印章、证照等在线审批。"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="application-name" content="东方饭店 OA" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="东方OA" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <title>东方饭店 OA · 企业协同办公</title>
   </head>
   <body>
     <div id="app"></div>
+    <noscript>
+      <div style="max-width: 420px; margin: 16vh auto; padding: 24px; font: 14px/1.6 sans-serif">
+        本系统需要启用 JavaScript 才能使用，请在浏览器设置中开启后重试。
+      </div>
+    </noscript>
+    <script>
+      (function () {
+        var reported = false;
+        function show(message) {
+          if (reported) return;
+          var app = document.getElementById('app');
+          if (!app || app.childElementCount > 0) return;
+          reported = true;
+          var box = document.createElement('div');
+          box.style.cssText =
+            'max-width:420px;margin:16vh auto;padding:24px;font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#0a0a0a;border:1px solid #e5e7eb;border-radius:12px;background:#fff';
+          var title = document.createElement('div');
+          title.style.cssText = 'font-size:18px;font-weight:600;margin-bottom:8px';
+          title.textContent = '页面加载失败';
+          var desc = document.createElement('div');
+          desc.style.cssText = 'color:#5f5f5f';
+          desc.innerHTML =
+            '当前浏览器可能版本过低或限制了本地存储。请使用最新版 <strong>Chrome / Edge</strong> 打开；仍无法访问可改用 <a href="http://47.107.168.97:52175/" style="color:#1456f0">备用地址</a>。';
+          var detail = document.createElement('div');
+          detail.style.cssText =
+            'margin-top:12px;color:#a8aab2;font-size:12px;word-break:break-all;white-space:pre-wrap';
+          detail.textContent =
+            '浏览器：' + navigator.userAgent + (message ? '\n错误：' + message : '');
+          box.appendChild(title);
+          box.appendChild(desc);
+          box.appendChild(detail);
+          app.appendChild(box);
+        }
+        window.addEventListener(
+          'error',
+          function (event) {
+            if (event && event.message) show(String(event.message));
+          },
+          true,
+        );
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event && event.reason;
+          show(reason ? String(reason.message || reason) : '');
+        });
+        window.setTimeout(function () {
+          show('');
+        }, 12000);
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

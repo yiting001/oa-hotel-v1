@@ -1,8 +1,3 @@
-export const sealDocumentTypeOptions = [
-  { label: '印章证照外借', value: 'SEAL_BORROW' },
-  { label: '印章证照使用', value: 'SEAL_USE' },
-] as const;
-
 export const sealDocumentStatusOptions = [
   { label: '草稿', value: 'DRAFT' },
   { label: '审批中', value: 'IN_REVIEW' },

@@ -1,9 +1,11 @@
 import { Inject, Injectable, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import type { SessionUser } from '@oa/contracts';
 import { randomUUID } from 'node:crypto';
-import { createDocumentNumber } from '../../../common/domain/document-number';
+import { DataSource } from 'typeorm';
 import { DomainError } from '../../../common/errors/domain-error';
 import { IamService } from '../../../common/iam/application/iam.service';
+import { normalizeAttachments } from '../../../common/storage/attachment-items';
+import { DocumentNumberService } from '../../../common/workflow/application/document-number.service';
 import { DocumentWorkflowService } from '../../../common/workflow/application/document-workflow.service';
 import { validateBorrowPeriod } from '../domain/seal-request';
 import { SEAL_REPOSITORY, type SealRepository } from '../domain/seal.repository';
@@ -22,6 +24,10 @@ export class SealApplicationService implements OnApplicationBootstrap {
     private readonly repository: SealRepository,
     @Inject(DocumentWorkflowService)
     private readonly workflow: DocumentWorkflowService,
+    @Inject(DocumentNumberService)
+    private readonly documentNumbers: DocumentNumberService,
+    @Inject(DataSource)
+    private readonly dataSource: DataSource,
     @Inject(IamService)
     private readonly iam: IamService,
   ) {}
@@ -59,8 +65,13 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async saveBorrow(dto: SealBorrowDto, user: SessionUser, id?: string) {
-    validateBorrowPeriod(dto.useDate, dto.plannedReturnDate);
-    const normalized = normalizeSealSheet(dto);
+    if (dto.plannedReturnDate) validateBorrowPeriod(dto.useDate, dto.plannedReturnDate);
+    // 不外带时归还日期与前往地点留空
+    const normalized = {
+      ...normalizeSealSheet(dto),
+      plannedReturnDate: dto.plannedReturnDate ?? '',
+      destination: (dto.destination ?? '').trim(),
+    };
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findBorrow(id);
@@ -68,13 +79,16 @@ export class SealApplicationService implements OnApplicationBootstrap {
         throw new NotFoundException('外借申请不存在');
       }
       const saved = await this.repository.saveBorrow({ ...current, ...normalized });
-      await this.workflow.updateDraftTitle(id, `印章证照外借：${dto.destination}`, user);
+      await this.workflow.updateDraftTitle(id, borrowTitle(dto), user);
       return this.withIndex(saved);
     }
     const documentId = randomUUID();
     const saved = await this.repository.saveBorrow({
       id: documentId,
-      number: createDocumentNumber('SEAL-BORROW', documentId),
+      number: await this.documentNumbers.generateForDepartment(
+        this.dataSource.manager,
+        user.departmentName,
+      ),
       applicantId: user.id,
       departmentId: user.departmentId,
       applicationDate: new Date().toISOString(),
@@ -90,7 +104,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
       id: documentId,
       documentType: 'SEAL_BORROW',
       module: 'SEAL',
-      title: `印章证照外借：${dto.destination}`,
+      title: borrowTitle(dto),
       applicantId: user.id,
       departmentId: user.departmentId,
     });
@@ -98,7 +112,17 @@ export class SealApplicationService implements OnApplicationBootstrap {
   }
 
   async saveUse(dto: SealUseDto, user: SessionUser, id?: string) {
-    const normalized = normalizeSealSheet(dto);
+    if (dto.sealTakeout) {
+      if (!dto.plannedReturnDate) {
+        throw new DomainError('SEAL_RETURN_DATE_REQUIRED', '公章外带时必须填写归还日期');
+      }
+      validateBorrowPeriod(dto.useDate, dto.plannedReturnDate);
+    }
+    // 不外带时不允许残留归还日期
+    const normalized = {
+      ...normalizeSealSheet(dto),
+      plannedReturnDate: dto.sealTakeout ? (dto.plannedReturnDate ?? null) : null,
+    };
     if (id) {
       await this.workflow.getEditable(id, user);
       const current = await this.repository.findUse(id);
@@ -106,13 +130,16 @@ export class SealApplicationService implements OnApplicationBootstrap {
         throw new NotFoundException('用印申请不存在');
       }
       const saved = await this.repository.saveUse({ ...current, ...normalized });
-      await this.workflow.updateDraftTitle(id, `印章证照使用：${dto.purpose}`, user);
+      await this.workflow.updateDraftTitle(id, `印章使用：${dto.purpose}`, user);
       return this.withIndex(saved);
     }
     const documentId = randomUUID();
     const saved = await this.repository.saveUse({
       id: documentId,
-      number: createDocumentNumber('SEAL-USE', documentId),
+      number: await this.documentNumbers.generateForDepartment(
+        this.dataSource.manager,
+        user.departmentName,
+      ),
       applicantId: user.id,
       departmentId: user.departmentId,
       applicationDate: new Date().toISOString(),
@@ -127,7 +154,7 @@ export class SealApplicationService implements OnApplicationBootstrap {
       id: documentId,
       documentType: 'SEAL_USE',
       module: 'SEAL',
-      title: `印章证照使用：${dto.purpose}`,
+      title: `印章使用：${dto.purpose}`,
       applicantId: user.id,
       departmentId: user.departmentId,
     });
@@ -231,6 +258,14 @@ export class SealApplicationService implements OnApplicationBootstrap {
 }
 
 /** 线下《用印及借用证照申请单》新增字段的默认值，保证旧前端载荷仍然可用。 */
+/** 借用单标题：外带用前往地点，不外带用证照种类。 */
+function borrowTitle(dto: SealBorrowDto): string {
+  const destination = (dto.destination ?? '').trim();
+  if (destination) return `证照借用：${destination}`;
+  const names = (dto.sealAssetNames ?? []).filter((name) => name.trim().length > 0);
+  return `证照借用：${names.join('、') || '未填写'}`;
+}
+
 function normalizeSealSheet<T extends SealUseDto | SealBorrowDto>(dto: T) {
   return {
     submitTo: '',
@@ -238,5 +273,6 @@ function normalizeSealSheet<T extends SealUseDto | SealBorrowDto>(dto: T) {
     sealTakeout: false,
     licenseTakeout: false,
     ...dto,
+    attachments: normalizeAttachments(dto.attachments),
   };
 }

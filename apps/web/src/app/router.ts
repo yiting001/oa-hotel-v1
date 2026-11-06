@@ -11,8 +11,11 @@ import {
   forcedPasswordChangeRedirect,
 } from '../modules/account/account-security.policy';
 import { accountRoutes } from '../modules/account/routes';
+import { foodPurchaseRoutes } from '../modules/food-purchase/routes';
 import { insightRoutes } from '../modules/insight/routes';
 import { libraryRoutes } from '../modules/library/routes';
+import { materialLossRoutes } from '../modules/material-loss/routes';
+import { orderCirculationRoutes } from '../modules/order-circulation/routes';
 import { pettyRoutes } from '../modules/petty/routes';
 import { portalRoutes } from '../modules/portal/routes';
 import { platformRoutes } from '../modules/platform/routes';
@@ -75,6 +78,9 @@ export const router = createRouter({
     ...portalRoutes,
     ...workbenchRoutes,
     ...contractRoutes,
+    ...foodPurchaseRoutes,
+    ...materialLossRoutes,
+    ...orderCirculationRoutes,
     ...purchaseRoutes,
     ...pettyRoutes,
     ...libraryRoutes,

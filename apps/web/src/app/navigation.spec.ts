@@ -49,13 +49,17 @@ describe('application navigation', () => {
         'requests',
         'contract-approvals',
         'seal',
+        'seal-licenses',
         'supply',
-        'notices',
         'processes',
         'forms',
       ]),
     );
     expect(ids).not.toContain('start');
+    // 零星采买并入采购审批、公司文件制度与公司通知入口取消
+    expect(ids).not.toContain('petty');
+    expect(ids).not.toContain('documents');
+    expect(ids).not.toContain('notices');
     expect(mobilePrimaryNavigation(groups).map((item) => item.id)).toEqual([
       'portal',
       'approval',

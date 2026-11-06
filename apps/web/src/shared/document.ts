@@ -9,8 +9,8 @@ export interface DocumentTypeMeta {
 
 export const documentTypeMeta: Record<DocumentType, DocumentTypeMeta> = {
   CONTRACT_REQUEST: {
-    label: '合同/支出请示',
-    moduleLabel: '合同支出',
+    label: '请示',
+    moduleLabel: '请示批复',
     createPath: '/contract/requests/new',
     apiPath: (id) => `/contracts/requests/${id}`,
   },
@@ -27,14 +27,14 @@ export const documentTypeMeta: Record<DocumentType, DocumentTypeMeta> = {
     apiPath: (id) => `/contracts/payments/${id}`,
   },
   SEAL_BORROW: {
-    label: '印章证照外借',
-    moduleLabel: '印章证照',
+    label: '证照借用申请',
+    moduleLabel: '证照申请',
     createPath: '/seal/borrow/new',
     apiPath: (id) => `/seals/borrow-requests/${id}`,
   },
   SEAL_USE: {
-    label: '印章证照使用',
-    moduleLabel: '印章证照',
+    label: '印章使用申请',
+    moduleLabel: '印章申请',
     createPath: '/seal/use/new',
     apiPath: (id) => `/seals/use-requests/${id}`,
   },
@@ -61,6 +61,24 @@ export const documentTypeMeta: Record<DocumentType, DocumentTypeMeta> = {
     moduleLabel: '零星采买',
     createPath: '/petty/requests/new',
     apiPath: (id) => `/petty/procurements/${id}`,
+  },
+  FOOD_PURCHASE: {
+    label: '食材采购',
+    moduleLabel: '食材采购',
+    createPath: '/food-purchase/requests/new',
+    apiPath: (id) => `/food-purchases/${id}`,
+  },
+  MATERIAL_LOSS: {
+    label: '物资报损',
+    moduleLabel: '物资报损',
+    createPath: '/material-loss/requests/new',
+    apiPath: (id) => `/material-losses/${id}`,
+  },
+  ORDER_CIRCULATION: {
+    label: '订单流转',
+    moduleLabel: '订单流转',
+    createPath: '/order-circulation/requests/new',
+    apiPath: (id) => `/order-circulations/${id}`,
   },
 };
 
@@ -100,6 +118,9 @@ export function documentEditPath(documentType: DocumentType, id: string): string
     MATERIAL_REQUISITION: `/supply/requisitions/${id}/edit`,
     PURCHASE_APPROVAL: `/purchase/requests/${id}/edit`,
     PETTY_PROCUREMENT: `/petty/requests/${id}/edit`,
+    FOOD_PURCHASE: `/food-purchase/requests/${id}/edit`,
+    MATERIAL_LOSS: `/material-loss/requests/${id}/edit`,
+    ORDER_CIRCULATION: `/order-circulation/requests/${id}/edit`,
   };
   return routes[documentType];
 }

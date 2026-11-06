@@ -104,12 +104,11 @@ export const DEMO_SCENARIOS = [
       counterpartyFullName: '华东特种设备维护有限公司',
       counterpartyContact: '李工',
       counterpartyPhone: '021-88886666',
-      paymentMethod: '银行转账',
       validFrom: '2026-07-01',
       validTo: '2027-06-30',
       contentReason: '覆盖酒店客梯、货梯的年度巡检、保养和应急响应。',
       remark: null,
-      needsSeal: true,
+      sealType: 'CONTRACT_SEAL',
       attachments: ['电梯维保合同终稿.pdf', '供应商资质.pdf'],
     },
   },
@@ -147,7 +146,7 @@ export const DEMO_SCENARIOS = [
   {
     key: 'seal-use-office-todo',
     kind: 'SEAL_USE',
-    title: '印章证照使用：[演示] 暑期招聘材料盖章',
+    title: '印章使用：[演示] 暑期招聘材料盖章',
     target: { status: 'IN_REVIEW', currentStep: 0 },
     payload: {
       useDate: '2026-07-15',
@@ -160,7 +159,7 @@ export const DEMO_SCENARIOS = [
   {
     key: 'seal-borrow-approved',
     kind: 'SEAL_BORROW',
-    title: '印章证照外借：[演示] 市行政服务中心',
+    title: '证照借用：[演示] 市行政服务中心',
     target: { status: 'APPROVED' },
     payload: {
       useDate: '2026-07-16',

@@ -18,7 +18,7 @@ import type {
 import { requiredBusinessModulePermissions } from '@oa/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, Repository } from 'typeorm';
 import { DomainError } from '../../errors/domain-error';
 import {
   assertBusinessModulePermission,
@@ -50,6 +50,7 @@ import {
 import { buildOpinionSnapshot } from './workflow-opinion.snapshot';
 import { toApprovalOpinion, toDocumentSummary, toTaskSummary } from './workflow-read-model.mapper';
 import { WorkflowCandidateService } from './workflow-candidate.service';
+import type { ApprovalCandidateResolution } from './workflow-candidate.service';
 import { DocumentNumberService } from './document-number.service';
 
 interface RegisterDraftInput {
@@ -59,6 +60,8 @@ interface RegisterDraftInput {
   title: string;
   applicantId: string;
   departmentId: string;
+  /** 业务模块在草稿阶段已经生成的单据编号，提交时不再另行编号。 */
+  documentNo?: string | null;
 }
 
 @Injectable()
@@ -94,6 +97,79 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     await this.seedLegacyDefinitions();
     await this.iam.ensureLegacyAssignments();
     await this.backfillPendingTaskCandidates();
+    await this.rebindUntouchedDocuments();
+  }
+
+  /**
+   * 流程链路调整后，把尚未开始的单据绑定到最新发布版本：
+   * - 草稿/未提交单据直接切换流程版本；
+   * - 审批中但尚无任何已办节点的单据，取消旧待办并从新链路首节点重新开始。
+   * 已有审批记录的在途单据保持原版本，保证历史可重放。
+   */
+  private async rebindUntouchedDocuments(): Promise<void> {
+    const documents = await this.documents.find({
+      where: { status: In(['DRAFT', 'IN_REVIEW']) },
+    });
+    for (const document of documents) {
+      const published = await this.processDesign.findPublishedByDocumentType(document.documentType);
+      if (!published || published.version.id === document.processVersionId) continue;
+
+      if (document.status === 'DRAFT') {
+        document.processVersionId = published.version.id;
+        document.workflowCode = published.definition.code;
+        await this.documents.save(document);
+        continue;
+      }
+
+      try {
+        await this.dataSource.transaction(async (manager) => {
+          const repository = manager.getRepository(DocumentIndexEntity);
+          const current = await repository.findOneBy({ id: document.id });
+          if (!current || current.status !== 'IN_REVIEW') return;
+          const taskRepository = manager.getRepository(WorkflowTaskEntity);
+          const completed = await taskRepository.count({
+            where: { documentId: current.id, status: 'COMPLETED' },
+          });
+          // 已有审批结论的在途单据不能中途换链
+          if (completed > 0) return;
+          const pending = await taskRepository.find({
+            where: { documentId: current.id, status: 'PENDING' },
+          });
+          if (pending.length === 0) return;
+          for (const task of pending) {
+            task.status = 'CANCELLED';
+            task.completedBy = null;
+          }
+          await taskRepository.save(pending);
+
+          current.processVersionId = published.version.id;
+          current.workflowCode = published.definition.code;
+          const definition = await this.loadRuntimeDefinition(current);
+          const placement = await this.createPendingTaskSkippingUnresolved(
+            manager,
+            current,
+            definition,
+            0,
+          );
+          if (!placement) {
+            // 新链路暂时无人可办：回滚，保持旧链路可继续流转
+            throw new DomainError('WORKFLOW_REBIND_NO_CANDIDATE', '最新流程暂时没有可办理人');
+          }
+          current.currentStep = placement.stepIndex;
+          current.revision += 1;
+          await repository.save(current);
+          this.logger.log(
+            `单据 ${current.id} 已切换到最新流程 ${definition.code} V${definition.version}`,
+          );
+        });
+      } catch (error) {
+        this.logger.warn(
+          `单据 ${document.id} 保持原流程版本：${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
   }
 
   async registerDraft(input: RegisterDraftInput): Promise<DocumentIndexEntity> {
@@ -104,6 +180,7 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     const legacy = process ? null : await this.findDefinition(input.documentType);
     return this.documents.save({
       ...input,
+      documentNo: input.documentNo ?? null,
       status: 'DRAFT',
       revision: 1,
       currentStep: null,
@@ -152,7 +229,19 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
       }
 
       const definition = await this.loadRuntimeDefinition(document);
-      await this.createPendingTask(manager, document, 0, definition.tasks[0]);
+      const placement = await this.createPendingTaskSkippingUnresolved(
+        manager,
+        document,
+        definition,
+        0,
+      );
+      if (!placement) {
+        const firstNode = definition.tasks[0];
+        throw new DomainError('WORKFLOW_ASSIGNEE_EMPTY', '审批节点未解析到有效办理人', {
+          processNodeId: firstNode?.id,
+          processNodeName: firstNode?.name,
+        });
+      }
       const prefix = this.documentNumbers.documentNumberPrefix(
         document.documentType as DocumentType,
       );
@@ -161,7 +250,12 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         (prefix ? await this.documentNumbers.generate(manager, prefix) : null);
       const submitted = await documentRepository.update(
         { id: document.id, status: document.status, revision: document.revision },
-        { status: 'IN_REVIEW', currentStep: 0, revision: document.revision + 1, documentNo },
+        {
+          status: 'IN_REVIEW',
+          currentStep: placement.stepIndex,
+          revision: document.revision + 1,
+          documentNo,
+        },
       );
       if (submitted.affected !== 1) {
         throw new DomainError('DOCUMENT_STATE_CHANGED', '单据状态已变化，请刷新后重试');
@@ -209,6 +303,20 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
 
       const definition = await this.loadRuntimeDefinition(document);
       const node = definition.tasks[task.stepIndex];
+      // 请示批复的办公室节点必须先勾选下一步审核部门，不能直接跳过部门审核；
+      // 分支任务与选择节点共用 stepIndex，不能按选择节点校验
+      if (
+        !task.originTaskId &&
+        action === 'APPROVE' &&
+        node?.kind === 'CHOICE' &&
+        node.advanceAfterBranches &&
+        choices.length === 0
+      ) {
+        throw new DomainError('WORKFLOW_CHOICE_REQUIRED', '请选择下一步审核部门后再提交', {
+          processNodeId: node.id,
+          processNodeName: node.name,
+        });
+      }
       const completed = await taskRepository.update(
         { id: task.id, status: 'PENDING' },
         { status: 'COMPLETED', completedBy: user.id },
@@ -226,21 +334,29 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
       });
 
       if (task.originTaskId) {
-        // 分支任务（外部律师 / 兄弟部门）：办结后回到「人工选择」节点，由行政审批人继续决定去向。
-        await this.settleBranchTask(manager, document, definition, task);
+        if (action === 'RETURN') {
+          // 分支审核人退回：回到「人工选择」节点，由指派方重新决定后续审核。
+          await this.returnBranchTask(manager, document, definition, task);
+        } else {
+          // 分支任务（外部律师 / 兄弟部门）：办结后回到「人工选择」节点，由行政审批人继续决定去向。
+          await this.settleBranchTask(manager, document, definition, task);
+        }
       } else if (action === 'RETURN') {
-        document.status = 'RETURNED';
-        document.currentStep = null;
+        await this.returnToPreviousStep(manager, document, definition, task);
       } else if (node?.kind === 'CHOICE' && choices.length > 0) {
         await this.dispatchBranches(manager, document, task, node, choices);
       } else {
-        const nextStep = task.stepIndex + 1;
-        if (nextStep >= definition.tasks.length) {
+        const placement = await this.createPendingTaskSkippingUnresolved(
+          manager,
+          document,
+          definition,
+          task.stepIndex + 1,
+        );
+        if (!placement) {
           document.status = 'APPROVED';
           document.currentStep = null;
         } else {
-          await this.createPendingTask(manager, document, nextStep, definition.tasks[nextStep]);
-          document.currentStep = nextStep;
+          document.currentStep = placement.stepIndex;
         }
       }
       document.revision += 1;
@@ -302,7 +418,12 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         steps: definition.tasks.map((task) => task.name),
       },
       currentTask: currentTask
-        ? toTaskSummary(currentTask, document, currentNode?.name ?? null, currentNode?.options ?? [])
+        ? toTaskSummary(
+            currentTask,
+            document,
+            currentNode?.name ?? null,
+            currentNode?.options ?? [],
+          )
         : null,
       pendingBranches: await this.readBranchSummaries(documentId),
       opinions: await this.readOpinions(documentId),
@@ -339,23 +460,29 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     return document;
   }
 
+  /** 校验用户是当前待审节点的固化办理人，返回该待办（用于审批人改单等节点内操作）。 */
+  async getModeratableTask(documentId: string, user: SessionUser): Promise<WorkflowTaskEntity> {
+    await this.getDocument(documentId);
+    const pending = await this.tasks.find({
+      where: { documentId, status: 'PENDING' },
+      order: { createdAt: 'DESC' },
+    });
+    for (const task of pending) {
+      if (await this.candidates.existsBy({ taskId: task.id, userId: user.id })) return task;
+    }
+    if (pending.length === 0) {
+      throw new DomainError('WORKFLOW_NOT_IN_REVIEW', '单据不在审批流转中');
+    }
+    throw new ForbiddenException('当前用户不是该单据当前审批节点的办理人');
+  }
+
   /** 校验用户是当前待审节点的固化办理人，返回单据（用于审批人改单等节点内操作）。 */
   async getModeratableDocument(
     documentId: string,
     user: SessionUser,
   ): Promise<DocumentIndexEntity> {
-    const document = await this.getDocument(documentId);
-    const task = await this.tasks.findOne({
-      where: { documentId, status: 'PENDING' },
-      order: { createdAt: 'DESC' },
-    });
-    if (!task) {
-      throw new DomainError('WORKFLOW_NOT_IN_REVIEW', '单据不在审批流转中');
-    }
-    if (!(await this.candidates.existsBy({ taskId: task.id, userId: user.id }))) {
-      throw new ForbiddenException('当前用户不是该单据当前审批节点的办理人');
-    }
-    return document;
+    await this.getModeratableTask(documentId, user);
+    return this.getDocument(documentId);
   }
 
   async getViewableDocument(documentId: string, user: SessionUser): Promise<DocumentIndexEntity> {
@@ -403,6 +530,45 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     return publishedRuntimeDefinition(definition, version);
   }
 
+  /**
+   * 从 startIndex 起寻找第一个能产生待办的节点：
+   * 无法解析出任何候选人的节点自动跳过（申请人本人即负责人、部门未配置负责人等），
+   * 候选人都缺少审批权限的节点仍按配置错误处理，避免静默绕过审批。
+   */
+  private async createPendingTaskSkippingUnresolved(
+    manager: EntityManager,
+    document: DocumentIndexEntity,
+    definition: RuntimeWorkflowDefinition,
+    startIndex: number,
+  ): Promise<{ task: WorkflowTaskEntity; stepIndex: number } | null> {
+    for (let stepIndex = startIndex; stepIndex < definition.tasks.length; stepIndex += 1) {
+      const node = definition.tasks[stepIndex];
+      if (!node) continue;
+      const resolution = await this.resolveNodeCandidates(document, node);
+      if (resolution.resolvedCount === 0) {
+        this.logger.warn(
+          `跳过无有效办理人的审批节点：单据 ${document.id} 节点「${node.name}」(${node.id})`,
+        );
+        continue;
+      }
+      const task = await this.insertPendingTask(manager, document, stepIndex, node, resolution);
+      return { task, stepIndex };
+    }
+    return null;
+  }
+
+  private resolveNodeCandidates(
+    document: DocumentIndexEntity,
+    node: RuntimeWorkflowTask,
+  ): Promise<ApprovalCandidateResolution> {
+    return this.candidateService.resolve(
+      node.assigneeRule,
+      document.departmentId,
+      document.applicantId,
+      requiredBusinessModulePermissions(document.module, 'VIEW'),
+    );
+  }
+
   private async createPendingTask(
     manager: EntityManager,
     document: DocumentIndexEntity,
@@ -411,19 +577,24 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
     branch?: { originTaskId: string; branchLabel: string; nodeKind: 'APPROVAL' | 'CHOICE' },
   ): Promise<WorkflowTaskEntity> {
     if (!node) throw new DomainError('WORKFLOW_STEP_MISSING', '审批流程缺少办理节点');
-    const documentViewPermissions = requiredBusinessModulePermissions(document.module, 'VIEW');
-    const resolution = await this.candidateService.resolve(
-      node.assigneeRule,
-      document.departmentId,
-      document.applicantId,
-      documentViewPermissions,
-    );
+    const resolution = await this.resolveNodeCandidates(document, node);
     if (resolution.resolvedCount === 0) {
       throw new DomainError('WORKFLOW_ASSIGNEE_EMPTY', '审批节点未解析到有效办理人', {
         processNodeId: node.id,
         processNodeName: node.name,
       });
     }
+    return this.insertPendingTask(manager, document, stepIndex, node, resolution, branch);
+  }
+
+  private async insertPendingTask(
+    manager: EntityManager,
+    document: DocumentIndexEntity,
+    stepIndex: number,
+    node: RuntimeWorkflowTask,
+    resolution: ApprovalCandidateResolution,
+    branch?: { originTaskId: string; branchLabel: string; nodeKind: 'APPROVAL' | 'CHOICE' },
+  ): Promise<WorkflowTaskEntity> {
     if (resolution.candidates.length === 0) {
       throw new DomainError(
         'WORKFLOW_ASSIGNEE_PERMISSION_MISSING',
@@ -432,7 +603,10 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
           processNodeId: node.id,
           processNodeName: node.name,
           requiredPermission: 'WORKFLOW_APPROVE',
-          requiredPermissions: ['WORKFLOW_APPROVE', ...documentViewPermissions],
+          requiredPermissions: [
+            'WORKFLOW_APPROVE',
+            ...requiredBusinessModulePermissions(document.module, 'VIEW'),
+          ],
           resolvedCandidateCount: resolution.resolvedCount,
         },
       );
@@ -500,7 +674,13 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
         manager,
         document,
         task.stepIndex,
-        { id: option.id, name: option.name, kind: 'APPROVAL', assigneeRule: option.assigneeRule, options: [] },
+        {
+          id: option.id,
+          name: option.name,
+          kind: 'APPROVAL',
+          assigneeRule: option.assigneeRule,
+          options: [],
+        },
         { originTaskId: task.id, branchLabel: option.name, nodeKind: 'APPROVAL' },
       );
     }
@@ -533,9 +713,131 @@ export class DocumentWorkflowService implements OnApplicationBootstrap {
       document.currentStep = null;
       return;
     }
+    const pendingChooser = await branchRepository.findOne({
+      where: {
+        documentId: document.id,
+        stepIndex: chooserStep,
+        status: 'PENDING',
+        originTaskId: IsNull(),
+      },
+    });
+    if (pendingChooser) {
+      // 已有分支退回并重新打开了选择节点，其他分支办结时不再重复派生待办。
+      document.status = 'IN_REVIEW';
+      document.currentStep = chooserStep;
+      return;
+    }
+    if (chooserNode.advanceAfterBranches) {
+      // 请示批复：办公室选定部门审核后直接送主管领导，不再回到办公室确认。
+      const placement = await this.createPendingTaskSkippingUnresolved(
+        manager,
+        document,
+        definition,
+        chooserStep + 1,
+      );
+      if (!placement) {
+        document.status = 'APPROVED';
+        document.currentStep = null;
+      } else {
+        document.status = 'IN_REVIEW';
+        document.currentStep = placement.stepIndex;
+      }
+      return;
+    }
     await this.createPendingTask(manager, document, chooserStep, chooserNode);
     document.status = 'IN_REVIEW';
     document.currentStep = chooserStep;
+  }
+
+  /**
+   * 普通审批节点退回：退回最近的、仍能解析出办理人的前置审批节点；
+   * 第一个审批节点退回发起人（单据回到可编辑状态）。
+   */
+  private async returnToPreviousStep(
+    manager: EntityManager,
+    document: DocumentIndexEntity,
+    definition: RuntimeWorkflowDefinition,
+    task: WorkflowTaskEntity,
+  ): Promise<void> {
+    const taskRepository = manager.getRepository(WorkflowTaskEntity);
+    for (let targetStep = task.stepIndex - 1; targetStep >= 0; targetStep -= 1) {
+      const targetNode = definition.tasks[targetStep];
+      if (!targetNode) continue;
+      const existing = await taskRepository.findOne({
+        where: {
+          documentId: document.id,
+          stepIndex: targetStep,
+          status: 'PENDING',
+          originTaskId: IsNull(),
+        },
+      });
+      if (existing) {
+        document.status = 'IN_REVIEW';
+        document.currentStep = targetStep;
+        return;
+      }
+      try {
+        await this.createPendingTask(manager, document, targetStep, targetNode);
+        document.status = 'IN_REVIEW';
+        document.currentStep = targetStep;
+        return;
+      } catch (error) {
+        if (!this.isAssigneeUnavailable(error)) throw error;
+      }
+    }
+    document.status = 'RETURNED';
+    document.currentStep = null;
+  }
+
+  /** 分支任务退回：重新打开「人工选择」节点，由指派方决定重新选择或继续退回。 */
+  private async returnBranchTask(
+    manager: EntityManager,
+    document: DocumentIndexEntity,
+    definition: RuntimeWorkflowDefinition,
+    task: WorkflowTaskEntity,
+  ): Promise<void> {
+    const taskRepository = manager.getRepository(WorkflowTaskEntity);
+    const originTask = task.originTaskId
+      ? await taskRepository.findOneBy({ id: task.originTaskId })
+      : null;
+    const chooserStep = originTask?.stepIndex ?? task.stepIndex;
+    const chooserNode = definition.tasks[chooserStep];
+    if (!chooserNode) {
+      document.status = 'RETURNED';
+      document.currentStep = null;
+      return;
+    }
+    const existing = await taskRepository.findOne({
+      where: {
+        documentId: document.id,
+        stepIndex: chooserStep,
+        status: 'PENDING',
+        originTaskId: IsNull(),
+      },
+    });
+    if (existing) {
+      document.status = 'IN_REVIEW';
+      document.currentStep = chooserStep;
+      return;
+    }
+    try {
+      await this.createPendingTask(manager, document, chooserStep, chooserNode);
+      document.status = 'IN_REVIEW';
+      document.currentStep = chooserStep;
+    } catch (error) {
+      if (!this.isAssigneeUnavailable(error)) throw error;
+      document.status = 'RETURNED';
+      document.currentStep = null;
+    }
+  }
+
+  /** 前置节点没有可用办理人（负责人未配置、本人审批本人等）时允许退回发起人。 */
+  private isAssigneeUnavailable(error: unknown): boolean {
+    return (
+      error instanceof DomainError &&
+      (error.code === 'WORKFLOW_ASSIGNEE_EMPTY' ||
+        error.code === 'WORKFLOW_ASSIGNEE_PERMISSION_MISSING')
+    );
   }
 
   private async toTaskSummaries(tasks: WorkflowTaskEntity[]): Promise<ApprovalTaskSummary[]> {

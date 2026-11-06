@@ -21,19 +21,11 @@ import { LibraryService } from '../application/library.service';
 import {
   contentDisposition,
   contentTypeHeader,
+  decodeMultipartFileName,
   isInlinePreviewable,
   MAX_LIBRARY_FILE_BYTES,
 } from '../domain/library-storage';
 import { LibraryListQueryDto, LibraryUploadDto } from './library.dto';
-
-/**
- * multipart 的文件名按 latin1 解析，中文会变成乱码；
- * 这里按 UTF-8 还原，还原失败时保留原值。
- */
-function decodeMultipartFileName(value: string): string {
-  const decoded = Buffer.from(value, 'latin1').toString('utf8');
-  return decoded.includes('\uFFFD') ? value : decoded;
-}
 
 interface UploadedLibraryFile {
   originalname: string;

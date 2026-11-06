@@ -1,4 +1,6 @@
 import type { SessionUser } from '@oa/contracts';
+import { appBasePath } from './app-base';
+import { readStorage, removeStorage, writeStorage } from './browser-storage';
 import { randomId } from './random-id';
 
 const tokenKey = 'oa-token';
@@ -37,16 +39,16 @@ export interface ApiEnvelope<T> {
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem(tokenKey);
+  return readStorage(tokenKey);
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(tokenKey, token);
+  writeStorage(tokenKey, token);
   authGeneration += 1;
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(tokenKey);
+  removeStorage(tokenKey);
   authGeneration += 1;
 }
 
@@ -68,7 +70,7 @@ export async function apiRequest<T>(path: string, init: JsonRequestInit = {}): P
     headers.set('Content-Type', 'application/json');
     body = JSON.stringify(body);
   }
-  const response = await fetch(`/api/v1${path}`, { ...init, headers, body });
+  const response = await fetch(`${appBasePath()}api/v1${path}`, { ...init, headers, body });
   const responseText = await response.text();
   const payload: unknown = responseText ? JSON.parse(responseText) : {};
   if (!response.ok) {
@@ -100,7 +102,7 @@ export async function apiRequestBlob(path: string): Promise<Blob> {
   const token = getToken();
   const requestGeneration = getAuthGeneration();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  const response = await fetch(`/api/v1${path}`, { headers });
+  const response = await fetch(`${appBasePath()}api/v1${path}`, { headers });
   if (!response.ok) {
     const text = await response.text();
     let payload: ErrorPayload = {};
@@ -109,7 +111,11 @@ export async function apiRequestBlob(path: string): Promise<Blob> {
     } catch {
       payload = {};
     }
-    if (response.status === 401 && requestGeneration === getAuthGeneration() && token === getToken()) {
+    if (
+      response.status === 401 &&
+      requestGeneration === getAuthGeneration() &&
+      token === getToken()
+    ) {
       clearToken();
     }
     throw new ApiRequestError(

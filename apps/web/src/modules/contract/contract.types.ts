@@ -1,4 +1,4 @@
-import type { DocumentStatus } from '@oa/contracts';
+import type { DocumentAttachmentItem, DocumentStatus } from '@oa/contracts';
 
 export interface ContractRequestData {
   id: string;
@@ -13,7 +13,8 @@ export interface ContractRequestData {
   addressee: string;
   /** 内部请示的发出部门。 */
   issuer: string;
-  attachments: string[];
+  /** 上传附件（带 id 可下载）与历史文件名混排。 */
+  attachments: DocumentAttachmentItem[];
 }
 
 export type ContractRequestPayload = Pick<
@@ -32,14 +33,17 @@ export interface ContractApprovalData {
   counterpartyFullName: string;
   counterpartyContact: string | null;
   counterpartyPhone: string | null;
-  paymentMethod: string | null;
   validFrom: string | null;
   validTo: string | null;
   contentReason: string;
   remark: string | null;
+  /** 用印类型：CONTRACT_SEAL=合同章，OFFICIAL_SEAL=公章，空表示不需要用印。 */
+  sealType: string | null;
+  /** 遗留下单开关，仅历史数据可能为 true。 */
   needsSeal: boolean;
   applicantId: string;
-  attachments: string[];
+  /** 上传附件（带 id 可下载）与历史文件名混排。 */
+  attachments: DocumentAttachmentItem[];
 }
 
 export type ContractApprovalPayload = Pick<
@@ -52,12 +56,11 @@ export type ContractApprovalPayload = Pick<
   | 'counterpartyFullName'
   | 'counterpartyContact'
   | 'counterpartyPhone'
-  | 'paymentMethod'
   | 'validFrom'
   | 'validTo'
   | 'contentReason'
   | 'remark'
-  | 'needsSeal'
+  | 'sealType'
   | 'attachments'
 >;
 

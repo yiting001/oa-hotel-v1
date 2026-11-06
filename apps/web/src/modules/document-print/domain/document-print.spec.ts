@@ -67,6 +67,41 @@ describe('buildBusinessDocumentPrintModel', () => {
     });
   });
 
+  it('上传附件按文件名打印（新数据结构）', () => {
+    const model = buildBusinessDocumentPrintModel(
+      envelope('CONTRACT_REQUEST', {
+        number: 'GCB20261011-001',
+        title: '关于更新客房布草的请示',
+        departmentId: 'dept-business',
+        applicantId: 'user-applicant',
+        requestedAt: '2026-10-11',
+        amountCents: null,
+        content: '上传附件打印测试。',
+        attachments: [{ id: 'att-1', fileName: '布草采购比价表.xlsx' }, '历史文件名.pdf'],
+      }),
+      references,
+    );
+
+    expect(model.attachments).toEqual(['布草采购比价表.xlsx', '历史文件名.pdf']);
+  });
+
+  it('合同审批的用印选择打印为中文标签', () => {
+    const model = buildBusinessDocumentPrintModel(
+      envelope('CONTRACT_APPROVAL', {
+        signingDepartmentId: 'dept-business',
+        signingDate: '2026-07-13',
+        name: '布草采购合同',
+        amountCents: 500000,
+        counterpartyFullName: '北京某纺织公司',
+        contentReason: '采购客房布草',
+        sealType: 'OFFICIAL_SEAL',
+      }),
+      references,
+    );
+
+    expect(model.fields.find((item) => item.label === '用印')?.value).toBe('公章');
+  });
+
   it.each<[DocumentType, string, Record<string, unknown>]>([
     [
       'CONTRACT_APPROVAL',
@@ -78,7 +113,7 @@ describe('buildBusinessDocumentPrintModel', () => {
         amountCents: 500000,
         counterpartyFullName: '北京某纺织公司',
         contentReason: '采购客房布草',
-        needsSeal: true,
+        sealType: 'CONTRACT_SEAL',
       },
     ],
     [
@@ -265,6 +300,43 @@ describe('buildBusinessDocumentPrintModel', () => {
     ]);
     expect(model.sections[0]).toMatchObject({ type: 'GRID', rows: [[{}, {}, {}]] });
     expect(model.sections[1]).toMatchObject({ type: 'TABLE', table: { minRows: 6 } });
+  });
+
+  it('每种单据都能生成带审批意见的打印审批单', () => {
+    const documentTypes: DocumentType[] = [
+      'CONTRACT_REQUEST',
+      'CONTRACT_APPROVAL',
+      'CONTRACT_PAYMENT',
+      'SEAL_BORROW',
+      'SEAL_USE',
+      'MATERIAL_PURCHASE',
+      'MATERIAL_REQUISITION',
+      'PURCHASE_APPROVAL',
+      'PETTY_PROCUREMENT',
+      'FOOD_PURCHASE',
+      'MATERIAL_LOSS',
+      'ORDER_CIRCULATION',
+    ];
+    for (const documentType of documentTypes) {
+      const model = buildBusinessDocumentPrintModel(
+        envelope(documentType, {
+          title: '打印测试',
+          departmentId: 'dept-business',
+          applicantId: 'user-applicant',
+          applicationDate: '2026-10-28',
+          content: '打印内容',
+          reason: '打印原因',
+          items: [{ name: '测试物品', quantity: 1, unit: '件', remark: '备注' }],
+        }),
+        references,
+      );
+      expect(model.title, documentType).not.toBe('');
+      expect(model.opinions, documentType).toHaveLength(1);
+      expect(
+        model.sections.some((section) => section.type === 'OPINIONS'),
+        documentType,
+      ).toBe(true);
+    }
   });
 });
 

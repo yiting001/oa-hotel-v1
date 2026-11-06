@@ -34,7 +34,7 @@ describe('ProcessDesignSeeder', () => {
     await dataSource.destroy();
   });
 
-  it('publishes all seven business workflows with legacy-compatible approval order', async () => {
+  it('publishes every business workflow with legacy-compatible approval order', async () => {
     await seeder.onApplicationBootstrap();
 
     const definitions = await repository.listDefinitions();

@@ -7,4 +7,6 @@ export const PURCHASE_ROUTE_NAMES = {
 export const PURCHASE_API = {
   purchases: '/purchases',
   purchase: (id: string) => `/purchases/${id}`,
+  approval: (id: string) => `/purchases/${id}/approval`,
+  approvalAttachments: (id: string) => `/purchases/${id}/approval/attachments`,
 } as const;

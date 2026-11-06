@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DOCUMENT_NUMBER_PREFIXES, type DocumentType } from '@oa/contracts';
 import type { EntityManager } from 'typeorm';
+import { departmentNumberPrefix } from '../../domain/department-abbreviation';
 import { businessDateKey } from '../../time/business-date';
 import { DocumentNumberSequenceEntity } from '../infrastructure/document-number-sequence.entity';
 
@@ -13,6 +14,27 @@ export class DocumentNumberService {
 
   async generate(manager: EntityManager, prefix: string, now = new Date()): Promise<string> {
     const dateKey = businessDateKey(now);
+    const serial = await this.nextSerial(manager, prefix, dateKey);
+    return `${prefix}${dateKey}${String(serial).padStart(3, '0')}`;
+  }
+
+  /** 请示单编号：部门简称 + 日期 + 「-」+ 3 位流水号，例如 GCB20261011-001。 */
+  async generateForDepartment(
+    manager: EntityManager,
+    departmentName: string | null | undefined,
+    now = new Date(),
+  ): Promise<string> {
+    const prefix = departmentNumberPrefix(departmentName);
+    const dateKey = businessDateKey(now);
+    const serial = await this.nextSerial(manager, prefix, dateKey);
+    return `${prefix}${dateKey}-${String(serial).padStart(3, '0')}`;
+  }
+
+  private async nextSerial(
+    manager: EntityManager,
+    prefix: string,
+    dateKey: string,
+  ): Promise<number> {
     const repository = manager.getRepository(DocumentNumberSequenceEntity);
     const placeholders = manager.connection.options.type === 'postgres' ? ['$1', '$2'] : ['?', '?'];
     await manager.query(
@@ -22,7 +44,6 @@ export class DocumentNumberService {
       [prefix, dateKey],
     );
     const sequence = await repository.findOneByOrFail({ prefix, dateKey });
-    const serial = sequence.nextSerial - 1;
-    return `${prefix}${dateKey}${String(serial).padStart(3, '0')}`;
+    return sequence.nextSerial - 1;
   }
 }

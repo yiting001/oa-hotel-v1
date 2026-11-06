@@ -1,11 +1,14 @@
 import type { SessionUser } from '@oa/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DataSource } from 'typeorm';
 import { IamService } from '../../../common/iam/application/iam.service';
+import { DocumentNumberService } from '../../../common/workflow/application/document-number.service';
 import { DocumentWorkflowService } from '../../../common/workflow/application/document-workflow.service';
 import { DocumentIndexEntity } from '../../../common/workflow/infrastructure/document-index.entity';
 import type { ContractRepository } from '../domain/contract.repository';
 import { ContractEntity } from '../infrastructure/contract.entity';
-import type { ContractPaymentDto } from '../presentation/contract.dto';
+import { ContractRequestEntity } from '../infrastructure/contract-request.entity';
+import type { ContractApprovalDto, ContractPaymentDto } from '../presentation/contract.dto';
 import { ContractApplicationService } from './contract-application.service';
 
 describe('ContractApplicationService data scope', () => {
@@ -17,7 +20,14 @@ describe('ContractApplicationService data scope', () => {
   };
   let iam: {
     canAccessResource: ReturnType<typeof vi.fn<IamService['canAccessResource']>>;
+    listDepartments: ReturnType<typeof vi.fn<IamService['listDepartments']>>;
   };
+  let documentNumbers: {
+    generateForDepartment: ReturnType<
+      typeof vi.fn<DocumentNumberService['generateForDepartment']>
+    >;
+  };
+  let dataSource: { manager: unknown };
   let service: ContractApplicationService;
 
   beforeEach(() => {
@@ -37,11 +47,22 @@ describe('ContractApplicationService data scope', () => {
     };
     iam = {
       canAccessResource: vi.fn<IamService['canAccessResource']>(),
+      listDepartments: vi.fn<IamService['listDepartments']>(),
     };
+    iam.listDepartments.mockResolvedValue([
+      { id: 'dept-child', name: '测试部门', children: [] },
+    ] as never);
+    documentNumbers = {
+      generateForDepartment: vi.fn<DocumentNumberService['generateForDepartment']>(),
+    };
+    documentNumbers.generateForDepartment.mockResolvedValue('YWB20260101-001');
+    dataSource = { manager: {} };
     workflow.readOpinions.mockResolvedValue([]);
     service = new ContractApplicationService(
       repository,
       workflow as unknown as DocumentWorkflowService,
+      documentNumbers as unknown as DocumentNumberService,
+      dataSource as unknown as DataSource,
       iam as unknown as IamService,
     );
   });
@@ -113,6 +134,29 @@ describe('ContractApplicationService data scope', () => {
     expect(workflow.getDocument).not.toHaveBeenCalled();
     expect(repository.savePayment).not.toHaveBeenCalled();
   });
+
+  it('links an own request in any status but rejects requests owned by others', async () => {
+    vi.mocked(repository.findRequest).mockResolvedValue(requestFixture('request-mine'));
+    vi.mocked(repository.saveContract).mockImplementation(async (entity) => entity);
+    workflow.getDocument.mockResolvedValue(
+      documentFixture('request-mine', 'DRAFT', { applicantId: scopedUser.id }),
+    );
+
+    const saved = await service.saveContract(approvalDto('request-mine'), scopedUser);
+    expect(saved.data.requestId).toBe('request-mine');
+    expect(workflow.registerDraft).toHaveBeenCalled();
+
+    vi.mocked(repository.findRequest).mockResolvedValue(requestFixture('request-other'));
+    vi.mocked(repository.saveContract).mockClear();
+    workflow.getDocument.mockResolvedValue(
+      documentFixture('request-other', 'APPROVED', { applicantId: 'owner-other' }),
+    );
+
+    await expect(service.saveContract(approvalDto('request-other'), scopedUser)).rejects.toMatchObject(
+      { code: 'CONTRACT_REQUEST_NOT_OWNED' },
+    );
+    expect(repository.saveContract).not.toHaveBeenCalled();
+  });
 });
 
 const scopedUser: SessionUser = {
@@ -161,13 +205,17 @@ function contractFixture(id: string, applicantId: string, signingDepartmentId: s
     amountCents: 100_000,
     counterpartyFullName: '测试供应商',
     contentReason: '测试',
-    needsSeal: false,
+    sealType: null,
     applicantId,
     attachments: [],
   });
 }
 
-function documentFixture(id: string, status: string) {
+function documentFixture(
+  id: string,
+  status: string,
+  overrides: Partial<DocumentIndexEntity> = {},
+) {
   return Object.assign(new DocumentIndexEntity(), {
     id,
     documentType: 'CONTRACT_APPROVAL',
@@ -183,7 +231,43 @@ function documentFixture(id: string, status: string) {
     formVersionId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    ...overrides,
   });
+}
+
+function requestFixture(id: string) {
+  return Object.assign(new ContractRequestEntity(), {
+    id,
+    number: `CONTRACT-REQUEST-${id}`,
+    title: `请示-${id}`,
+    departmentId: 'dept-child',
+    applicantId: scopedUser.id,
+    requestedAt: '2026-07-01',
+    amountCents: 100_000,
+    content: '测试请示',
+    addressee: '',
+    issuer: '',
+    attachments: [],
+  });
+}
+
+function approvalDto(requestId: string): ContractApprovalDto {
+  return {
+    requestId,
+    signingDepartmentId: 'dept-child',
+    signingDate: '2026-07-01',
+    name: '测试合同',
+    amountCents: 100_000,
+    counterpartyFullName: '测试供应商',
+    counterpartyContact: null,
+    counterpartyPhone: null,
+    validFrom: null,
+    validTo: null,
+    contentReason: '测试',
+    remark: null,
+    sealType: null,
+    attachments: [],
+  };
 }
 
 function paymentDto(contractId: string): ContractPaymentDto {

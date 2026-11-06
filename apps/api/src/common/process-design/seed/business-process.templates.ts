@@ -34,6 +34,8 @@ export function createBusinessProcessTemplate(
               name: option.name,
               assigneeRule: option.assigneeRule,
             })),
+            // 仅在需要时写入，避免未使用该语义的流程版本发生无意义重发
+            ...(choice.advanceAfterBranches ? { advanceAfterBranches: true } : {}),
           }
         : {}),
     };
@@ -47,7 +49,7 @@ export function createBusinessProcessTemplate(
     description: `申请人提交后依次由${definition.approvalRoles
       .map((roleCode) =>
         definition.manualChoice?.roleCode === roleCode
-          ? `${approverDescription(roleCode)}（可选择外部律师或兄弟部门先审）`
+          ? `${approverDescription(roleCode)}（可勾选下一步审核部门）`
           : approverDescription(roleCode),
       )
       .join('、')}办理。`,

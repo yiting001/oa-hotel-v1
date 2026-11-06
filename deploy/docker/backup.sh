@@ -80,5 +80,19 @@ fi
 
 gzip -9 "$TEMP_DB"
 mv "$TEMP_DB.gz" "$FINAL_BACKUP"
+
+# 附件与文件库：与数据库同批留存，恢复时文件和单据记录保持一致
+STORAGE_DIR="$DATA_DIR/storage"
+FILE_BACKUP=""
+if [ -d "$STORAGE_DIR" ]; then
+  FILE_BACKUP="$BACKUP_DIR/oa-$STAMP.storage.tar.gz"
+  tar -czf "$TEMP_DIR/storage.tar.gz" -C "$DATA_DIR" storage
+  mv "$TEMP_DIR/storage.tar.gz" "$FILE_BACKUP"
+fi
+
 find "$BACKUP_DIR" -maxdepth 1 -type f -name 'oa-*.sqlite.gz' -mtime "+$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -maxdepth 1 -type f -name 'oa-*.storage.tar.gz' -mtime "+$RETENTION_DAYS" -delete
 printf '%s\n' "$FINAL_BACKUP"
+if [ -n "$FILE_BACKUP" ]; then
+  printf '%s\n' "$FILE_BACKUP"
+fi

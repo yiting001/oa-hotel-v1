@@ -540,7 +540,7 @@ echo "$BACKUP_GZ"
 ls -lh /www/wwwroot/oa-hotel-docker/shared/backups
 ```
 
-脚本先确认源数据库非空且包含 `migrations`、`users` 两个关键表，再通过宿主机 SQLite `.backup` 在线生成一致性副本。它使用 `flock` 防止人工备份与计划任务并发，执行 `PRAGMA integrity_check`，成功后以权限 `600` 压缩保存，并按 `.env` 中的 `OA_BACKUP_RETENTION_DAYS` 清理旧备份。备份目录不挂载给 API 容器。
+脚本先确认源数据库非空且包含 `migrations`、`users` 两个关键表，再通过宿主机 SQLite `.backup` 在线生成一致性副本。它使用 `flock` 防止人工备份与计划任务并发，执行 `PRAGMA integrity_check`，成功后以权限 `600` 压缩保存，并按 `.env` 中的 `OA_BACKUP_RETENTION_DAYS` 清理旧备份。备份目录不挂载给 API 容器。附件与文件库位于数据卷的 `storage/` 子目录，脚本会额外生成 `oa-<时间戳>.storage.tar.gz`；恢复时要与数据库副本一起还原，否则附件记录会找不到文件。
 
 在宝塔“计划任务”中新增 Shell 脚本，例如每天 `02:30` 执行：
 

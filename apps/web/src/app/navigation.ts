@@ -7,11 +7,13 @@ import {
   DataBoard,
   DocumentCopy,
   EditPen,
+  Food,
   Grid,
   House,
   Menu,
   Monitor,
   OfficeBuilding,
+  Promotion,
   Setting,
   Share,
   ShoppingCart,
@@ -19,6 +21,7 @@ import {
   Suitcase,
   Tickets,
   TrendCharts,
+  Warning,
 } from '@element-plus/icons-vue';
 import { requiredBusinessModulePermissions, type MenuTreeNode } from '@oa/contracts';
 import type { Component } from 'vue';
@@ -34,12 +37,14 @@ export type NavigationItemId =
   | 'content'
   | 'contract'
   | 'purchase'
-  | 'petty'
-  | 'petty-materials'
   | 'insight-documents'
   | 'insight-logs'
   | 'insight-statistics'
   | 'seal'
+  | 'seal-licenses'
+  | 'food-purchase'
+  | 'material-loss'
+  | 'order-circulation'
   | 'supply'
   | 'iam'
   | 'menus'
@@ -105,8 +110,15 @@ const navigationGroups: readonly NavigationGroup[] = [
       {
         id: 'seal',
         path: '/seal',
-        label: '印章证照',
+        label: '印章申请',
         icon: Stamp,
+        requiredPermissions: requiredBusinessModulePermissions('SEAL', 'VIEW'),
+      },
+      {
+        id: 'seal-licenses',
+        path: '/seal/licenses',
+        label: '证照申请',
+        icon: Tickets,
         requiredPermissions: requiredBusinessModulePermissions('SEAL', 'VIEW'),
       },
       {
@@ -117,25 +129,25 @@ const navigationGroups: readonly NavigationGroup[] = [
         requiredPermissions: requiredBusinessModulePermissions('PURCHASE', 'VIEW'),
       },
       {
-        id: 'petty',
-        path: '/petty',
-        label: '零星采买',
-        icon: ShoppingCart,
-        requiredPermissions: requiredBusinessModulePermissions('PETTY', 'VIEW'),
+        id: 'food-purchase',
+        path: '/food-purchase',
+        label: '食材采购',
+        icon: Food,
+        requiredPermissions: requiredBusinessModulePermissions('FOOD_PURCHASE', 'VIEW'),
       },
       {
-        id: 'documents',
-        path: '/documents',
-        label: '公司文件制度',
-        icon: Folder,
-        requiredPermissions: ['LIBRARY_VIEW'],
+        id: 'material-loss',
+        path: '/material-loss',
+        label: '物资报损',
+        icon: Warning,
+        requiredPermissions: requiredBusinessModulePermissions('MATERIAL_LOSS', 'VIEW'),
       },
       {
-        id: 'notices',
-        path: '/notices',
-        label: '公司通知',
-        icon: Bell,
-        requiredPermissions: [...portalViewPermissions],
+        id: 'order-circulation',
+        path: '/order-circulation',
+        label: '订单流转',
+        icon: Promotion,
+        requiredPermissions: requiredBusinessModulePermissions('ORDER_CIRCULATION', 'VIEW'),
       },
       {
         id: 'supply',
@@ -150,13 +162,6 @@ const navigationGroups: readonly NavigationGroup[] = [
         label: '内容管理',
         icon: DocumentCopy,
         requiredPermissions: [portalContentManagePermission],
-      },
-      {
-        id: 'petty-materials',
-        path: '/system/petty-materials',
-        label: '零星采买物资库',
-        icon: Box,
-        requiredPermissions: ['IAM_MANAGE'],
       },
     ],
   },
@@ -248,11 +253,13 @@ const menuIconComponents: Record<string, Component> = {
   DataBoard,
   DocumentCopy,
   EditPen,
+  Food,
   Grid,
   House,
   Menu,
   Monitor,
   OfficeBuilding,
+  Promotion,
   Setting,
   Share,
   ShoppingCart,
@@ -260,6 +267,7 @@ const menuIconComponents: Record<string, Component> = {
   Suitcase,
   Tickets,
   TrendCharts,
+  Warning,
 };
 
 export function menuIconComponent(icon: string | null): Component {

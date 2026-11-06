@@ -36,6 +36,12 @@ import { SealAssetNamesFreeText1786100000000 } from './migrations/1786100000000-
 import { ContractRequestAddressee1786400000000 } from './migrations/1786400000000-ContractRequestAddressee';
 import { PettyRequisitionSheet1786500000000 } from './migrations/1786500000000-PettyRequisitionSheet';
 import { LibraryDocuments1786800000000 } from './migrations/1786800000000-LibraryDocuments';
+import { BusinessCenterRefinement1786900000000 } from './migrations/1786900000000-BusinessCenterRefinement';
+import { ContractSealType1787000000000 } from './migrations/1787000000000-ContractSealType';
+import { ApprovalChainPermissions1787100000000 } from './migrations/1787100000000-ApprovalChainPermissions';
+import { BusinessExpansion1787200000000 } from './migrations/1787200000000-BusinessExpansion';
+import { SealUseReturnDate1787300000000 } from './migrations/1787300000000-SealUseReturnDate';
+import { PurchaseChainWithoutVicePresident1787400000000 } from './migrations/1787400000000-PurchaseChainWithoutVicePresident';
 import { PurchaseRequisitionSheet1786700000000 } from './migrations/1786700000000-PurchaseRequisitionSheet';
 import { SealRequisitionSheet1786600000000 } from './migrations/1786600000000-SealRequisitionSheet';
 import { LegalAdvisorPermissions1786300000000 } from './migrations/1786300000000-LegalAdvisorPermissions';
@@ -44,6 +50,12 @@ import { PostgresSealAssetNamesFreeText1786100000001 } from './migrations-postgr
 import { PostgresContractRequestAddressee1786400000001 } from './migrations-postgres/1786400000001-PostgresContractRequestAddressee';
 import { PostgresPettyRequisitionSheet1786500000001 } from './migrations-postgres/1786500000001-PostgresPettyRequisitionSheet';
 import { PostgresLibraryDocuments1786800000001 } from './migrations-postgres/1786800000001-PostgresLibraryDocuments';
+import { PostgresBusinessCenterRefinement1786900000001 } from './migrations-postgres/1786900000001-PostgresBusinessCenterRefinement';
+import { PostgresContractSealType1787000000001 } from './migrations-postgres/1787000000001-PostgresContractSealType';
+import { PostgresApprovalChainPermissions1787100000001 } from './migrations-postgres/1787100000001-PostgresApprovalChainPermissions';
+import { PostgresBusinessExpansion1787200000001 } from './migrations-postgres/1787200000001-PostgresBusinessExpansion';
+import { PostgresSealUseReturnDate1787300000001 } from './migrations-postgres/1787300000001-PostgresSealUseReturnDate';
+import { PostgresPurchaseChainWithoutVicePresident1787400000001 } from './migrations-postgres/1787400000001-PostgresPurchaseChainWithoutVicePresident';
 import { PostgresPurchaseRequisitionSheet1786700000001 } from './migrations-postgres/1786700000001-PostgresPurchaseRequisitionSheet';
 import { PostgresSealRequisitionSheet1786600000001 } from './migrations-postgres/1786600000001-PostgresSealRequisitionSheet';
 import { PostgresLegalAdvisorPermissions1786300000001 } from './migrations-postgres/1786300000001-PostgresLegalAdvisorPermissions';
@@ -76,6 +88,12 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
         PostgresSealRequisitionSheet1786600000001,
         PostgresPurchaseRequisitionSheet1786700000001,
         PostgresLibraryDocuments1786800000001,
+        PostgresBusinessCenterRefinement1786900000001,
+        PostgresContractSealType1787000000001,
+        PostgresApprovalChainPermissions1787100000001,
+        PostgresBusinessExpansion1787200000001,
+        PostgresSealUseReturnDate1787300000001,
+        PostgresPurchaseChainWithoutVicePresident1787400000001,
       ],
       migrationsRun: overrides.migrationsRun ?? true,
       synchronize: false,
@@ -125,6 +143,12 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
       SealRequisitionSheet1786600000000,
       PurchaseRequisitionSheet1786700000000,
       LibraryDocuments1786800000000,
+      BusinessCenterRefinement1786900000000,
+      ContractSealType1787000000000,
+      ApprovalChainPermissions1787100000000,
+      BusinessExpansion1787200000000,
+      SealUseReturnDate1787300000000,
+      PurchaseChainWithoutVicePresident1787400000000,
     ],
     migrationsRun: overrides.migrationsRun ?? true,
     synchronize: false,

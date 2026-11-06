@@ -17,6 +17,8 @@ export interface RuntimeWorkflowTask {
   kind: PublishedTaskKind;
   assigneeRule: PublishedAssigneeRule;
   options: readonly PublishedChoiceOption[];
+  /** 「选择下一步」节点：分支办结后直接进入下一节点。 */
+  advanceAfterBranches?: boolean;
 }
 
 export interface RuntimeWorkflowDefinition {

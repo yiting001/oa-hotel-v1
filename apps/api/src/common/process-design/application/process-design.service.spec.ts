@@ -40,32 +40,33 @@ describe('ProcessDesignService', () => {
       expect.objectContaining({
         documentType: 'CONTRACT_REQUEST',
         version: 1,
-        approvalPath: ['部门负责人审批', '主管领导', '总经理'],
+        approvalPath: ['部门负责人审批', '办公室审核（选择下一步）', '主管领导'],
       }),
     ]);
-    expect(parsePublishedUserTasks(published.designJson)).toEqual([
-      {
-        id: 'department-manager',
-        name: '部门负责人审批',
-        kind: 'APPROVAL',
-        assigneeRule: { type: 'APPLICANT_DEPARTMENT_MANAGER' },
-        options: [],
-      },
-      {
-        id: 'approval-2',
-        name: '主管领导',
-        kind: 'APPROVAL',
-        assigneeRule: { type: 'ROLE', roleCode: 'EXEC_PRE_APPROVER' },
-        options: [],
-      },
-      {
-        id: 'approval-3',
-        name: '总经理',
-        kind: 'APPROVAL',
-        assigneeRule: { type: 'ROLE', roleCode: 'EXEC_APPROVER' },
-        options: [],
-      },
-    ]);
+    const tasks = parsePublishedUserTasks(published.designJson);
+    expect(tasks.map((task) => task.kind)).toEqual(['APPROVAL', 'CHOICE', 'APPROVAL']);
+    expect(tasks[0]).toMatchObject({
+      id: 'department-manager',
+      name: '部门负责人审批',
+      assigneeRule: { type: 'APPLICANT_DEPARTMENT_MANAGER' },
+      options: [],
+    });
+    // 办公室勾选下一步部门，部门审核完成后直接进入主管领导
+    expect(tasks[1]).toMatchObject({
+      id: 'office-review',
+      name: '办公室审核（选择下一步）',
+      kind: 'CHOICE',
+      assigneeRule: { type: 'ROLE', roleCode: 'OFFICE_REVIEWER' },
+      advanceAfterBranches: true,
+    });
+    expect(tasks[1].options.map((option) => option.name)).toContain('财务部审核');
+    expect(tasks[1].options.map((option) => option.name)).not.toContain('外部律师审核');
+    expect(tasks[2]).toMatchObject({
+      id: 'approval-3',
+      name: '主管领导',
+      assigneeRule: { type: 'ROLE', roleCode: 'EXEC_PRE_APPROVER' },
+      options: [],
+    });
 
     await expect(
       service.updateVersion(published.id, { changeNote: '覆盖已发布流程' }, 'designer-1'),

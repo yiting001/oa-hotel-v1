@@ -15,6 +15,12 @@ export const BUSINESS_MODULE_PERMISSIONS = {
   SUPPLY: { CREATE: 'SUPPLY_CREATE', VIEW: 'SUPPLY_VIEW' },
   PURCHASE: { CREATE: 'PURCHASE_CREATE', VIEW: 'PURCHASE_VIEW' },
   PETTY: { CREATE: 'PETTY_CREATE', VIEW: 'PETTY_VIEW' },
+  FOOD_PURCHASE: { CREATE: 'FOOD_PURCHASE_CREATE', VIEW: 'FOOD_PURCHASE_VIEW' },
+  MATERIAL_LOSS: { CREATE: 'MATERIAL_LOSS_CREATE', VIEW: 'MATERIAL_LOSS_VIEW' },
+  ORDER_CIRCULATION: {
+    CREATE: 'ORDER_CIRCULATION_CREATE',
+    VIEW: 'ORDER_CIRCULATION_VIEW',
+  },
 } as const satisfies Record<BusinessModule, Record<BusinessPermissionAction, string>>;
 
 export const DOCUMENT_TYPE_MODULES: Record<DocumentType, BusinessModule> = {
@@ -27,6 +33,9 @@ export const DOCUMENT_TYPE_MODULES: Record<DocumentType, BusinessModule> = {
   MATERIAL_REQUISITION: 'SUPPLY',
   PURCHASE_APPROVAL: 'PURCHASE',
   PETTY_PROCUREMENT: 'PETTY',
+  FOOD_PURCHASE: 'FOOD_PURCHASE',
+  MATERIAL_LOSS: 'MATERIAL_LOSS',
+  ORDER_CIRCULATION: 'ORDER_CIRCULATION',
 };
 
 /** 单据编号规则：前缀 + 发起日期(yyyyMMdd) + 3 位流水号，例如 HT20260727001。 */
@@ -156,6 +165,16 @@ export interface ApprovalOpinion {
   processNodeName: string | null;
   createdAt: string;
 }
+
+/**
+ * 单据附件引用：新上传的附件带服务端 id，可按 id 下载；历史数据只有文件名。
+ */
+export interface DocumentAttachment {
+  id: string;
+  fileName: string;
+}
+
+export type DocumentAttachmentItem = string | DocumentAttachment;
 
 export interface DocumentSummary {
   id: string;

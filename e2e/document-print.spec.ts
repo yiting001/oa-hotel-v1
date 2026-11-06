@@ -51,6 +51,51 @@ test.describe('A4 print media isolation', () => {
     expect(pdf.byteLength).toBeGreaterThan(minimumNonBlankPdfBytes);
   });
 
+  test('food purchase prints the paper requisition layout', async ({ page, request }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'desktop',
+      'Print media is covered by the desktop project.',
+    );
+
+    const applicant = await apiLogin(request, 'applicant');
+    const created = await authorizedPost<CreatedDocumentEnvelope>(
+      request,
+      applicant,
+      '/food-purchases',
+      {
+        applicationDate: '2026-10-28',
+        teamName: '中厨房',
+        items: [
+          {
+            category: '肉禽类',
+            name: '五花肉',
+            specification: '散装',
+            unit: '斤',
+            quantity: 5,
+            requirement: '新鲜、切块',
+            remark: '每日配送',
+          },
+        ],
+        attachments: [],
+      },
+    );
+
+    await loginThroughUi(page, 'applicant');
+    await page.goto(`/documents/FOOD_PURCHASE/${created.data.id}/print`);
+
+    const sheet = page.locator('.business-print-sheet');
+    await expect(sheet.getByText('餐饮食品原材料请购单', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('中厨房', { exact: true })).toBeVisible();
+    for (const label of ['品名', '数量', '单位', '要求', '备注']) {
+      await expect(sheet.getByRole('columnheader', { name: label })).toBeVisible();
+    }
+    await expect(sheet.getByText('五花肉', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('新鲜、切块', { exact: true })).toBeVisible();
+    for (const label of ['填单人', '厨师长签字', '送单时间', '部门审核', '财务审核']) {
+      await expect(sheet.getByText(label, { exact: true })).toBeVisible();
+    }
+  });
+
   test('form designer keeps its A4 sheet visible in print media', async ({ page }, testInfo) => {
     test.skip(
       testInfo.project.name !== 'desktop',

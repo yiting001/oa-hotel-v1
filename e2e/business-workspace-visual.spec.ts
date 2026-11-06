@@ -2,9 +2,10 @@ import { expect, test } from '@playwright/test';
 import { expectNoPageOverflow, loginThroughUi } from './advanced-fixtures';
 
 const workspaces = [
-  { path: '/requests', title: '请示批复' },
+  { path: '/requests', title: '请示批复', hiddenTitle: true },
   { path: '/contract-approvals', title: '合同审批' },
-  { path: '/seal', title: '印章证照' },
+  { path: '/seal', title: '印章申请' },
+  { path: '/seal/licenses', title: '证照申请' },
   { path: '/supply', title: '物资申购与领用' },
 ] as const;
 
@@ -15,7 +16,12 @@ test.describe('业务工作台视觉一致性', () => {
     await loginThroughUi(page, 'office');
     for (const workspace of workspaces) {
       await page.goto(workspace.path);
-      await expect(page.getByRole('heading', { name: workspace.title, exact: true })).toBeVisible();
+      if ('hiddenTitle' in workspace && workspace.hiddenTitle) {
+        // 请示批复按需求隐藏大标题：确认页头没有 h1，其余结构保持一致
+        await expect(page.locator('.page-header h1')).toHaveCount(0);
+      } else {
+        await expect(page.getByRole('heading', { name: workspace.title, exact: true })).toBeVisible();
+      }
       await expect(page.getByTestId('workspace-metric-strip')).toBeVisible();
       await expect(page.getByTestId('workspace-metric-item')).toHaveCount(4);
       await expect(page.locator('[data-testid="workspace-filter-bar"]:visible')).toBeVisible();

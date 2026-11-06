@@ -25,6 +25,12 @@ export function businessDateKey(instant: Date = new Date(), timeZone = businessT
   return `${values.get('year')}${values.get('month')}${values.get('day')}`;
 }
 
+/** 酒店本地当天日期（YYYY-MM-DD），用于单据申请日期等业务字段。 */
+export function businessDateIso(instant: Date = new Date(), timeZone = businessTimeZone()): string {
+  const key = businessDateKey(instant, timeZone);
+  return `${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6, 8)}`;
+}
+
 /** Converts one hotel-local calendar date boundary into its UTC storage instant. */
 export function startOfBusinessDate(value: string, timeZone = businessTimeZone()): Date {
   return zonedLocalDateTimeToUtc(parseBusinessDate(value), timeZone);

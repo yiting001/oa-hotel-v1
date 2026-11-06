@@ -1,4 +1,4 @@
-import type { DocumentStatus } from '@oa/contracts';
+import type { DocumentAttachmentItem, DocumentStatus } from '@oa/contracts';
 
 export interface SealAsset {
   id: string;
@@ -19,7 +19,8 @@ export interface SealCategoryEntry {
 
 export interface SealBorrowInput {
   useDate: string;
-  plannedReturnDate: string;
+  /** 不外带时为空。 */
+  plannedReturnDate: string | null;
   companionIds: string[];
   destination: string;
   sealAssetNames: string[];
@@ -28,7 +29,7 @@ export interface SealBorrowInput {
   sealCategories: SealCategoryEntry[];
   sealTakeout: boolean;
   licenseTakeout: boolean;
-  attachments: string[];
+  attachments: DocumentAttachmentItem[];
 }
 
 export interface SealBorrowRecord extends SealBorrowInput {
@@ -47,6 +48,8 @@ export interface SealBorrowRecord extends SealBorrowInput {
 
 export interface SealUseInput {
   useDate: string;
+  /** 公章外带时的归还日期；不外带为空。 */
+  plannedReturnDate: string | null;
   purpose: string;
   sealAssetNames: string[];
   content: string;
@@ -54,7 +57,7 @@ export interface SealUseInput {
   sealCategories: SealCategoryEntry[];
   sealTakeout: boolean;
   licenseTakeout: boolean;
-  attachments: string[];
+  attachments: DocumentAttachmentItem[];
 }
 
 export interface SealUseRecord extends SealUseInput {

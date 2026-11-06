@@ -41,7 +41,12 @@ const publicRoute = computed(() => route.meta.publicRoute === true);
 const pageTitle = computed(() => route.path === '/workbench' && route.query.tab === 'pending' ? '审批中心' : String(route.meta.title ?? '工作台'));
 const quickStarts = computed(() => availableProcessStarts(session.user?.permissionCodes ?? []));
 const navigationGroups = computed(() => session.menuTreeLoaded ? navigationGroupsFromMenuTree(session.menuTree, session.user?.permissionCodes ?? [], quickStarts.value.length) : visibleNavigationGroups(session.user?.permissionCodes ?? [], quickStarts.value.length));
-const selectedPath = computed(() => selectedNavigationPath(navigationGroups.value, route.path));
+const selectedPath = computed(() => {
+  // 明细/表单页可用 meta.navigationPath 指定所属菜单（如证照借用挂在证照申请下）
+  const explicit = route.meta.navigationPath;
+  if (typeof explicit === 'string' && explicit.length > 0) return explicit;
+  return selectedNavigationPath(navigationGroups.value, route.path);
+});
 const activeGroupLabel = computed(() => navigationGroups.value.find((group) => group.items.some((item) => item.path.split('?')[0] === selectedPath.value))?.label ?? appConfig.productName);
 const mobileNavigationItems = computed(() => mobilePrimaryNavigation(navigationGroups.value));
 const passwordChangeRequired = computed(() => session.user?.passwordChangeRequired === true);

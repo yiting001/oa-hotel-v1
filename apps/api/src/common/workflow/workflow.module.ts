@@ -61,6 +61,6 @@ const entities = [
     WorkflowBatchApprovalService,
     WorkflowCopyService,
   ],
-  exports: [DocumentWorkflowService, WorkflowCopyService, TypeOrmModule],
+  exports: [DocumentWorkflowService, DocumentNumberService, WorkflowCopyService, TypeOrmModule],
 })
 export class WorkflowModule {}

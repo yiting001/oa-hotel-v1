@@ -1,4 +1,5 @@
-import { Type } from 'class-transformer';
+import type { DocumentAttachmentItem } from '@oa/contracts';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -11,6 +12,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { IsDocumentAttachmentList } from '../../../common/validation/document-attachment.decorator';
 
 export class SealCategoryDto {
   @IsString()
@@ -26,21 +28,26 @@ export class SealBorrowDto {
   @IsDateString()
   useDate!: string;
 
+  /** 不外带时留空（空字符串按未填写处理）。 */
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsOptional()
   @IsDateString()
-  plannedReturnDate!: string;
+  plannedReturnDate!: string | null;
 
   @IsArray()
   @IsString({ each: true })
   companionIds!: string[];
 
+  /** 不外带时留空。 */
+  @IsOptional()
   @IsString()
   @MaxLength(300)
-  destination!: string;
+  destination?: string;
 
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsString({ each: true })
-  @MaxLength(200, { each: true })
+  @IsArray({ message: '请至少填写一项证照种类' })
+  @ArrayMinSize(1, { message: '请至少填写一项证照种类' })
+  @IsString({ each: true, message: '证照种类格式不正确' })
+  @MaxLength(200, { each: true, message: '单项名称不能超过 200 个字符' })
   sealAssetNames!: string[];
 
   @IsString()
@@ -66,23 +73,28 @@ export class SealBorrowDto {
   @IsBoolean()
   licenseTakeout?: boolean;
 
-  @IsArray()
-  @IsString({ each: true })
-  attachments!: string[];
+  @IsDocumentAttachmentList()
+  attachments!: DocumentAttachmentItem[];
 }
 
 export class SealUseDto {
   @IsDateString()
   useDate!: string;
 
+  /** 公章外带时填写归还日期；不外带留空。 */
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsOptional()
+  @IsDateString()
+  plannedReturnDate?: string | null;
+
   @IsString()
   @MaxLength(1000)
   purpose!: string;
 
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsString({ each: true })
-  @MaxLength(200, { each: true })
+  @IsArray({ message: '请至少选择一项用章类别' })
+  @ArrayMinSize(1, { message: '请至少选择一项用章类别' })
+  @IsString({ each: true, message: '用章类别格式不正确' })
+  @MaxLength(200, { each: true, message: '单项名称不能超过 200 个字符' })
   sealAssetNames!: string[];
 
   @IsString()
@@ -108,9 +120,8 @@ export class SealUseDto {
   @IsBoolean()
   licenseTakeout?: boolean;
 
-  @IsArray()
-  @IsString({ each: true })
-  attachments!: string[];
+  @IsDocumentAttachmentList()
+  attachments!: DocumentAttachmentItem[];
 }
 
 export class SealCheckoutDto {

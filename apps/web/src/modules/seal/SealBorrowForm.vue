@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Delete, Plus } from '@element-plus/icons-vue';
 import type { WorkflowOverview } from '@oa/contracts';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentFormLayout from '../../shared/components/DocumentFormLayout.vue';
 import FormSection from '../../shared/components/FormSection.vue';
@@ -13,7 +12,7 @@ import { useSessionStore } from '../../shared/session';
 import { useWorkflowStore } from '../../shared/workflow';
 import { useLayoutMode } from '../../ui/useLayoutMode';
 import SealApplicantSection from './SealApplicantSection.vue';
-import SealAttachmentsField from './SealAttachmentsField.vue';
+import AttachmentUploadField from '../../shared/components/AttachmentUploadField.vue';
 import { getSealBorrow, saveSealBorrow, submitSealDocument } from './seal.api';
 import type { SealBorrowInput, SealBorrowRecord } from './seal.types';
 import { useSealResources } from './useSealResources';
@@ -87,10 +86,18 @@ const companionOptions = computed(() =>
 
 const rules: FormRules<SealBorrowInput> = {
   useDate: [{ required: true, message: '请选择使用日期' }],
+  // 不外带时无需归还日期与前往地点，只有外带才校验
   plannedReturnDate: [
-    { required: true, message: '请选择计划归还日期' },
     {
       validator: (_rule, _value, callback) => {
+        if (!form.licenseTakeout) {
+          callback();
+          return;
+        }
+        if (!form.plannedReturnDate) {
+          callback(new Error('外带需选择计划归还日期'));
+          return;
+        }
         if (form.useDate && form.plannedReturnDate < form.useDate) {
           callback(new Error('计划归还日期不能早于使用日期'));
           return;
@@ -100,8 +107,23 @@ const rules: FormRules<SealBorrowInput> = {
     },
   ],
   destination: [
-    { required: true, whitespace: true, message: '请输入前往地点' },
-    { max: 300, message: '前往地点不能超过 300 个字符' },
+    {
+      validator: (_rule, _value, callback) => {
+        if (!form.licenseTakeout) {
+          callback();
+          return;
+        }
+        if (!form.destination.trim()) {
+          callback(new Error('外带需填写前往地点'));
+          return;
+        }
+        if (form.destination.trim().length > 300) {
+          callback(new Error('前往地点不能超过 300 个字符'));
+          return;
+        }
+        callback();
+      },
+    },
   ],
   sealAssetNames: [
     { required: true, type: 'array', min: 1, message: '请至少填写一项印章或证照名称' },
@@ -127,12 +149,13 @@ function applyRecord(value: SealBorrowRecord): void {
   record.value = value;
   Object.assign(form, {
     useDate: value.useDate,
-    plannedReturnDate: value.plannedReturnDate,
+    plannedReturnDate: value.plannedReturnDate ?? '',
     companionIds: [...value.companionIds],
     destination: value.destination,
     sealAssetNames: [...value.sealAssetNames],
     content: value.content,
     submitTo: value.submitTo ?? '',
+    // 用章类别与公章外带已并入印章申请；这里保留历史值，避免编辑旧单据时丢数据
     sealCategories: (value.sealCategories ?? []).map((entry) => ({ ...entry })),
     sealTakeout: Boolean(value.sealTakeout),
     licenseTakeout: Boolean(value.licenseTakeout),
@@ -140,18 +163,20 @@ function applyRecord(value: SealBorrowRecord): void {
   });
 }
 
-function addSealCategory(): void {
-  form.sealCategories = [...form.sealCategories, { name: '饭店章', copies: 1 }];
-}
-
-function removeSealCategory(index: number): void {
-  form.sealCategories = form.sealCategories.filter((_, current) => current !== index);
-}
+watch(
+  () => form.licenseTakeout,
+  (takeout) => {
+    if (takeout) return;
+    form.plannedReturnDate = '';
+    form.companionIds = [];
+    form.destination = '';
+  },
+);
 
 function toInput(): SealBorrowInput {
   return {
     useDate: form.useDate,
-    plannedReturnDate: form.plannedReturnDate,
+    plannedReturnDate: form.plannedReturnDate || null,
     companionIds: [...form.companionIds],
     destination: form.destination.trim(),
     sealAssetNames: form.sealAssetNames
@@ -270,10 +295,10 @@ onMounted(async () => {
     :loading="loading"
     :revision="revision"
     :status="documentStatus"
-    title="印章证照外借申请"
+    title="证照借用申请"
   >
     <template #headerActions>
-      <el-button @click="router.push('/seal')">返回台账</el-button>
+      <el-button @click="router.push('/seal/licenses')">返回台账</el-button>
     </template>
 
     <el-alert v-if="errorMessage" :closable="false" :title="errorMessage" show-icon type="error" />
@@ -292,7 +317,24 @@ onMounted(async () => {
         :department-name="departmentName"
       />
 
-      <FormSection title="外借安排">
+      <FormSection title="证照">
+        <el-form-item label="证照种类" prop="sealAssetNames">
+          <el-select
+            v-model="form.sealAssetNames"
+            allow-create
+            clearable
+            default-first-option
+            filterable
+            multiple
+            no-data-text="输入证照种类后回车添加"
+            placeholder="输入证照种类，如：营业执照，回车添加"
+            :reserve-keyword="false"
+            @change="normalizeAssetNames"
+          />
+        </el-form-item>
+      </FormSection>
+
+      <FormSection title="外带安排">
         <div class="ui-fields">
           <el-form-item label="使用日期" prop="useDate">
             <el-date-picker
@@ -303,88 +345,56 @@ onMounted(async () => {
               value-format="YYYY-MM-DD"
             />
           </el-form-item>
-          <el-form-item label="计划归还日期" prop="plannedReturnDate">
-            <el-date-picker
-              v-model="form.plannedReturnDate"
-              format="YYYY-MM-DD"
-              placeholder="请选择计划归还日期"
-              type="date"
-              value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-          <el-form-item class="ui-field-full" label="陪同人" prop="companionIds">
-            <el-select
-              v-model="form.companionIds"
-              clearable
-              filterable
-              multiple
-              placeholder="选择陪同人员"
-            >
-              <el-option
-                v-for="option in companionOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item class="ui-field-full" label="前往地点" prop="destination">
-            <el-input
-              v-model="form.destination"
-              :maxlength="300"
-              placeholder="请输入前往地点"
-              show-word-limit
-            />
-          </el-form-item>
-        </div>
-      </FormSection>
-
-      <FormSection title="报送与外带">
-        <div class="ui-fields">
-          <el-form-item label="报送单位" prop="submitTo">
-            <el-input v-model="form.submitTo" :maxlength="200" placeholder="如：市场监督管理局 / 客户单位" />
-          </el-form-item>
-          <el-form-item label="公章外带" prop="sealTakeout">
-            <el-radio-group v-model="form.sealTakeout" :disabled="!canEdit">
-              <el-radio-button :value="false">否</el-radio-button>
-              <el-radio-button :value="true">是</el-radio-button>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="证照外带" prop="licenseTakeout">
+          <el-form-item label="是否外带" prop="licenseTakeout">
             <el-radio-group v-model="form.licenseTakeout" :disabled="!canEdit">
               <el-radio-button :value="false">否</el-radio-button>
               <el-radio-button :value="true">是</el-radio-button>
             </el-radio-group>
           </el-form-item>
-        </div>
-        <div class="seal-categories">
-          <div class="seal-categories__head">
-            <span>用章类别及数量</span>
-            <el-button :disabled="!canEdit" :icon="Plus" text @click="addSealCategory">添加用章类别</el-button>
-          </div>
-          <div v-for="(entry, index) in form.sealCategories" :key="index" class="seal-categories__row">
-            <el-input v-model="entry.name" :disabled="!canEdit" :maxlength="100" placeholder="如：饭店章 / 党委章" aria-label="用章类别" />
-            <el-input-number v-model="entry.copies" :disabled="!canEdit" :min="0" :precision="0" aria-label="盖章数" />
-            <el-button :disabled="!canEdit" :icon="Delete" text type="danger" :aria-label="`删除第 ${index + 1} 项用章类别`" @click="removeSealCategory(index)" />
-          </div>
-          <p v-if="form.sealCategories.length === 0" class="ui-text-muted">如需登记盖章数量，请添加用章类别。</p>
+          <template v-if="form.licenseTakeout">
+            <el-form-item label="计划归还日期" prop="plannedReturnDate">
+              <el-date-picker
+                v-model="form.plannedReturnDate"
+                format="YYYY-MM-DD"
+                placeholder="请选择计划归还日期"
+                type="date"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="陪同人" prop="companionIds">
+              <el-select
+                v-model="form.companionIds"
+                clearable
+                filterable
+                multiple
+                placeholder="选择陪同人员"
+              >
+                <el-option
+                  v-for="option in companionOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item class="ui-field-full" label="前往地点" prop="destination">
+              <el-input
+                v-model="form.destination"
+                :maxlength="300"
+                placeholder="请输入前往地点"
+                show-word-limit
+              />
+            </el-form-item>
+          </template>
+          <p v-else class="ui-text-muted seal-takeout-hint">
+            不外带时无需填写归还日期、陪同人和前往地点。
+          </p>
         </div>
       </FormSection>
 
-      <FormSection title="印章证照">
-        <el-form-item label="印章证照名称" prop="sealAssetNames">
-          <el-select
-            v-model="form.sealAssetNames"
-            allow-create
-            clearable
-            default-first-option
-            filterable
-            multiple
-            no-data-text="输入印章或证照名称后回车添加"
-            placeholder="输入印章或证照名称，回车添加"
-            :reserve-keyword="false"
-            @change="normalizeAssetNames"
-          />
+      <FormSection title="报送信息">
+        <el-form-item label="报送单位" prop="submitTo">
+          <el-input v-model="form.submitTo" :maxlength="200" placeholder="如：市场监督管理局 / 客户单位" />
         </el-form-item>
       </FormSection>
 
@@ -403,7 +413,7 @@ onMounted(async () => {
 
       <FormSection title="相关附件">
         <el-form-item prop="attachments">
-          <SealAttachmentsField v-model="form.attachments" :editable="canEdit && !busy" />
+          <AttachmentUploadField v-model="form.attachments" :readonly="!canEdit || busy" />
         </el-form-item>
       </FormSection>
     </el-form>
@@ -414,7 +424,7 @@ onMounted(async () => {
 
     <template #actions>
       <div class="seal-actions" :data-compact="isCompact">
-        <el-button @click="router.push('/seal')">返回</el-button>
+        <el-button @click="router.push('/seal/licenses')">返回</el-button>
         <div class="seal-actions__primary">
           <el-button
             v-if="canExecute"
@@ -436,6 +446,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.seal-takeout-hint { margin: 0; font-size: 13px; }
 .seal-categories { display: grid; gap: 10px; margin-top: 8px; }
 .seal-categories__head { display: flex; align-items: center; justify-content: space-between; color: var(--color-text-tertiary); font-size: 13px; }
 .seal-categories__row { display: grid; grid-template-columns: minmax(0, 1fr) 140px 40px; align-items: center; gap: 8px; }

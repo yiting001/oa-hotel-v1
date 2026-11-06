@@ -64,7 +64,7 @@ npm run seed:demo -w @oa/api
 
 工作区脚本在 `apps/api` 目录运行，因此上述相对数据库路径对应 `apps/api/data/oa.sqlite`。
 
-`OA_BOOTSTRAP_ADMIN_USERNAME=office` 用于本地全功能验收，使 `office` 获得系统管理员权限，从而可以查看组织权限、七类审批流程和 A4 表单设计。该设置只应在本地演示环境使用；不设置时，`office` 仍保持办公室审核人和印章管理员角色，不能制单，也不能进入流程或表单设计器。
+`OA_BOOTSTRAP_ADMIN_USERNAME=office` 用于本地全功能验收，使 `office` 获得系统管理员权限，从而可以查看组织权限、十类审批流程和 A4 表单设计。该设置只应在本地演示环境使用；不设置时，`office` 仍保持办公室审核人和印章管理员角色，不能制单，也不能进入流程或表单设计器。
 
 演示账号密码由 `OA_DEMO_PASSWORD` 决定。默认本地数据包含：
 

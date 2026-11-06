@@ -55,7 +55,7 @@ h3 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 .ui-dialog .el-dialog__header { padding: 0 32px 20px 0; margin: 0; }
 .ui-dialog .el-dialog__title { font-size: 20px; font-weight: 600; }
 .ui-dialog .el-dialog__footer { padding: 20px 0 0; }
-.ui-dialog--compact { display: flex; flex-direction: column; max-width: none; margin: 0; border-radius: 0; height: 100dvh; padding: 16px; }
+.ui-dialog--compact { display: flex; flex-direction: column; max-width: none; margin: 0; border-radius: 0; height: 100vh; height: 100dvh; padding: 16px; }
 .ui-dialog--compact .el-dialog__body { flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 16px; }
 .ui-dialog--compact .el-dialog__footer { padding-bottom: max(0px, env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border-soft); }
 

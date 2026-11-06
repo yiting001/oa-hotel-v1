@@ -77,4 +77,6 @@ export interface PublishedUserTask {
   assigneeRule: PublishedAssigneeRule;
   /** 仅 kind = CHOICE 时非空。 */
   options: PublishedChoiceOption[];
+  /** 仅 kind = CHOICE 时有效：分支办结后直接进入下一审批节点，不再回到选择人。 */
+  advanceAfterBranches?: boolean;
 }

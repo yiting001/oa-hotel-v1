@@ -2,13 +2,19 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IamModule } from '../../common/iam/iam.module';
 import { WorkflowModule } from '../../common/workflow/workflow.module';
+import { AttachmentsModule } from '../attachments/attachments.module';
 import { PurchaseApplicationService } from './application/purchase-application.service';
 import { PurchaseEntity } from './infrastructure/purchase.entity';
 import { PurchaseItemEntity } from './infrastructure/purchase-item.entity';
 import { PurchaseController } from './presentation/purchase.controller';
 
 @Module({
-  imports: [IamModule, WorkflowModule, TypeOrmModule.forFeature([PurchaseEntity, PurchaseItemEntity])],
+  imports: [
+    IamModule,
+    WorkflowModule,
+    AttachmentsModule,
+    TypeOrmModule.forFeature([PurchaseEntity, PurchaseItemEntity]),
+  ],
   controllers: [PurchaseController],
   providers: [PurchaseApplicationService],
 })

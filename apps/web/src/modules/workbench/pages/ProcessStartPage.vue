@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { Box, Document, EditPen, Search, Stamp, Tickets } from '@element-plus/icons-vue';
+import {
+  Box,
+  Document,
+  EditPen,
+  Food,
+  Promotion,
+  Search,
+  Stamp,
+  Tickets,
+  Warning,
+} from '@element-plus/icons-vue';
 import type { DocumentType, PublishedProcessSummary } from '@oa/contracts';
 import { computed, onMounted, ref, type Component } from 'vue';
 import { useRouter } from 'vue-router';
@@ -44,13 +54,21 @@ const documentIcons: Record<DocumentType, Component> = {
   MATERIAL_REQUISITION: Box,
   PURCHASE_APPROVAL: Tickets,
   PETTY_PROCUREMENT: Box,
+  FOOD_PURCHASE: Food,
+  MATERIAL_LOSS: Warning,
+  ORDER_CIRCULATION: Promotion,
 };
 const groupIcons: Record<string, Component> = {
+  请示批复: EditPen,
   合同支出: Tickets,
-  印章证照: Stamp,
+  印章申请: Stamp,
+  证照申请: Box,
   物资管理: Box,
   采购审批: Tickets,
   零星采买: Box,
+  食材采购: Food,
+  物资报损: Warning,
+  订单流转: Promotion,
 };
 
 onMounted(() => void loadApprovalPaths());
@@ -62,7 +80,16 @@ const groups = computed<ProcessStartGroup[]>(() => {
       .toLocaleLowerCase();
     return !normalizedKeyword.value || searchText.includes(normalizedKeyword.value);
   });
-  return ['合同支出', '印章证照', '物资管理']
+  return [
+    '请示批复',
+    '合同支出',
+    '印章申请',
+    '证照申请',
+    '食材采购',
+    '物资报损',
+    '订单流转',
+    '物资管理',
+  ]
     .map((moduleLabel) => ({
       key: moduleLabel,
       label: moduleLabel,

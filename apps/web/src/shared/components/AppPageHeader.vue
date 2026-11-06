@@ -3,19 +3,21 @@ import { computed } from 'vue';
 import { useLayoutMode } from '../../ui/useLayoutMode';
 
 const props = defineProps<{
-  title: string;
+  /** 传空字符串时不渲染 h1，用于按需求隐藏大标题的页面。 */
+  title?: string;
   description?: string;
   eyebrow?: string;
 }>();
 const { isCompact } = useLayoutMode();
 const showEyebrow = computed(() => Boolean(props.eyebrow));
+const showTitle = computed(() => Boolean(props.title));
 </script>
 
 <template>
   <header class="page-header" :data-compact="isCompact">
     <div class="page-header__copy">
       <span v-if="showEyebrow" class="page-header__eyebrow">{{ eyebrow }}</span>
-      <h1>{{ title }}</h1>
+      <h1 v-if="showTitle">{{ title }}</h1>
       <p v-if="description">{{ description }}</p>
       <div v-if="$slots.meta" class="page-header__meta"><slot name="meta" /></div>
     </div>

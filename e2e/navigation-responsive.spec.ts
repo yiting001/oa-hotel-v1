@@ -1,25 +1,43 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { expectNoPageOverflow, loginThroughUi } from './advanced-fixtures';
 
-const keyNavigationLabels = ['审批中心', '请示批复', '印章证照', '公司文件制度'] as const;
+const keyNavigationLabels = [
+  '审批中心',
+  '请示批复',
+  '印章申请',
+  '证照申请',
+  '食材采购',
+  '物资报损',
+  '订单流转',
+] as const;
 
 const processStartLabels = [
-  '合同/支出请示',
+  '请示',
   '合同审批',
   '合同付款',
-  '印章证照外借',
-  '印章证照使用',
+  '证照借用申请',
+  '印章使用申请',
   '物资申购',
   '物资领用',
+  '食材采购',
+  '物资报损',
+  '订单流转',
 ] as const;
 
 const mobileBusinessPages = [
-  { path: '/requests', heading: '请示批复' },
-  { path: '/contract-approvals', heading: '合同审批' },
-  { path: '/seal', heading: '印章证照' },
-  { path: '/supply', heading: '物资申购与领用' },
-  { path: '/documents', heading: '公司文件制度' },
-  { path: '/notices', heading: '公司通知' },
+  // 请示批复按需求隐藏大标题，用说明文案作为页面标识
+  {
+    path: '/requests',
+    heading: '',
+    text: '部门发起请示，部门负责人审核后由办公室勾选下一步部门，再报主管领导审批。',
+  },
+  { path: '/contract-approvals', heading: '合同审批', text: '' },
+  { path: '/seal', heading: '印章申请', text: '' },
+  { path: '/seal/licenses', heading: '证照申请', text: '' },
+  { path: '/food-purchase', heading: '食材采购', text: '' },
+  { path: '/material-loss', heading: '物资报损', text: '' },
+  { path: '/order-circulation', heading: '订单流转', text: '' },
+  { path: '/supply', heading: '物资申购与领用', text: '' },
 ] as const;
 
 test.describe('enterprise navigation and responsive process entry', () => {
@@ -45,9 +63,13 @@ test.describe('enterprise navigation and responsive process entry', () => {
 
     await page.goto('/start');
     await expect(page.getByRole('heading', { name: '发起申请', exact: true })).toBeVisible();
-    await expect(page.getByTestId('process-start-item')).toHaveCount(7);
+    await expect(page.getByTestId('process-start-item')).toHaveCount(10);
+    const processItems = page.getByTestId('process-start-item');
     for (const label of processStartLabels) {
-      await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
+      // 分组标题与流程名称可能同名（如「食材采购」），断言限定在流程卡片内
+      await expect(
+        processItems.getByRole('heading', { name: label, exact: true }),
+      ).toBeVisible();
     }
     await expectNoPageOverflow(page);
   });
@@ -147,9 +169,14 @@ test.describe('enterprise navigation and responsive process entry', () => {
 
     for (const businessPage of mobileBusinessPages) {
       await page.goto(businessPage.path);
-      await expect(
-        page.getByRole('heading', { name: businessPage.heading, exact: true }),
-      ).toBeVisible();
+      if (businessPage.heading) {
+        await expect(
+          page.getByRole('heading', { name: businessPage.heading, exact: true }),
+        ).toBeVisible();
+      }
+      if (businessPage.text) {
+        await expect(page.getByText(businessPage.text).first()).toBeVisible();
+      }
       await expectNoPageOverflow(page);
     }
 

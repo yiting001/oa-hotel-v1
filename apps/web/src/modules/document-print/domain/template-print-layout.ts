@@ -154,10 +154,12 @@ function printField(
   references: DocumentPrintReferences,
 ): PrintField & { key: string } {
   const key = stringValue(cell.field);
+  // 签字栏等固定单元格用 text 提供空值，避免渲染成缺失字段的「-」
+  const literal = typeof cell.text === 'string' ? cell.text : null;
   return {
     key,
     label: stringValue(cell.label) || key,
-    value: resolveDocumentPrintValue(data, key, references),
+    value: literal ?? resolveDocumentPrintValue(data, key, references),
     span: wideCell(cell) ? 2 : 1,
   };
 }

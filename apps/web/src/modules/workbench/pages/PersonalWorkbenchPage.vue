@@ -428,7 +428,8 @@ async function scrollActiveTabIntoView(): Promise<void> {
         </el-button>
       </div>
 
-      <el-tabs v-if="!isCompact" v-model="activeTab" class="workbench-tabs">
+      <!-- 手机端用上方下拉切换工作箱，页签头隐藏但内容仍需渲染 -->
+      <el-tabs v-model="activeTab" class="workbench-tabs">
         <el-tab-pane v-if="isApprovalCenter" name="pending"
           ><template #label>待办<el-badge :value="workbench.count('PENDING')" /></template>
           <div v-if="canBatchApprove" class="workbench-batch-toolbar">
@@ -567,6 +568,7 @@ async function scrollActiveTabIntoView(): Promise<void> {
 .workbench-filter-bar .ui-toolbar__end { align-self: flex-start; }
 .workbench-tabs :deep(.el-tabs__header) { margin-bottom: 10px; }
 .workbench-tabs :deep(.el-badge) { margin-left: 8px; }
+html[data-layout='compact'] .workbench-tabs :deep(.el-tabs__header) { display: none; }
 .workbench-mobile-tab-select { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .workbench-mobile-tab-select > span { flex: 0 0 auto; color: var(--color-text-tertiary); font-size: 13px; }
 .workbench-mobile-tab-select :deep(.el-select) { flex: 1; min-width: 0; }

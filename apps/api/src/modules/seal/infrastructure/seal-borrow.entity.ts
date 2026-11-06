@@ -1,3 +1,4 @@
+import type { DocumentAttachmentItem } from '@oa/contracts';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('seal_borrow_requests')
@@ -51,8 +52,9 @@ export class SealBorrowEntity {
   @Column('text')
   content!: string;
 
+  /** 上传附件（{ id, fileName }）与历史文件名（字符串）混排。 */
   @Column('simple-json')
-  attachments!: string[];
+  attachments!: DocumentAttachmentItem[];
 
   @Column('text', { default: 'NOT_CHECKED_OUT' })
   executionStatus!: string;

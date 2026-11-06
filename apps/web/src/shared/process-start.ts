@@ -38,6 +38,15 @@ const processStartDetails: Record<DocumentType, Pick<ProcessStartItem, 'descript
   PETTY_PROCUREMENT: {
     description: '从物资数据库勾选商品并填写数量，系统自动计算合计金额。',
   },
+  FOOD_PURCHASE: {
+    description: '按品类与品名登记食材明细，价格可暂不填写，由审批领导补充或调整。',
+  },
+  MATERIAL_LOSS: {
+    description: '登记报损物资明细、数量与金额，说明报损原因后逐级审批。',
+  },
+  ORDER_CIRCULATION: {
+    description: '填写单子主要内容和附件，选择抄送人后发起流转，具体内容以附件为准。',
+  },
 };
 
 const documentOrder: DocumentType[] = [
@@ -48,6 +57,9 @@ const documentOrder: DocumentType[] = [
   'SEAL_USE',
   'MATERIAL_PURCHASE',
   'MATERIAL_REQUISITION',
+  'FOOD_PURCHASE',
+  'MATERIAL_LOSS',
+  'ORDER_CIRCULATION',
 ];
 
 export function availableProcessStarts(permissionCodes: string[]): ProcessStartItem[] {

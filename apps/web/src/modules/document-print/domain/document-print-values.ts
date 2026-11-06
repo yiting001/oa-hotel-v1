@@ -53,6 +53,22 @@ export function stringArray(value: unknown): string[] {
     : [];
 }
 
+/** 附件清单打印：新数据是 { id, fileName }，历史数据是纯文件名。 */
+export function attachmentFileNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const names: string[] = [];
+  for (const item of value) {
+    if (typeof item === 'string' && item.length > 0) {
+      names.push(item);
+      continue;
+    }
+    if (isRecord(item) && typeof item.fileName === 'string' && item.fileName.length > 0) {
+      names.push(item.fileName);
+    }
+  }
+  return names;
+}
+
 export function stringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }

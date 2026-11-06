@@ -6,6 +6,7 @@ import type { Repository } from 'typeorm';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiExceptionFilter } from '../src/common/errors/api-exception.filter';
+import { ProcessDesignService } from '../src/common/process-design/application/process-design.service';
 import { DocumentWorkflowService } from '../src/common/workflow/application/document-workflow.service';
 import { DocumentIndexEntity } from '../src/common/workflow/infrastructure/document-index.entity';
 import { WorkflowDefinitionEntity } from '../src/common/workflow/infrastructure/workflow-definition.entity';
@@ -49,7 +50,15 @@ describe('工作流读取模型与单据访问权限', () => {
     candidates = moduleRef.get(getRepositoryToken(WorkflowTaskCandidateEntity));
     server = app.getHttpServer() as Parameters<typeof request>[0];
 
-    for (const username of ['applicant', 'manager', 'finance', 'execpre', 'exec', 'warehouse']) {
+    for (const username of [
+      'applicant',
+      'manager',
+      'office',
+      'finance',
+      'execpre',
+      'exec',
+      'warehouse',
+    ]) {
       const response = await request(server)
         .post('/api/v1/auth/login')
         .send({ username, password: testPassword })
@@ -68,6 +77,11 @@ describe('工作流读取模型与单据访问权限', () => {
 
     const managerTask = await taskForDocument('manager', document.data.id);
     await approve('manager', managerTask.id);
+    // 部门负责人之后由办公室勾选下一步部门，部门办结后直接送主管领导
+    const officeTask = await taskForDocument('office', document.data.id);
+    await approveWithChoices('office', officeTask.id, ['finance-dept']);
+    const financeTask = await taskForDocument('finance', document.data.id);
+    await approve('finance', financeTask.id);
     const execPreTask = await taskForDocument('execpre', document.data.id);
     await approve('execpre', execPreTask.id);
 
@@ -105,7 +119,7 @@ describe('工作流读取模型与单据访问权限', () => {
     await submit(document.data.id);
     const managerTask = await taskForDocument('manager', document.data.id);
     await approve('manager', managerTask.id);
-    const execPreTask = await taskForDocument('execpre', document.data.id);
+    const officeTask = await taskForDocument('office', document.data.id);
 
     const response = await request(server)
       .get(`/api/v1/workflow/documents/${document.data.id}/overview`)
@@ -129,18 +143,21 @@ describe('工作流读取模型与单据访问权限', () => {
       name: '请示批复流程',
       version: 1,
       processVersionId: overview.document.processVersionId,
-      steps: ['部门负责人审批', '主管领导', '总经理'],
+      steps: ['部门负责人审批', '办公室审核（选择下一步）', '主管领导'],
     });
     expect(overview.currentTask).toMatchObject({
-      id: execPreTask.id,
+      id: officeTask.id,
       documentId: document.data.id,
       currentStep: 1,
-      processNodeId: 'approval-2',
-      processNodeName: '主管领导',
-      assigneeRole: 'EXEC_PRE_APPROVER',
+      processNodeId: 'office-review',
+      processNodeName: '办公室审核（选择下一步）',
+      assigneeRole: 'OFFICE_REVIEWER',
       status: 'PENDING',
-      nodeKind: 'APPROVAL',
+      nodeKind: 'CHOICE',
     });
+    expect(overview.currentTask?.choiceOptions.map((option) => option.name)).toContain(
+      '财务部审核',
+    );
     expect(overview.opinions).toEqual([
       expect.objectContaining({
         action: 'SUBMIT',
@@ -160,6 +177,52 @@ describe('工作流读取模型与单据访问权限', () => {
     expect(overview.opinions.every((opinion) => !Number.isNaN(Date.parse(opinion.createdAt)))).toBe(
       true,
     );
+  });
+
+  it('rebinds untouched documents to the latest published process version', async () => {
+    const processDesign = app.get(ProcessDesignService);
+    const published = await processDesign.findPublishedByDocumentType('CONTRACT_REQUEST');
+    expect(published).toBeTruthy();
+
+    const draft = await createRequest('旧流程草稿', 1000);
+    await documents.update(
+      { id: draft.data.id },
+      { processVersionId: published!.version.id },
+    );
+
+    const running = await createRequest('旧流程在途', 2000);
+    await submit(running.data.id);
+    const oldTask = await taskForDocument('manager', running.data.id);
+    await documents.update(
+      { id: running.data.id },
+      { processVersionId: published!.version.id },
+    );
+
+    // 发布同设计的新版本，模拟链路调整
+    const copy = await processDesign.copyVersion(
+      published!.definition.id,
+      { changeNote: '测试链路调整' },
+      'tester',
+    );
+    const latest = await processDesign.publishVersion(copy.id, 'tester');
+
+    await workflow.onApplicationBootstrap();
+
+    const draftAfter = await documents.findOneByOrFail({ id: draft.data.id });
+    expect(draftAfter.processVersionId).toBe(latest.id);
+
+    const runningAfter = await documents.findOneByOrFail({ id: running.data.id });
+    expect(runningAfter.processVersionId).toBe(latest.id);
+    expect(runningAfter.status).toBe('IN_REVIEW');
+
+    const cancelled = await tasks.findOneByOrFail({ id: oldTask.id });
+    expect(cancelled.status).toBe('CANCELLED');
+    const pending = await tasks.findBy({
+      documentId: running.data.id,
+      status: 'PENDING',
+    });
+    expect(pending).toHaveLength(1);
+    expect(pending[0].assigneeRole).toBe('APPLICANT_DEPARTMENT_MANAGER');
   });
 
   it('rejects unauthenticated workflow read requests', async () => {
@@ -398,6 +461,50 @@ describe('工作流读取模型与单据访问权限', () => {
     expect(await workflow.readOpinions(documentId)).toEqual([]);
   });
 
+  it('skips the department manager node when the applicant is the manager and the rest of the chain approves', async () => {
+    const document = await createRequest('经理本人请示', 300000);
+    await definitions.update(
+      { code: 'contract-request' },
+      { steps: ['DEPARTMENT_MANAGER', 'EXEC_PRE_APPROVER', 'EXEC_APPROVER'] },
+    );
+    // 由部门负责人本人发起、提交：部门负责人节点解析到的唯一候选人就是申请人，应自动跳过
+    const managerSession = sessionUser({
+      id: 'user-manager',
+      username: 'manager',
+      displayName: '部门总监',
+      roleCodes: ['DEPARTMENT_MANAGER'],
+      permissionCodes: ['DOCUMENT_CREATE', 'DOCUMENT_VIEW', 'CONTRACT_CREATE', 'CONTRACT_VIEW'],
+    });
+    await documents.update(
+      { id: document.data.id },
+      { applicantId: 'user-manager', processVersionId: null, workflowCode: 'contract-request' },
+    );
+    await workflow.submit(document.data.id, crypto.randomUUID(), managerSession);
+
+    const submitted = await documents.findOneByOrFail({ id: document.data.id });
+    expect(submitted).toMatchObject({ status: 'IN_REVIEW', currentStep: 1 });
+
+    // 部门负责人节点被跳过，直接生成分管副总待办
+    const execPreTask = await taskForDocument('execpre', document.data.id);
+    await approve('execpre', execPreTask.id);
+    const execTask = await taskForDocument('exec', document.data.id);
+    await approve('exec', execTask.id);
+
+    const approved = await documents.findOneByOrFail({ id: document.data.id });
+    expect(approved).toMatchObject({ status: 'APPROVED', currentStep: null });
+  });
+
+  it('numbers a new request with the department abbreviation, date, and serial', async () => {
+    const first = await createRequest('编号格式请示', 1000);
+    expect(first.data.number).toMatch(/^YWB\d{8}-\d{3}$/);
+    const second = await createRequest('编号连号请示', 1000);
+    expect(second.data.number).toMatch(/^YWB\d{8}-\d{3}$/);
+    expect(second.data.number).not.toBe(first.data.number);
+    const firstSerial = Number(first.data.number.slice(-3));
+    const secondSerial = Number(second.data.number.slice(-3));
+    expect(secondSerial).toBe(firstSerial + 1);
+  });
+
   async function createRequest(
     title: string,
     amountCents: number,
@@ -429,6 +536,18 @@ describe('工作流读取模型与单据访问权限', () => {
       .post(`/api/v1/workflow/tasks/${taskId}/approve`)
       .auth(token(username), { type: 'bearer' })
       .send({ requestId: crypto.randomUUID(), comment: '同意' })
+      .expect(201);
+  }
+
+  async function approveWithChoices(
+    username: string,
+    taskId: string,
+    choices: string[],
+  ): Promise<void> {
+    await request(server)
+      .post(`/api/v1/workflow/tasks/${taskId}/approve`)
+      .auth(token(username), { type: 'bearer' })
+      .send({ requestId: crypto.randomUUID(), comment: '指派审核', choices })
       .expect(201);
   }
 

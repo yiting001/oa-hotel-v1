@@ -1,3 +1,4 @@
+import type { DocumentAttachmentItem } from '@oa/contracts';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -10,6 +11,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { IsDocumentAttachmentList } from '../../../common/validation/document-attachment.decorator';
 
 export class PurchaseItemDto {
   @IsString()
@@ -21,10 +23,9 @@ export class PurchaseItemDto {
   @MaxLength(200)
   specification?: string;
 
-  @IsOptional()
   @IsString()
   @MaxLength(20)
-  unit?: string;
+  unit!: string;
 
   @IsInt()
   @Min(1)
@@ -104,13 +105,16 @@ export class PurchaseDto {
   @MaxLength(200)
   name!: string;
 
+  /** 采购金额已从表单取消，保留字段兼容旧客户端与历史数据。 */
+  @IsOptional()
   @IsInt()
   @Min(0)
-  amountCents!: number;
+  amountCents?: number;
 
+  @IsOptional()
   @IsString()
   @MaxLength(300)
-  counterpartyName!: string;
+  counterpartyName?: string;
 
   @IsOptional()
   @IsString()
@@ -136,7 +140,17 @@ export class PurchaseDto {
   @MaxLength(1000)
   remark!: string | null;
 
+  @IsDocumentAttachmentList()
+  attachments!: DocumentAttachmentItem[];
+}
+
+/** 采购经办在审批节点补充单价与附件。 */
+export class PurchaseApprovalDto {
   @IsArray()
-  @IsString({ each: true })
-  attachments!: string[];
+  @ValidateNested({ each: true })
+  @Type(() => PurchaseItemDto)
+  items!: PurchaseItemDto[];
+
+  @IsDocumentAttachmentList()
+  attachments!: DocumentAttachmentItem[];
 }

@@ -1,3 +1,5 @@
+import type { DocumentAttachmentItem } from '@oa/contracts';
+
 /** 采购申请单明细：品名 / 规格 / 订购数量 / 单价 / 总价。 */
 export interface PurchaseItem {
   id: string;
@@ -39,9 +41,16 @@ export interface PurchaseData {
   items: PurchaseItem[];
   applicantId: string;
   departmentId: string;
-  attachments: string[];
+  /** 上传附件（带 id 可下载）与历史文件名混排。 */
+  attachments: DocumentAttachmentItem[];
+  /** 采购经办在审批节点可补充单价与附件。 */
+  canModerate?: boolean;
 }
 
-export type PurchasePayload = Omit<PurchaseData, 'id' | 'number' | 'applicantId' | 'departmentId' | 'items'> & {
+/** 明细小计与总价由服务端按明细汇总，前端不提交。 */
+export type PurchasePayload = Omit<
+  PurchaseData,
+  'id' | 'number' | 'applicantId' | 'departmentId' | 'items' | 'subtotalCents'
+> & {
   items: PurchaseItemDraft[];
 };

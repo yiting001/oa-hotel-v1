@@ -8,8 +8,12 @@ import { WorkflowModule } from './common/workflow/workflow.module';
 import { WorkbenchModule } from './common/workbench/workbench.module';
 import { FormDesignModule } from './common/form-design/form-design.module';
 import { ProcessDesignModule } from './common/process-design/process-design.module';
+import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { ContractModule } from './modules/contract/contract.module';
+import { FoodPurchaseModule } from './modules/food-purchase/food-purchase.module';
 import { InsightModule } from './modules/insight/insight.module';
+import { MaterialLossModule } from './modules/material-loss/material-loss.module';
+import { OrderCirculationModule } from './modules/order-circulation/order-circulation.module';
 import { LibraryModule } from './modules/library/library.module';
 import { PettyModule } from './modules/petty/petty.module';
 import { PortalModule } from './modules/portal/portal.module';
@@ -27,9 +31,13 @@ import { SupplyModule } from './modules/supply/supply.module';
     WorkflowModule,
     WorkbenchModule,
     PortalModule,
+    AttachmentsModule,
     ContractModule,
+    FoodPurchaseModule,
     InsightModule,
     LibraryModule,
+    MaterialLossModule,
+    OrderCirculationModule,
     PurchaseModule,
     PettyModule,
     SealModule,

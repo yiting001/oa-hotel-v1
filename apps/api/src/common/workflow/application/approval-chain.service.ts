@@ -7,6 +7,7 @@ import { RoleEntity } from '../../iam/infrastructure/role.entity';
 import { ProcessDesignService } from '../../process-design/application/process-design.service';
 import { parsePublishedUserTasks } from '../../process-design/domain/process-design.rules';
 import { createBusinessProcessTemplate } from '../../process-design/seed/business-process.templates';
+import { BUSINESS_WORKFLOW_CATALOG } from '../domain/business-workflow.catalog';
 import { WorkflowDefinitionEntity } from '../infrastructure/workflow-definition.entity';
 
 export interface ApprovalChainSummary {
@@ -83,12 +84,19 @@ export class ApprovalChainService {
     if (!definition) {
       throw new DomainError('WORKFLOW_NOT_CONFIGURED', '该单据未配置审批流程');
     }
+    // 后台改链时保留「选择下一步」配置，避免办公室勾选部门的能力被静默移除
+    const catalogChoice = BUSINESS_WORKFLOW_CATALOG.find(
+      (candidate) => candidate.documentType === documentType,
+    )?.manualChoice;
     const template = createBusinessProcessTemplate({
       legacyCode: definition.code.toLowerCase(),
       processCode: definition.code,
       documentType,
       name: definition.name.replace(/流程$/, ''),
       approvalRoles: normalized,
+      ...(catalogChoice && normalized.includes(catalogChoice.roleCode)
+        ? { manualChoice: catalogChoice }
+        : {}),
     });
     const draft = await this.processDesign.copyVersion(
       definition.id,

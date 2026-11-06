@@ -1,3 +1,4 @@
+import type { DocumentAttachmentItem } from '@oa/contracts';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('seal_use_requests')
@@ -19,6 +20,10 @@ export class SealUseEntity {
 
   @Column('text')
   useDate!: string;
+
+  /** 公章外带时的归还日期；不外带为空。 */
+  @Column('text', { nullable: true })
+  plannedReturnDate!: string | null;
 
   @Column('text')
   purpose!: string;
@@ -45,8 +50,9 @@ export class SealUseEntity {
   @Column('text')
   content!: string;
 
+  /** 上传附件（{ id, fileName }）与历史文件名（字符串）混排。 */
   @Column('simple-json')
-  attachments!: string[];
+  attachments!: DocumentAttachmentItem[];
 
   @Column('text', { default: 'NOT_EXECUTED' })
   executionStatus!: string;

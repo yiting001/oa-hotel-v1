@@ -33,7 +33,14 @@ import { PettyChangeLogEntity } from '../../modules/petty/infrastructure/petty-c
 import { PettyMaterialEntity } from '../../modules/petty/infrastructure/petty-material.entity';
 import { PettyProcurementItemEntity } from '../../modules/petty/infrastructure/petty-procurement-item.entity';
 import { LibraryDocumentEntity } from '../../modules/library/infrastructure/library-document.entity';
+import { DocumentAttachmentEntity } from '../../modules/attachments/infrastructure/document-attachment.entity';
 import { PettyProcurementEntity } from '../../modules/petty/infrastructure/petty-procurement.entity';
+import { FoodPurchaseEntity } from '../../modules/food-purchase/infrastructure/food-purchase.entity';
+import { FoodPurchaseItemEntity } from '../../modules/food-purchase/infrastructure/food-purchase-item.entity';
+import { FoodPurchaseChangeLogEntity } from '../../modules/food-purchase/infrastructure/food-purchase-change-log.entity';
+import { MaterialLossEntity } from '../../modules/material-loss/infrastructure/material-loss.entity';
+import { MaterialLossItemEntity } from '../../modules/material-loss/infrastructure/material-loss-item.entity';
+import { OrderCirculationEntity } from '../../modules/order-circulation/infrastructure/order-circulation.entity';
 
 export const databaseEntities = [
   DepartmentEntity,
@@ -64,6 +71,7 @@ export const databaseEntities = [
   PettyMaterialEntity,
   PettyProcurementEntity,
   LibraryDocumentEntity,
+  DocumentAttachmentEntity,
   PettyProcurementItemEntity,
   PettyChangeLogEntity,
   SealAssetEntity,
@@ -72,4 +80,10 @@ export const databaseEntities = [
   MaterialItemEntity,
   MaterialPurchaseEntity,
   MaterialRequisitionEntity,
+  FoodPurchaseEntity,
+  FoodPurchaseItemEntity,
+  FoodPurchaseChangeLogEntity,
+  MaterialLossEntity,
+  MaterialLossItemEntity,
+  OrderCirculationEntity,
 ];

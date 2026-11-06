@@ -1,6 +1,8 @@
 import type { SessionUser } from '@oa/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DataSource } from 'typeorm';
 import { IamService } from '../../../common/iam/application/iam.service';
+import { DocumentNumberService } from '../../../common/workflow/application/document-number.service';
 import { DocumentWorkflowService } from '../../../common/workflow/application/document-workflow.service';
 import { DocumentIndexEntity } from '../../../common/workflow/infrastructure/document-index.entity';
 import type { SealRepository } from '../domain/seal.repository';
@@ -18,6 +20,11 @@ describe('SealApplicationService data scope', () => {
   };
   let iam: {
     canAccessResource: ReturnType<typeof vi.fn<IamService['canAccessResource']>>;
+  };
+  let documentNumbers: {
+    generateForDepartment: ReturnType<
+      typeof vi.fn<DocumentNumberService['generateForDepartment']>
+    >;
   };
   let service: SealApplicationService;
 
@@ -40,13 +47,19 @@ describe('SealApplicationService data scope', () => {
     iam = {
       canAccessResource: vi.fn<IamService['canAccessResource']>(),
     };
+    documentNumbers = {
+      generateForDepartment: vi.fn<DocumentNumberService['generateForDepartment']>(),
+    };
     workflow.getDocument.mockResolvedValue(documentFixture('APPROVED'));
     workflow.readOpinions.mockResolvedValue([]);
     vi.mocked(repository.saveBorrow).mockImplementation(async (entity) => entity);
     vi.mocked(repository.saveUse).mockImplementation(async (entity) => entity);
+    documentNumbers.generateForDepartment.mockResolvedValue('YWB20260101-001');
     service = new SealApplicationService(
       repository,
       workflow as unknown as DocumentWorkflowService,
+      documentNumbers as unknown as DocumentNumberService,
+      { manager: {} } as unknown as DataSource,
       iam as unknown as IamService,
     );
   });
@@ -72,7 +85,7 @@ describe('SealApplicationService data scope', () => {
 
     expect(workflow.updateDraftTitle).toHaveBeenCalledWith(
       borrow.id,
-      '印章证照外借：政务服务中心',
+      '证照借用：政务服务中心',
       scopedUser,
     );
   });

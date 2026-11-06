@@ -5,7 +5,8 @@ import AppPageHeader from './AppPageHeader.vue';
 import StatusTag from './StatusTag.vue';
 
 const props = defineProps<{
-  title: string;
+  /** 传空字符串时不渲染大标题，用于按需求隐藏标题的单据表单。 */
+  title?: string;
   eyebrow?: string;
   description?: string;
   documentNumber?: string | null;

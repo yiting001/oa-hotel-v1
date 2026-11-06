@@ -11,6 +11,7 @@ playwright-report/
 test-results/
 .zcode/
 apps/api/storage/
+/storage/
 apps/api/release/
 apps/web/.vite/
 packages/contracts/cjs/*.js
