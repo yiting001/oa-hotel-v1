@@ -1,11 +1,5 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../../common/database/column-types';
 
 export const LIBRARY_CATEGORIES = [
   'REGULATION',
@@ -58,9 +52,9 @@ export class LibraryDocumentEntity {
   @Column('integer', { default: 0 })
   downloadCount!: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: DATETIME_COLUMN_TYPE })
   updatedAt!: Date;
 }

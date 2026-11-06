@@ -60,6 +60,7 @@ import { PostgresPurchaseRequisitionSheet1786700000001 } from './migrations-post
 import { PostgresSealRequisitionSheet1786600000001 } from './migrations-postgres/1786600000001-PostgresSealRequisitionSheet';
 import { PostgresLegalAdvisorPermissions1786300000001 } from './migrations-postgres/1786300000001-PostgresLegalAdvisorPermissions';
 import { PostgresWorkflowManualChoice1786200000001 } from './migrations-postgres/1786200000001-PostgresWorkflowManualChoice';
+import { PostgresTimestamptzDateColumns1787500000001 } from './migrations-postgres/1787500000001-PostgresTimestamptzDateColumns';
 
 interface DatabaseOptionOverrides {
   migrationsRun?: boolean;
@@ -94,6 +95,7 @@ export function createDatabaseOptions(overrides: DatabaseOptionOverrides = {}): 
         PostgresBusinessExpansion1787200000001,
         PostgresSealUseReturnDate1787300000001,
         PostgresPurchaseChainWithoutVicePresident1787400000001,
+        PostgresTimestamptzDateColumns1787500000001,
       ],
       migrationsRun: overrides.migrationsRun ?? true,
       synchronize: false,

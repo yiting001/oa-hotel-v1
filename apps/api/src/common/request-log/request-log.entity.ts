@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../database/column-types';
 
 /** API 请求级日志：traceId、出参入参、耗时与错误栈，用于问题排查。 */
 @Entity({ name: 'request_logs' })
@@ -45,6 +46,6 @@ export class RequestLogEntity {
   errorStack!: string | null;
 
   @Index()
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 }

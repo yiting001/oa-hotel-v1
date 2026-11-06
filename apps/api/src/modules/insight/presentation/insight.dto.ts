@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 
 export class DocumentSearchQuery {
   @IsOptional()
@@ -30,11 +30,13 @@ export class DocumentSearchQuery {
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateFrom?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateTo?: string;
 
   @IsOptional()
@@ -69,11 +71,13 @@ export class OperationLogQuery {
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateFrom?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateTo?: string;
 }
 
@@ -105,11 +109,13 @@ export class RequestLogQuery {
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateFrom?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateTo?: string;
 
   @IsOptional()
@@ -127,10 +133,12 @@ export class StatisticsQuery {
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateFrom?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(10)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateTo?: string;
 }

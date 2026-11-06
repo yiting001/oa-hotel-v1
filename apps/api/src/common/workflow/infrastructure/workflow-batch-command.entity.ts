@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 
 @Entity('workflow_batch_commands')
 export class WorkflowBatchCommandEntity {
@@ -15,6 +16,6 @@ export class WorkflowBatchCommandEntity {
   @Column('simple-json')
   resultJson!: Record<string, unknown>;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 }
