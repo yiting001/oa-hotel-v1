@@ -1,8 +1,8 @@
 /* 东方饭店 OA 离线壳：页面网络优先、哈希资源缓存优先、接口不缓存。 */
 const BASE_PATH = new URL('./', self.location.href).pathname;
 const appUrl = (path = '') => `${BASE_PATH}${path}`;
-const SHELL_CACHE = 'oa-shell-v2';
-const ASSET_CACHE = 'oa-assets-v2';
+const SHELL_CACHE = 'oa-shell-v3';
+const ASSET_CACHE = 'oa-assets-v3';
 const CURRENT_CACHES = new Set([SHELL_CACHE, ASSET_CACHE]);
 const PRECACHE_URLS = [
   appUrl(''),
@@ -14,6 +14,7 @@ const PRECACHE_URLS = [
   appUrl('icons/icon-512.png'),
   appUrl('icons/icon-maskable-512.png'),
   appUrl('icons/apple-touch-icon.png'),
+  appUrl('brand/logo-mark.webp'),
 ];
 
 self.addEventListener('install', (event) => {

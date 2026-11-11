@@ -8,11 +8,11 @@ export const appConfig = Object.freeze({
   productName: import.meta.env.VITE_OA_PRODUCT_NAME?.trim() || defaultProductName,
 });
 
-export const companyMark = appConfig.companyName.slice(0, 1).toUpperCase();
-
 const base = appBasePath();
 
 export const brandAssets = Object.freeze({
+  /** 东方饭店官方标志（徽标版，透明底），用于侧栏、登录页与打印抬头。 */
+  logoMark: `${base}brand/logo-mark.webp`,
   loginBackground: `${base}assets/hotel/dongfang-courtyard-dusk.webp`,
   portalBanner: `${base}assets/hotel/dongfang-courtyard-day.webp`,
   portalNewsFallback: `${base}assets/hotel/dongfang-tower-sunset.webp`,

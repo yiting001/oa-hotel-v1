@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { appConfig, companyMark } from '../../../shared/app-config';
+import { appConfig, brandAssets } from '../../../shared/app-config';
 import type { BusinessDocumentPrintModel } from '../domain/document-print';
 import BusinessPrintSection from './BusinessPrintSection.vue';
 
@@ -22,7 +22,7 @@ const sheetStyle = computed(() => ({
       :class="{ 'business-print-sheet__header--without-number': !model.page.showDocumentNumber }"
     >
       <div class="business-print-brand" :aria-label="appConfig.companyName">
-        <span class="business-print-brand__mark">{{ companyMark }}</span>
+        <img class="business-print-brand__mark" :src="brandAssets.logoMark" alt="" />
         <span>
           <strong>{{ appConfig.companyName }}</strong>
           <small>{{ appConfig.productName }}</small>

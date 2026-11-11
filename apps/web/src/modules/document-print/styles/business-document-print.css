@@ -120,17 +120,11 @@
 }
 
 .business-print-brand__mark {
-  display: inline-flex;
-  width: 9mm;
-  height: 9mm;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 9mm;
-  border: 0.5mm solid #222;
-  border-radius: 50%;
-  font-size: 15pt;
-  font-weight: 700;
-  line-height: 1;
+  display: block;
+  width: 11mm;
+  height: 11mm;
+  flex: 0 0 11mm;
+  object-fit: contain;
 }
 
 .business-print-brand > span:last-child {

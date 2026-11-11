@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Close, Lock, Menu, SwitchButton, User } from '@e
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import { unauthorizedEventName } from '../shared/api';
-import { appConfig, companyMark } from '../shared/app-config';
+import { appConfig, brandAssets } from '../shared/app-config';
 import { useDirectoryStore } from '../shared/directory';
 import { availableProcessStarts } from '../shared/process-start';
 import { useSessionStore } from '../shared/session';
@@ -69,7 +69,7 @@ function handleUnauthorized(): void {
   <el-container v-else class="ui-shell">
     <el-aside v-if="!passwordChangeRequired && !isCompact" :width="siderCollapsed ? '72px' : '224px'" class="ui-sidebar">
       <div class="ui-brand" :class="{ 'ui-brand--collapsed': siderCollapsed }">
-        <span class="ui-brand__mark">{{ companyMark }}</span>
+        <img class="ui-brand__mark" :src="brandAssets.logoMark" alt="" aria-hidden="true" />
         <span v-if="!siderCollapsed" class="ui-brand__copy"><strong>{{ appConfig.companyName }} OA</strong><small>{{ appConfig.productName }}</small></span>
       </div>
       <el-scrollbar class="ui-sidebar__scroll"><AppNavigationMenu :active-path="selectedPath" :collapsed="siderCollapsed" :groups="navigationGroups" @navigate="navigate" /></el-scrollbar>
@@ -77,7 +77,7 @@ function handleUnauthorized(): void {
     </el-aside>
 
     <el-drawer v-if="!passwordChangeRequired && isCompact" v-model="mobileMenuOpen" class="ui-menu-drawer" direction="ltr" :show-close="false" size="min(92vw, 360px)" :with-header="false">
-      <div class="ui-menu-drawer__head"><div class="ui-brand"><span class="ui-brand__mark">{{ companyMark }}</span><span class="ui-brand__copy"><strong>{{ appConfig.companyName }} OA</strong><small>{{ appConfig.productName }}</small></span></div><el-button :icon="Close" circle text aria-label="关闭导航" @click="mobileMenuOpen = false" /></div>
+      <div class="ui-menu-drawer__head"><div class="ui-brand"><img class="ui-brand__mark" :src="brandAssets.logoMark" alt="" aria-hidden="true" /><span class="ui-brand__copy"><strong>{{ appConfig.companyName }} OA</strong><small>{{ appConfig.productName }}</small></span></div><el-button :icon="Close" circle text aria-label="关闭导航" @click="mobileMenuOpen = false" /></div>
       <AppNavigationMenu :active-path="selectedPath" :groups="navigationGroups" @navigate="navigate" />
     </el-drawer>
 

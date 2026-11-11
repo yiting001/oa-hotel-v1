@@ -139,16 +139,11 @@ html[data-layout='compact'] .el-date-editor.el-input__wrapper { min-width: 0; }
 .ui-sidebar .ui-brand { min-height: 76px; }
 .ui-brand--collapsed { justify-content: center; padding-inline: 8px; }
 .ui-brand__mark {
-  display: inline-grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  place-items: center;
-  color: var(--color-on-dark);
-  background: var(--color-primary);
-  border-radius: 50%;
-  font-size: 16px;
-  font-weight: 600;
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  object-fit: contain;
 }
 .ui-brand__copy { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
 .ui-brand__copy strong { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

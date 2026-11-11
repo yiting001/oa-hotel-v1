@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus';
 import { computed, reactive, type CSSProperties } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { destinationAfterLogin } from '../modules/account/account-security.policy';
-import { appConfig, brandAssets, companyMark } from '../shared/app-config';
+import { appConfig, brandAssets } from '../shared/app-config';
 import { loadRememberedLogin, saveRememberedLogin } from '../shared/remember-login';
 import { useSessionStore } from '../shared/session';
 import { useLayoutMode } from '../ui/useLayoutMode';
@@ -44,7 +44,7 @@ async function submit(): Promise<void> {
   <main class="login" :data-compact="isCompact" :style="backgroundStyle">
     <section class="login__panel" aria-labelledby="login-title">
       <header class="login__brand">
-        <span class="login__mark" aria-hidden="true">{{ companyMark }}</span>
+        <img class="login__mark" :src="brandAssets.logoMark" alt="" aria-hidden="true" />
         <span class="login__brand-copy">
           <strong>{{ appConfig.companyName }} OA</strong>
           <small>{{ appConfig.productName }}</small>
@@ -102,15 +102,11 @@ async function submit(): Promise<void> {
 }
 .login__brand { display: flex; align-items: center; gap: 12px; }
 .login__mark {
-  display: inline-grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  color: var(--color-on-dark);
-  background: var(--color-primary);
-  border-radius: 50%;
-  font-size: 18px;
-  font-weight: 600;
+  display: block;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 60px;
+  object-fit: contain;
 }
 .login__brand-copy { display: flex; min-width: 0; flex-direction: column; }
 .login__brand-copy strong { font-size: 16px; font-weight: 600; }
