@@ -16,6 +16,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { credentialPolicy } from '../../auth/credential-policy';
+import { PHONE_PATTERN } from '../../domain/phone';
 import { DataScope } from '../domain/data-scope';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -60,6 +61,12 @@ export class UpdateRoleDto {
   @IsString()
   @MaxLength(300)
   description?: string | null;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() || null : value))
+  @ValidateIf((_object, value) => value !== null)
+  @Matches(PHONE_PATTERN, { message: '手机号格式不正确' })
+  phone?: string | null;
 
   @IsOptional()
   @IsBoolean()
@@ -194,6 +201,12 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MaxLength(100)
   displayName!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() || null : value))
+  @ValidateIf((_object, value) => value !== null)
+  @Matches(PHONE_PATTERN, { message: '手机号格式不正确' })
+  phone?: string | null;
 
   @IsString()
   @MinLength(credentialPolicy.newPasswordMinLength)

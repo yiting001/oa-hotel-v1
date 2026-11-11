@@ -136,6 +136,7 @@ function testUser(
     id,
     username,
     displayName,
+    phone: null,
     passwordHash: 'unused-in-service-test',
     departmentId,
     roleCodes: [],

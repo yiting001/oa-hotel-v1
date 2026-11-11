@@ -45,6 +45,8 @@ export interface UserAccessSummary {
   id: string;
   username: string;
   displayName: string;
+  /** 手机号；未设置时为 null。 */
+  phone: string | null;
   active: boolean;
   primaryDepartmentId: string | null;
   memberships: MembershipSummary[];
@@ -124,6 +126,8 @@ export interface UserAssignmentsWriteInput {
 export interface UserCreateInput {
   username: string;
   displayName: string;
+  /** 手机号，可选；填写后可作为登录账号。 */
+  phone?: string | null;
   password: string;
   memberships: MembershipWriteInput[];
   roles: RoleAssignmentWriteInput[];
@@ -131,6 +135,8 @@ export interface UserCreateInput {
 
 export interface UserUpdateInput {
   displayName?: string;
+  /** 传 null 表示清空手机号。 */
+  phone?: string | null;
   active?: boolean;
 }
 

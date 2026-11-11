@@ -234,6 +234,7 @@ function user(): UserEntity {
     id: 'user-target',
     username: 'target',
     displayName: '目标用户',
+    phone: null,
     passwordHash: 'unused',
     departmentId: 'department-a',
     roleCodes: [],

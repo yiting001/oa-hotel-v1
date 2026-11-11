@@ -18,6 +18,7 @@ import { IamService } from '../iam/application/iam.service';
 import { LoginAttemptLimiter } from './login-attempt-limiter.service';
 import { credentialPolicy } from './credential-policy';
 import { LoginPasswordVerifier } from './login-password-verifier.service';
+import { normalizePhone } from '../domain/phone';
 
 export interface LoginResult {
   accessToken: string;
@@ -60,7 +61,7 @@ export class AuthService implements OnApplicationBootstrap {
 
   async login(username: string, password: string): Promise<LoginResult> {
     const attempt = await this.loginAttempts.reserve(username);
-    const user = await this.users.findOneBy({ username: attempt.username, active: true });
+    const user = await this.findLoginUser(attempt.username);
     const passwordMatches = await this.loginPasswordVerifier.matches(user?.passwordHash, password);
     if (!user || !passwordMatches) {
       await this.loginAttempts.recordFailure(attempt);
@@ -68,6 +69,18 @@ export class AuthService implements OnApplicationBootstrap {
     }
     await this.loginAttempts.recordSuccess(attempt);
     return this.createLoginResult(user);
+  }
+
+  /**
+   * 登录标识可以是登录账号，也可以是手机号。
+   * 先按账号匹配，再按手机号匹配，避免同名账号与手机号产生歧义。
+   */
+  private async findLoginUser(identifier: string): Promise<UserEntity | null> {
+    const byUsername = await this.users.findOneBy({ username: identifier, active: true });
+    if (byUsername) return byUsername;
+    const phone = normalizePhone(identifier);
+    if (!phone) return null;
+    return this.users.findOneBy({ phone, active: true });
   }
 
   async getSessionUser(userId: string, expectedCredentialVersion?: number): Promise<SessionUser> {
