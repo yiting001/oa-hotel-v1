@@ -270,6 +270,7 @@ function userRow(id: string, displayName: string, departmentId: string): UserEnt
     passwordHash: 'not-used',
     departmentId,
     roleCodes: [],
+    phone: null,
     active: true,
   };
 }

@@ -54,6 +54,7 @@ const createOpen = ref(false);
 const createForm = reactive({
   username: '',
   displayName: '',
+  phone: '',
   password: '',
   departmentId: '' as string,
   positionId: '' as string,
@@ -61,7 +62,7 @@ const createForm = reactive({
 });
 const profileOpen = ref(false);
 const profileUserId = ref<string | null>(null);
-const profileForm = reactive({ displayName: '', active: true });
+const profileForm = reactive({ displayName: '', phone: '', active: true });
 const passwordOpen = ref(false);
 const passwordUserId = ref<string | null>(null);
 const passwordForm = reactive({ password: '', confirm: '' });
@@ -86,6 +87,7 @@ const pagedUsers = computed(() =>
 const columns: DataColumn[] = [
   { key: 'displayName', label: '姓名', minWidth: 120 },
   { key: 'username', label: '登录账号', minWidth: 140 },
+  { key: 'phone', label: '手机号', minWidth: 130 },
   { key: 'department', label: '主部门', minWidth: 140 },
   { key: 'positions', label: '岗位', minWidth: 140 },
   { key: 'roles', label: '角色', minWidth: 160 },
@@ -233,6 +235,7 @@ function openCreate(): void {
   Object.assign(createForm, {
     username: '',
     displayName: '',
+    phone: '',
     password: '',
     departmentId: '',
     positionId: '',
@@ -257,6 +260,7 @@ async function createUser(): Promise<void> {
     await iamApi.createUser({
       username,
       displayName,
+      phone: createForm.phone.trim() || null,
       password: createForm.password,
       memberships: [
         {
@@ -285,7 +289,11 @@ async function createUser(): Promise<void> {
 function openProfile(user: IamUser): void {
   if (props.readonly) return;
   profileUserId.value = user.id;
-  Object.assign(profileForm, { displayName: user.displayName, active: user.active });
+  Object.assign(profileForm, {
+    displayName: user.displayName,
+    phone: user.phone ?? '',
+    active: user.active,
+  });
   profileOpen.value = true;
 }
 async function saveProfile(): Promise<void> {
@@ -297,7 +305,11 @@ async function saveProfile(): Promise<void> {
   }
   saving.value = true;
   try {
-    await iamApi.updateUser(profileUserId.value, { displayName, active: profileForm.active });
+    await iamApi.updateUser(profileUserId.value, {
+      displayName,
+      phone: profileForm.phone.trim() || null,
+      active: profileForm.active,
+    });
     ElMessage.success('用户资料已更新');
     profileOpen.value = false;
     emit('refresh');
@@ -402,6 +414,7 @@ async function resetPassword(): Promise<void> {
     >
       <template #cell-department="{ row }">{{ primaryDepartmentName(row) }}</template>
       <template #cell-positions="{ row }">{{ userPositionNames(row).join('、') || '—' }}</template>
+      <template #cell-phone="{ row }">{{ row.phone || '—' }}</template>
       <template #cell-roles="{ row }">{{ userRoleNames(row).join('、') || '未授权' }}</template>
       <template #cell-active="{ row }">
         <el-tag :type="row.active ? 'success' : 'info'">{{ row.active ? '正常' : '停用' }}</el-tag>
@@ -564,6 +577,9 @@ async function resetPassword(): Promise<void> {
       <el-form-item label="用户姓名" required>
         <el-input v-model="createForm.displayName" maxlength="100" />
       </el-form-item>
+      <el-form-item label="手机号">
+        <el-input v-model="createForm.phone" maxlength="20" placeholder="可选，填写后可用手机号登录" />
+      </el-form-item>
       <el-form-item label="初始密码" required>
         <el-input
           v-model="createForm.password"
@@ -627,6 +643,9 @@ async function resetPassword(): Promise<void> {
       </el-form-item>
       <el-form-item label="用户姓名" required>
         <el-input v-model="profileForm.displayName" maxlength="100" />
+      </el-form-item>
+      <el-form-item label="手机号">
+        <el-input v-model="profileForm.phone" maxlength="20" placeholder="可选，填写后可用手机号登录" />
       </el-form-item>
       <el-form-item label="账号状态">
         <el-switch v-model="profileForm.active" active-text="启用" inactive-text="停用" />

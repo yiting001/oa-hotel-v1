@@ -78,6 +78,7 @@ export function mapUserSummaries(input: {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
+      phone: user.phone ?? null,
       active: user.active,
       primaryDepartmentId:
         memberships.find((membership) => membership.active && membership.isPrimary)?.departmentId ??

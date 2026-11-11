@@ -75,6 +75,8 @@ export interface IamUser {
   id: string;
   username: string;
   displayName: string;
+  /** 手机号；未设置时为 null。 */
+  phone: string | null;
   active: boolean;
   primaryDepartmentId: string | null;
   memberships: UserMembership[];
@@ -101,6 +103,8 @@ export interface PositionInput extends Record<string, unknown> {
 export interface UserCreateInput extends Record<string, unknown> {
   username: string;
   displayName: string;
+  /** 手机号，填写后可作为登录账号。 */
+  phone?: string | null;
   password: string;
   memberships: UserAssignmentsInput['memberships'];
   roles: UserAssignmentsInput['roles'];
@@ -108,6 +112,8 @@ export interface UserCreateInput extends Record<string, unknown> {
 
 export interface UserUpdateInput extends Record<string, unknown> {
   displayName?: string;
+  /** 传 null 清空手机号。 */
+  phone?: string | null;
   active?: boolean;
 }
 

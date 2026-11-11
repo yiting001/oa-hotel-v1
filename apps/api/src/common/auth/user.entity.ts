@@ -13,6 +13,11 @@ export class UserEntity {
   @Column('text')
   displayName!: string;
 
+  /** 手机号：可作为登录账号使用，也可只是联系方式；未填写为 null。 */
+  @Index({ unique: true })
+  @Column('text', { nullable: true })
+  phone!: string | null;
+
   @Column('text')
   passwordHash!: string;
 

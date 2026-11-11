@@ -14,6 +14,7 @@ import { DepartmentEntity } from '../../auth/department.entity';
 import { UserEntity } from '../../auth/user.entity';
 import { DomainError } from '../../errors/domain-error';
 import { DataScope } from '../domain/data-scope';
+import { normalizePhone } from '../../domain/phone';
 import { DepartmentProfileEntity } from '../infrastructure/department-profile.entity';
 import { MembershipEntity } from '../infrastructure/membership.entity';
 import { PermissionEntity } from '../infrastructure/permission.entity';
@@ -96,6 +97,7 @@ export class IamAccessService {
     this.assertMembershipShape(input.memberships);
     await this.assertMembershipReferences(input.memberships);
     await this.assertRoleReferences(input.roles);
+    const phone = await this.reservePhone(input.phone ?? null, null);
 
     const userId = randomUUID();
     const primaryDepartmentId =
@@ -109,6 +111,7 @@ export class IamAccessService {
         id: userId,
         username,
         displayName,
+        phone,
         passwordHash,
         departmentId: primaryDepartmentId,
         roleCodes: [],
@@ -151,12 +154,33 @@ export class IamAccessService {
       if (!displayName) throw new BadRequestException('用户姓名不能为空');
       user.displayName = displayName;
     }
+    if (input.phone !== undefined) {
+      user.phone = await this.reservePhone(input.phone, userId);
+    }
     if (input.active !== undefined) {
       if (user.active && !input.active) await this.assertNotLastActiveSystemAdmin(userId);
       user.active = input.active;
     }
     await this.users.save(user);
     return this.getUser(userId);
+  }
+
+  /**
+   * 归一化手机号并校验唯一性。
+   * 传 null/空串表示清空；传当前用户自己的手机号不算冲突。
+   */
+  private async reservePhone(
+    value: string | null | undefined,
+    currentUserId: string | null,
+  ): Promise<string | null> {
+    if (value === null || value === undefined || value === '') return null;
+    const phone = normalizePhone(value);
+    if (!phone) throw new BadRequestException('手机号格式不正确');
+    const existing = await this.users.findOneBy({ phone });
+    if (existing && existing.id !== currentUserId) {
+      throw new ConflictException('该手机号已被其他账号使用');
+    }
+    return phone;
   }
 
   async deleteUser(userId: string, actorUserId: string): Promise<void> {

@@ -494,6 +494,7 @@ function testUser(id: string, displayName: string, departmentId: string): UserEn
     passwordHash: 'unused-in-service-test',
     departmentId,
     roleCodes: [],
+    phone: null,
     active: true,
   };
 }

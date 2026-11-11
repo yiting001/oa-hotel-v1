@@ -137,6 +137,7 @@ function user(id: string): UserEntity {
     id,
     username: id,
     displayName: id,
+    phone: null,
     passwordHash: 'unused',
     departmentId: 'dept-business',
     roleCodes: [],
