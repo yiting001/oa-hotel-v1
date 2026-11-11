@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { DATETIME_COLUMN_TYPE } from '../../database/column-types';
 import type { BusinessModule } from '@oa/contracts';
 
 @Entity('document_indexes')
@@ -48,9 +49,9 @@ export class DocumentIndexEntity {
   @Column('text', { nullable: true })
   formVersionId!: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: DATETIME_COLUMN_TYPE })
   updatedAt!: Date;
 }

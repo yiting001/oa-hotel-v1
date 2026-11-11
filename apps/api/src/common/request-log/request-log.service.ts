@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { endOfBusinessDate, startOfBusinessDate } from '../time/business-date';
 import { RequestLogEntity } from './request-log.entity';
 
 const BODY_MAX_LENGTH = 8_000;
@@ -99,10 +100,10 @@ export class RequestLogService {
       qb.andWhere('log.status_code >= 400');
     }
     if (input.dateFrom) {
-      qb.andWhere('log.created_at >= :dateFrom', { dateFrom: `${input.dateFrom} 00:00:00` });
+      qb.andWhere('log.created_at >= :dateFrom', { dateFrom: startOfBusinessDate(input.dateFrom) });
     }
     if (input.dateTo) {
-      qb.andWhere('log.created_at <= :dateTo', { dateTo: `${input.dateTo} 23:59:59.999` });
+      qb.andWhere('log.created_at <= :dateTo', { dateTo: endOfBusinessDate(input.dateTo) });
     }
     qb.orderBy('log.created_at', 'DESC').limit(Math.min(input.limit ?? 200, 500));
     return qb.getMany();

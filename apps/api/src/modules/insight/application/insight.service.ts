@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type { SessionUser } from '@oa/contracts';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../../../common/auth/user.entity';
-import { businessDateKey } from '../../../common/time/business-date';
+import {
+  businessDateKey,
+  endOfBusinessDate,
+  startOfBusinessDate,
+} from '../../../common/time/business-date';
 import { DocumentIndexEntity } from '../../../common/workflow/infrastructure/document-index.entity';
 import { WorkflowOpinionEntity } from '../../../common/workflow/infrastructure/workflow-opinion.entity';
 import { ContractEntity } from '../../contract/infrastructure/contract.entity';
@@ -95,11 +99,13 @@ export class InsightService {
     }
     if (query.dateFrom) {
       builder.andWhere('document.createdAt >= :dateFrom', {
-        dateFrom: `${query.dateFrom} 00:00:00`,
+        dateFrom: startOfBusinessDate(query.dateFrom),
       });
     }
     if (query.dateTo) {
-      builder.andWhere('document.createdAt <= :dateTo', { dateTo: `${query.dateTo} 23:59:59` });
+      builder.andWhere('document.createdAt <= :dateTo', {
+        dateTo: endOfBusinessDate(query.dateTo),
+      });
     }
     const documents = await builder.take(500).getMany();
 
@@ -151,11 +157,13 @@ export class InsightService {
     }
     if (query.dateFrom) {
       builder.andWhere('opinion.createdAt >= :dateFrom', {
-        dateFrom: `${query.dateFrom} 00:00:00`,
+        dateFrom: startOfBusinessDate(query.dateFrom),
       });
     }
     if (query.dateTo) {
-      builder.andWhere('opinion.createdAt <= :dateTo', { dateTo: `${query.dateTo} 23:59:59` });
+      builder.andWhere('opinion.createdAt <= :dateTo', {
+        dateTo: endOfBusinessDate(query.dateTo),
+      });
     }
     const opinions = await builder.getMany();
     const documentIds = [...new Set(opinions.map((opinion) => opinion.documentId))];
@@ -188,11 +196,13 @@ export class InsightService {
       .andWhere("document.status != 'DRAFT'");
     if (query.dateFrom) {
       builder.andWhere('document.createdAt >= :dateFrom', {
-        dateFrom: `${query.dateFrom} 00:00:00`,
+        dateFrom: startOfBusinessDate(query.dateFrom),
       });
     }
     if (query.dateTo) {
-      builder.andWhere('document.createdAt <= :dateTo', { dateTo: `${query.dateTo} 23:59:59` });
+      builder.andWhere('document.createdAt <= :dateTo', {
+        dateTo: endOfBusinessDate(query.dateTo),
+      });
     }
     const documents = await builder.getMany();
     const amountMap = await this.loadAmountMap(documents.map((document) => document.id));

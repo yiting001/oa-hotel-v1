@@ -37,9 +37,9 @@ export class FormVersionEntity implements FormVersion {
   @Column(DATETIME_COLUMN_TYPE, { nullable: true })
   publishedAt!: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: DATETIME_COLUMN_TYPE })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: DATETIME_COLUMN_TYPE })
   updatedAt!: Date;
 }
