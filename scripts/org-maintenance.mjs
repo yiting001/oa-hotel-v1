@@ -18,6 +18,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { hash } from 'argon2';
 import process from 'node:process';
 import { Client } from 'pg';
 
@@ -35,6 +36,12 @@ const TARGET = {
   salesDepartment: '销售部',
   applicantRoleCode: 'APPLICANT',
   managerRoleCode: 'DEPARTMENT_MANAGER',
+};
+
+/** 彭博在本系统中没有账号时，用它来创建。 */
+const NEW_USER = {
+  username: process.env.ORG_NEW_USERNAME?.trim() || 'pengbo',
+  password: process.env.ORG_NEW_PASSWORD?.trim() || 'Dongfang2026',
 };
 
 const connectionString = process.env.OA_DATABASE_URL;
@@ -154,45 +161,76 @@ async function main() {
   if (cateringDepartments.length !== 1) {
     warnings.push(`部门「${TARGET.cateringDepartment}」匹配到 ${cateringDepartments.length} 条`);
   }
-  if (pengboUsers.length !== 1) {
+  if (pengboUsers.length > 1) {
     warnings.push(`用户「${TARGET.cateringManager}」匹配到 ${pengboUsers.length} 条`);
   }
-  if (cateringDepartments.length === 1 && pengboUsers.length === 1) {
+  if (cateringDepartments.length === 1) {
     const department = cateringDepartments[0];
-    const pengbo = pengboUsers[0];
+    const existing = pengboUsers[0] ?? null;
+    const pengboId = existing?.id ?? randomUUID();
     const currentManager = state.users.find((user) => user.id === department.managerUserId);
     log(
       `当前负责人：${currentManager ? currentManager.displayName : (department.managerUserId ?? '未设置')}`,
     );
-    log(`目标负责人：${pengbo.displayName}（${pengbo.username}）`);
-    let membership = state.memberships.find(
-      (item) => item.userId === pengbo.id && item.departmentId === department.id,
-    );
-    if (!membership) {
-      warnings.push(
-        `彭博在「${TARGET.cateringDepartment}」没有任职记录，脚本会补一条（主部门保持他原来的部门）`,
-      );
-      actions.push({
-        kind: 'membership-insert',
-        label: `为彭博补一条「${TARGET.cateringDepartment}」任职（部门负责人）`,
-        run: async () => {
-          await client.query(
-            `INSERT INTO iam_memberships (id, "userId", "departmentId", "positionId", "isPrimary", "isDepartmentHead", active)
-             VALUES ($1, $2, $3, NULL, false, true, true)`,
-            [randomUUID(), pengbo.id, department.id],
-          );
-        },
-      });
+
+    if (!existing) {
+      const usernameTaken = state.users.some((user) => user.username === NEW_USER.username);
+      if (usernameTaken) {
+        warnings.push(`账号 ${NEW_USER.username} 已被占用，请用 --username 指定别的账号`);
+      } else {
+        log(
+          `系统中没有「${TARGET.cateringManager}」的账号，将新建账号 ${NEW_USER.username}（手机号 ${TARGET.cateringManagerPhone}）`,
+        );
+        actions.push({
+          kind: 'user-create',
+          label: `新建账号「${TARGET.cateringManager}」（${NEW_USER.username}，手机号 ${TARGET.cateringManagerPhone}，首次登录需改密）`,
+          run: async () => {
+            const passwordHash = await hash(NEW_USER.password);
+            await client.query(
+              `INSERT INTO users (id, username, "displayName", phone, "passwordHash", "departmentId", "roleCodes", active, "passwordChangeRequired", "passwordChangedAt", "credentialVersion")
+               VALUES ($1, $2, $3, $4, $5, $6, '[]', true, true, NULL, 0)`,
+              [
+                pengboId,
+                NEW_USER.username,
+                TARGET.cateringManager,
+                TARGET.cateringManagerPhone,
+                passwordHash,
+                department.id,
+              ],
+            );
+          },
+        });
+        actions.push({
+          kind: 'membership-insert',
+          label: `为彭博建立「${TARGET.cateringDepartment}」主部门任职并标记为部门负责人`,
+          run: async () => {
+            await client.query(
+              `INSERT INTO iam_memberships (id, "userId", "departmentId", "positionId", "isPrimary", "isDepartmentHead", active)
+               VALUES ($1, $2, $3, NULL, true, true, true)`,
+              [randomUUID(), pengboId, department.id],
+            );
+          },
+        });
+      }
     } else {
-      log(
-        `任职现状：${describeUser(state, pengbo)
-          .memberships.map(
-            (m) =>
-              `${m.department}/${m.position}${m.isPrimary ? '（主）' : ''}${m.isDepartmentHead ? '（负责人）' : ''}`,
-          )
-          .join('、')}`,
+      log(`目标负责人：${existing.displayName}（${existing.username}）`);
+      const membership = state.memberships.find(
+        (item) => item.userId === existing.id && item.departmentId === department.id,
       );
-      if (!membership.isDepartmentHead || !membership.active) {
+      if (!membership) {
+        log(`彭博在「${TARGET.cateringDepartment}」没有任职记录，将补一条并标记为部门负责人`);
+        actions.push({
+          kind: 'membership-insert',
+          label: `为彭博补一条「${TARGET.cateringDepartment}」任职（部门负责人）`,
+          run: async () => {
+            await client.query(
+              `INSERT INTO iam_memberships (id, "userId", "departmentId", "positionId", "isPrimary", "isDepartmentHead", active)
+               VALUES ($1, $2, $3, NULL, false, true, true)`,
+              [randomUUID(), existing.id, department.id],
+            );
+          },
+        });
+      } else if (!membership.isDepartmentHead || !membership.active) {
         actions.push({
           kind: 'membership-update',
           label: '把彭博在餐饮部的任职标记为部门负责人并启用',
@@ -204,49 +242,77 @@ async function main() {
           },
         });
       }
+      if (existing.phone !== TARGET.cateringManagerPhone) {
+        actions.push({
+          kind: 'phone',
+          label: `写入彭博手机号 ${TARGET.cateringManagerPhone}（可作为登录账号）`,
+          run: async () => {
+            await client.query(`UPDATE users SET phone = $1 WHERE id = $2`, [
+              TARGET.cateringManagerPhone,
+              existing.id,
+            ]);
+          },
+        });
+      }
     }
-    if (department.managerUserId !== pengbo.id) {
+
+    // 部门负责人角色：审批节点会按 WORKFLOW_APPROVE 过滤候选人，缺角色时审批会无人可办
+    for (const roleCode of [TARGET.managerRoleCode, TARGET.applicantRoleCode]) {
+      const role = state.roles.find((item) => item.code === roleCode);
+      if (!role) {
+        warnings.push(`找不到角色 ${roleCode}`);
+        continue;
+      }
+      const hasRole = state.userRoles.some(
+        (link) => link.userId === pengboId && link.roleId === role.id,
+      );
+      if (hasRole) continue;
+      const departmentScoped = roleCode === TARGET.managerRoleCode;
+      actions.push({
+        kind: 'role-grant',
+        label: `给彭博授予「${role.name}」角色（数据范围=${departmentScoped ? '餐饮部' : '仅本人'}）`,
+        run: async () => {
+          await client.query(
+            `INSERT INTO iam_user_roles (id, "userId", "roleId", "dataScope", "scopeDepartmentId")
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              randomUUID(),
+              pengboId,
+              role.id,
+              departmentScoped ? 'DEPARTMENT' : 'SELF',
+              departmentScoped ? department.id : null,
+            ],
+          );
+        },
+      });
+    }
+
+    // 部门被停用时会话里会隐藏该部门的所有任职，并按范围过滤掉负责人角色，必须确保它是启用的
+    const profile = state.profiles.find((item) => item.departmentId === department.id);
+    if (profile && !profile.active) {
+      warnings.push(
+        `「${TARGET.cateringDepartment}」在组织里处于停用状态：该部门员工的任职和负责人角色都会被隐藏`,
+      );
+      actions.push({
+        kind: 'department-activate',
+        label: `启用「${TARGET.cateringDepartment}」（iam_department_profiles.active=true）`,
+        run: async () => {
+          await client.query(
+            `UPDATE iam_department_profiles SET active = true WHERE "departmentId" = $1`,
+            [department.id],
+          );
+        },
+      });
+    }
+
+    if (department.managerUserId !== pengboId) {
       actions.push({
         kind: 'department-manager',
         label: `设置「${TARGET.cateringDepartment}」负责人为彭博`,
         run: async () => {
           await client.query(`UPDATE departments SET "managerUserId" = $1 WHERE id = $2`, [
-            pengbo.id,
+            pengboId,
             department.id,
-          ]);
-        },
-      });
-    }
-    // 部门负责人角色：工作流节点会按 WORKFLOW_APPROVE 过滤候选人，缺角色时审批会无人可办
-    const managerRole = state.roles.find((role) => role.code === TARGET.managerRoleCode);
-    if (managerRole) {
-      const hasManagerRole = state.userRoles.some(
-        (link) => link.userId === pengbo.id && link.roleId === managerRole.id,
-      );
-      if (!hasManagerRole) {
-        actions.push({
-          kind: 'role-grant',
-          label: `给彭博授予「${managerRole.name}」角色（数据范围=餐饮部）`,
-          run: async () => {
-            await client.query(
-              `INSERT INTO iam_user_roles (id, "userId", "roleId", "dataScope", "scopeDepartmentId")
-               VALUES ($1, $2, $3, 'DEPARTMENT', $4)`,
-              [randomUUID(), pengbo.id, managerRole.id, department.id],
-            );
-          },
-        });
-      }
-    } else {
-      warnings.push(`找不到角色 ${TARGET.managerRoleCode}`);
-    }
-    if (pengbo.phone !== TARGET.cateringManagerPhone && 'phone' in pengbo) {
-      actions.push({
-        kind: 'phone',
-        label: `写入彭博手机号 ${TARGET.cateringManagerPhone}（可作为登录账号）`,
-        run: async () => {
-          await client.query(`UPDATE users SET phone = $1 WHERE id = $2`, [
-            TARGET.cateringManagerPhone,
-            pengbo.id,
           ]);
         },
       });
