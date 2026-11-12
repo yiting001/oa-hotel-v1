@@ -16,19 +16,19 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "icons/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-maskable-512.png",
+      "src": "icons/icon-maskable-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -39,13 +39,13 @@
       "name": "待我审批",
       "short_name": "待办审批",
       "url": "./#/approval",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192-v2.png", "sizes": "192x192" }]
     },
     {
       "name": "个人工作台",
       "short_name": "工作台",
       "url": "./#/workbench",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192-v2.png", "sizes": "192x192" }]
     }
   ]
 }
