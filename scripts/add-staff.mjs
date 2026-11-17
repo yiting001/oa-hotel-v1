@@ -52,7 +52,6 @@ function parseArgs(argv) {
     index += 1;
   }
   if (!result.department) fail('缺少 --department');
-  if (!result.position) fail('缺少 --position');
   if (!Array.isArray(result.staff) || result.staff.length === 0)
     fail('缺少 --staff 或 --staff-file');
   return result;
@@ -79,16 +78,21 @@ const applicantRole = (
 ).rows[0];
 if (!applicantRole) fail('找不到启用状态的 APPLICANT（申请人）角色');
 
-const positions = (
-  await client.query(`select id, name from iam_positions where name = $1`, [options.position])
-).rows;
-let position = positions[0] ?? null;
+let position = null;
 process.stdout.write(`部门：${department.name}（${department.id}）\n`);
-process.stdout.write(
-  position
-    ? `岗位：${position.name}（已存在，直接复用）\n`
-    : `岗位：${options.position}（不存在，将新建并归属 ${department.name}）\n`,
-);
+if (options.position) {
+  const positions = (
+    await client.query(`select id, name from iam_positions where name = $1`, [options.position])
+  ).rows;
+  position = positions[0] ?? null;
+  process.stdout.write(
+    position
+      ? `岗位：${position.name}（已存在，直接复用）\n`
+      : `岗位：${options.position}（不存在，将新建并归属 ${department.name}）\n`,
+  );
+} else {
+  process.stdout.write('岗位：未指定，任职上不挂岗位\n');
+}
 
 const existingUsers = (await client.query(`select id, username, "displayName", phone from users`))
   .rows;
@@ -161,7 +165,7 @@ if (createUserActions.length === 0) {
 await client.query('BEGIN');
 try {
   const passwordHash = await hash(password);
-  if (!position) {
+  if (options.position && !position) {
     position = { id: randomUUID(), name: options.position };
     await client.query(
       `INSERT INTO iam_positions (id, code, name, "departmentId", "sortOrder", active)
@@ -185,7 +189,7 @@ try {
     await client.query(
       `INSERT INTO iam_memberships (id, "userId", "departmentId", "positionId", "isPrimary", "isDepartmentHead", active)
        VALUES ($1, $2, $3, $4, true, false, true)`,
-      [randomUUID(), userId, department.id, position.id],
+      [randomUUID(), userId, department.id, position?.id ?? null],
     );
     await client.query(
       `INSERT INTO iam_user_roles (id, "userId", "roleId", "dataScope", "scopeDepartmentId")
